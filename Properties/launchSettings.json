@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "az_tw_website_functions": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7066",
+      "launchBrowser": false
+    }
+  }
+}
