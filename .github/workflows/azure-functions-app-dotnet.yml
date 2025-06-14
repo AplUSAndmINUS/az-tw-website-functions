@@ -1,0 +1,39 @@
+name: Deploy DotNet project to Azure Function App ${{ github.ref_name }}
+
+on:
+  push:
+    branches: ["develop", "test", "master"]
+
+env:
+  AZURE_FUNCTIONAPP_NAME: az-tw-website-${{ github.ref_name }}   
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: './output'       
+  DOTNET_VERSION: '8.0.x'                   
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest # For Linux, use ubuntu-latest
+    environment: ${{ github.ref_name }}
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v4
+
+    # Using Azure Credentials RBAC, so commented out lines 41-44
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }} # set up AZURE_RBAC_CREDENTIALS secrets in your repository
+
+    - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: 'Build the Function App'
+      run: dotnet build --configuration Release --output ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+
+    - name: 'Run Azure Functions Action'
+      uses: Azure/functions-action@v1
+      id: fa
+      with:
+        app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+        package: '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
