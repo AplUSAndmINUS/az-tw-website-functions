@@ -4,7 +4,7 @@ using System;
 
 namespace az_tw_website_functions.SharedStorage;
 
-public class TableStorageService
+public class TableStorageService : ITableStorageService
 {
     private readonly TableServiceClient _tableServiceClient;
 
