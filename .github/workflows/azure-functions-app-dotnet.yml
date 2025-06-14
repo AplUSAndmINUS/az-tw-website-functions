@@ -5,7 +5,7 @@ on:
     branches: ["develop", "test", "master"]
 
 env:
-  AZURE_FUNCTIONAPP_NAME: az-tw-website-${{ github.ref_name }}   
+  AZURE_FUNCTIONAPP_NAME: az-tw-website-${{ github.ref_name == 'master' && 'production' || github.ref_name }}
   AZURE_FUNCTIONAPP_PACKAGE_PATH: './output'       
   DOTNET_VERSION: '8.0.x'                   
 
