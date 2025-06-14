@@ -1,4 +1,4 @@
-name: Deploy DotNet project to Azure Function App ${{ github.ref_name }}
+name: Deploy DotNet project to Azure Function App
 
 on:
   push:
@@ -14,6 +14,10 @@ jobs:
     runs-on: ubuntu-latest # For Linux, use ubuntu-latest
     environment: ${{ github.ref_name }}
     steps:
+    # Print out the environment we're deploying to'
+    - name: Print Deployment Target
+      run: 'echo "🔁 Deploying to environment: ${{ github.ref_name }}"'
+      
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@v4
 
