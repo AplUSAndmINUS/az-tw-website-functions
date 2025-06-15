@@ -94,7 +94,7 @@ public class BlobStorageService : IBlobStorageService
             return new BlobDownloadResult(downloadResponse.Value.Content, downloadResponse.Value.ContentLength, downloadResponse.GetRawResponse().Headers.ContentType);
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
-        {`
+        {
             _logger.LogError(ex, "Blob {BlobName} not found in container {ContainerName}", blobName, containerName);
             throw new ArgumentException($"Blob '{blobName}' does not exist in container '{containerName}'.", nameof(blobName));
         }
