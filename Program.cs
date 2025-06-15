@@ -51,6 +51,10 @@ builder.Services.AddSingleton<ITableStorageService>(sp =>
 // Register custom logger
 builder.Services.AddSingleton<AppInsightsLogger>();
 
+// Register image and thumbnail services
+builder.Services.AddSingleton<IImageService, ImageConversionService>();
+builder.Services.AddSingleton<IThumbnailService, ThumbnailService>();
+
 builder.ConfigureFunctionsWebApplication();
 
 builder.Services
