@@ -4,10 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-using az_tw_website_functions.SharedStorage;
+using SharedStorage.Services;
 using Utils;
-using System.Reflection.Metadata;
-using Microsoft.Identity.Client.Extensions.Msal;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
@@ -23,7 +21,6 @@ builder.Services.AddSingleton<IBlobStorageService>(sp =>
     try
     {
         logger.LogInformation("Creating blob storage client for {StorageAccount}", storageAccountName ?? "unknown");
-        StorageAccountValidator.ValidateStorageAccountName(storageAccountName!);
 
         return new BlobStorageService(storageAccountName!, logger);
     }
@@ -41,7 +38,6 @@ builder.Services.AddSingleton<ITableStorageService>(sp =>
     try
     {
         logger.LogInformation("Creating table storage client for {StorageAccount}", storageAccountName ?? "unknown");
-        StorageAccountValidator.ValidateStorageAccountName(storageAccountName!);
 
         return new TableStorageService(storageAccountName!, logger);
     }

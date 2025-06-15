@@ -45,28 +45,74 @@ public class TableStorageService : ITableStorageService
         }
     }
 
-    public async Task<IEnumerable<TableEntity>> GetEntitiesAsync(string tableName, string? filter = null)
+    public async Task<(IEnumerable<TableEntity> Entities, string? ContinuationToken)> GetEntitiesAsync(
+        string tableName,
+        string? filter = null,
+        int pageSize = 25,
+        string? continuationToken = null)
+    {
+        TableNameValidator.ValidateTableName(tableName);
+        var client = _tableServiceClient.GetTableClient(tableName);
+
+        _logger.LogInformation("Retrieving entities from table {TableName} with filter {Filter} and page size {PageSize} token {Token}", tableName, filter, pageSize, continuationToken);
+
+        try
+        {
+            await foreach (var page in client.QueryAsync<TableEntity>(filter).AsPages(continuationToken, pageSize))
+            {
+                _logger.LogInformation("Successfully retrieved {Count} entities from table {TableName}", page.Values.Count, tableName);
+                return (page.Values, page.ContinuationToken);
+            }
+
+            return (Enumerable.Empty<TableEntity>(), null); // no data
+        }
+        catch (RequestFailedException ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve entities from table {TableName}", tableName);
+            throw;
+        }
+    }
+
+    public async Task UpsertEntityAsync(string tableName, ITableEntity entity)
     {
         var client = _tableServiceClient.GetTableClient(tableName);
-        _logger.LogInformation("Retrieving entities from table {TableName} with filter {Filter}", tableName, filter);
 
         // Validate table name
         TableNameValidator.ValidateTableName(tableName);
 
         try
         {
-            var entities = new List<TableEntity>();
-            await foreach (var entity in client.QueryAsync<TableEntity>(filter))
-            {
-                entities.Add(entity);
-            }
-
-            _logger.LogInformation("Successfully retrieved entities from table {TableName}", tableName);
-            return entities;
+            _logger.LogInformation("Upserting entity into table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, entity.PartitionKey, entity.RowKey);
+            await client.UpsertEntityAsync(entity);
+            _logger.LogInformation("Entity upserted successfully into table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, entity.PartitionKey, entity.RowKey);
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Failed to check existence of table {TableName}", tableName);
+            _logger.LogError(ex, "Failed to upsert entity into table {TableName}", tableName);
+            throw;
+        }
+    }
+
+    public async Task DeleteEntityAsync(string tableName, string partitionKey, string rowKey)
+    {
+        var client = _tableServiceClient.GetTableClient(tableName);
+
+        // Validate table name
+        TableNameValidator.ValidateTableName(tableName);
+
+        try
+        {
+            _logger.LogInformation("Deleting entity from table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
+            await client.DeleteEntityAsync(partitionKey, rowKey);
+            _logger.LogInformation("Entity deleted successfully from table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            _logger.LogWarning("Entity not found in table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
+        }
+        catch (RequestFailedException ex)
+        {
+            _logger.LogError(ex, "Failed to delete entity from table {TableName}", tableName);
             throw;
         }
     }
