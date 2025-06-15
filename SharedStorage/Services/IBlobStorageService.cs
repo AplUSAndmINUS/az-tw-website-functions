@@ -30,27 +30,30 @@ public record BlobReference(string FileName, string CdnUrl, DateTimeOffset? Last
     public BlobReference(string fileName, string cdnUrl)
         : this(fileName, cdnUrl, null, null) { }
 }
+
+public record MediaReference(string OriginalBlobName, string ThumbnailBlobName, string CdnUrl, string ThumbnailCdnUrl);
+
 public interface IBlobStorageService
-    {
-        BlobContainerClient GetBlobContainerClient(string containerName);
-        Task<BlobClient> GetBlobClientAsync(string containerName, string blobName);
-        Task<BlobPageResult> GetBlobsAsync(
-            string containerName,
-            string? prefix = null,
-            int pageSize = 25,
-            string? continuationToken = null
-        );
+{
+    BlobContainerClient GetBlobContainerClient(string containerName);
+    Task<BlobClient> GetBlobClientAsync(string containerName, string blobName);
+    Task<BlobPageResult> GetBlobsAsync(
+        string containerName,
+        string? prefix = null,
+        int pageSize = 25,
+        string? continuationToken = null
+    );
 
-        Task<IList<BlobReference>> GetBlobReferencesAsync(
-            string containerName,
-            string? prefix = null,
-            int pageSize = 25,
-            string? continuationToken = null
-        );
+    Task<IList<BlobReference>> GetBlobReferencesAsync(
+        string containerName,
+        string? prefix = null,
+        int pageSize = 25,
+        string? continuationToken = null
+    );
+    
+    Task<BlobReference> GetBlobReferenceAsync(string containerName, string blobName);
 
-        Task<BlobReference> GetBlobReferenceAsync(string containerName, string blobName);
-
-        Task<BlobDownloadResult> DownloadBlobAsync(string containerName, string blobName);
-        Task UploadBlobAsync(string containerName, string blobName, Stream content);
-        Task DeleteBlobAsync(string containerName, string blobName);
-    }
+    Task<BlobDownloadResult> DownloadBlobAsync(string containerName, string blobName);
+    Task<MediaReference> UploadBlobAsync(string containerName, string blobName, Stream content);
+    Task DeleteBlobAsync(string containerName, string blobName);
+}

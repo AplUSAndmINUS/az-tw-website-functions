@@ -1,4 +1,5 @@
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Azure.Identity;
 using Azure;
 using Microsoft.Extensions.Logging;
@@ -11,8 +12,14 @@ public class BlobStorageService : IBlobStorageService
 {
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ILogger<BlobStorageService> _logger;
+    private readonly IImageService _imageConversionService;
+    private readonly IThumbnailService _thumbnailService;
 
-    public BlobStorageService(string storageAccountName, ILogger<BlobStorageService> logger)
+    public BlobStorageService(
+        string storageAccountName,
+        ILogger<BlobStorageService> logger,
+        ILogger<ImageConversionService> imageLogger,
+        ILogger<ThumbnailService> thumbnailLogger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -21,6 +28,9 @@ public class BlobStorageService : IBlobStorageService
         var endpoint = $"https://{storageAccountName}.blob.core.windows.net";
         _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential());
         _logger.LogInformation("Blob storage client created for {Endpoint}", endpoint);
+
+        _imageConversionService = new ImageConversionService(imageLogger);
+        _thumbnailService = new ThumbnailService(thumbnailLogger);
     }
 
     public async Task<BlobClient> GetBlobClientAsync(string containerName, string blobName)
@@ -145,7 +155,7 @@ public class BlobStorageService : IBlobStorageService
         }
     }
 
-    public async Task UploadBlobAsync(string containerName, string blobName, Stream content)
+    public async Task<MediaReference> UploadBlobAsync(string containerName, string blobName, Stream content)
     {
         var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
@@ -155,8 +165,47 @@ public class BlobStorageService : IBlobStorageService
         try
         {
             var blobClient = containerClient.GetBlobClient(blobName);
-            await blobClient.UploadAsync(content, overwrite: true);
+            if (content == null)
+            {
+                throw new ArgumentNullException(nameof(content), "Content stream cannot be null.");
+            }
+
+            // Convert and reformat the image to WebP format
+            var convertedParams = await _imageConversionService.ConvertToWebPAsync(content);
+            if (convertedParams == null || convertedParams.Content == null)
+            {
+                throw new InvalidOperationException("Converted content is null or empty.");
+            }
+            convertedParams.Content.Position = 0; // Reset stream position to the beginning before upload
+
+            // Create a thumnail from the converted content
+            var thumbnail = await _thumbnailService.GenerateWebPThumbnailAsync(convertedParams.Content);
+            if (thumbnail == null || thumbnail.Content == null)
+            {
+                throw new InvalidOperationException("Thumbnail content is null or empty.");
+            }
+            thumbnail.Content.Position = 0; // Reset stream position to the beginning before upload
+
+            // Upload the WebP image to the blob storage
+            _logger.LogInformation("Uploading main blob {BlobName} to container {ContainerName}", blobName, containerName);
+            await blobClient.UploadAsync(convertedParams.Content, overwrite: true);
+
+            // Upload the thumbnail image to the blob storage
+            var thumbnailBlobName = $"thumbnails/{Path.GetFileNameWithoutExtension(blobName)}.webp";
+            _logger.LogInformation("Uploading thumbnail blob {ThumbnailBlobName} to container {ContainerName}", thumbnailBlobName, containerName);
+            var thumbnailBlobClient = containerClient.GetBlobClient(thumbnailBlobName);
+            await thumbnailBlobClient.UploadAsync(
+                thumbnail.Content,
+                new BlobHttpHeaders { ContentType = "image/webp" });
+            _logger.LogInformation("Thumbnail blob {ThumbnailBlobName} uploaded successfully to container {ContainerName}", thumbnailBlobName, containerName);
+
             _logger.LogInformation("Blob {BlobName} uploaded successfully to container {ContainerName}", blobName, containerName);
+            return new MediaReference(
+                blobName,
+                thumbnailBlobName,
+                CdnUrlBuilder.ResolveCdnUrl(containerName, blobName),
+                CdnUrlBuilder.ResolveCdnUrl(containerName, thumbnailBlobName)
+            );
         }
         catch (RequestFailedException ex)
         {
