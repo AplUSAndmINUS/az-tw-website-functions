@@ -2,6 +2,13 @@ using Azure.Data.Tables;
 
 namespace SharedStorage.Services;
 
+public record TablePageResult(
+    IEnumerable<TableEntity> Entities,
+    string? ContinuationToken,
+    int TotalCount,
+    bool HasMore
+);
+
 public interface ITableStorageService
 {
     TableClient GetTableClient(string tableName);

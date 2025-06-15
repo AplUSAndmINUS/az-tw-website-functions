@@ -15,7 +15,6 @@ public class TableStorageService : ITableStorageService
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        // Validate storage account name
         _logger.LogInformation("Creating table client for {Table}", storageAccountName ?? "unknown");
 
         var endpoint = $"https://{storageAccountName}.table.core.windows.net";
@@ -45,7 +44,7 @@ public class TableStorageService : ITableStorageService
         }
     }
 
-    public async Task<(IEnumerable<TableEntity> Entities, string? ContinuationToken)> GetEntitiesAsync(
+    public async Task<TablePageResult>GetEntitiesAsync(
         string tableName,
         string? filter = null,
         int pageSize = 25,
@@ -61,10 +60,20 @@ public class TableStorageService : ITableStorageService
             await foreach (var page in client.QueryAsync<TableEntity>(filter).AsPages(continuationToken, pageSize))
             {
                 _logger.LogInformation("Successfully retrieved {Count} entities from table {TableName}", page.Values.Count, tableName);
-                return (page.Values, page.ContinuationToken);
+                return new TablePageResult(
+                    Entities: page.Values,
+                    ContinuationToken: page.ContinuationToken,
+                    TotalCount: page.Values.Count,
+                    HasMore: page.ContinuationToken != null
+                );
             }
 
-            return (Enumerable.Empty<TableEntity>(), null); // no data
+            return new TablePageResult(
+                Entities: Enumerable.Empty<TableEntity>(),
+                ContinuationToken: null,
+                TotalCount: 0,
+                HasMore: false
+            );
         }
         catch (RequestFailedException ex)
         {
