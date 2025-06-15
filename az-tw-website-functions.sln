@@ -6,12 +6,18 @@ Project("{{{REDACTED-GUID}}}") = "az-tw-website-functions", "az-tw-website-funct
 EndProject
 Project("{{{REDACTED-GUID}}}") = "SharedStorage", "SharedStorage\SharedStorage.csproj", "{{{REDACTED-GUID}}}"
 EndProject
+Project("{{{REDACTED-GUID}}}") = "Utils", "Utils\Utils.csproj", "{{{REDACTED-GUID}}}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{{{REDACTED-GUID}}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{{{REDACTED-GUID}}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{{{REDACTED-GUID}}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{{{REDACTED-GUID}}}.Release|Any CPU.Build.0 = Release|Any CPU
 		{{{REDACTED-GUID}}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{{{REDACTED-GUID}}}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{{{REDACTED-GUID}}}.Release|Any CPU.ActiveCfg = Release|Any CPU

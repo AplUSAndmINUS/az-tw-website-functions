@@ -1,24 +1,26 @@
 using Azure.Storage.Blobs;
 using Azure.Identity;
+using Microsoft.Extensions.Logging;
+using Microsoft.Identity.Client.Extensions.Msal;
 
+using Utils;
 namespace az_tw_website_functions.SharedStorage
 {
     public class BlobStorageService : IBlobStorageService
     {
         private readonly BlobServiceClient _blobServiceClient;
+        private readonly ILogger<BlobStorageService> _logger;
 
-        public BlobStorageService(string storageAccountName)
+        public BlobStorageService(string storageAccountName, ILogger<BlobStorageService> logger)
         {
-            if (string.IsNullOrEmpty(storageAccountName))
-            {
-                throw new ArgumentException("Storage account name cannot be null or empty.", nameof(storageAccountName));
-            }
-            if (storageAccountName.Length < 3 || storageAccountName.Length > 24)
-            {
-                throw new ArgumentException("Storage account name must be between 3 and 24 characters long.", nameof(storageAccountName));
-            }
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            StorageAccountValidator.ValidateStorageAccountName(storageAccountName);
+            _logger.LogInformation("Creating blob storage client for {StorageAccount}", storageAccountName ?? "unknown");
+
             var endpoint = $"https://{storageAccountName}.blob.core.windows.net";
             _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential());
+            _logger.LogInformation("Blob storage client created for {Endpoint}", endpoint);
         }
 
         public BlobContainerClient GetBlobContainerClient(string containerName)

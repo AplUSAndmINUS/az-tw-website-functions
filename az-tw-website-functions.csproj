@@ -16,9 +16,11 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="SharedStorage\SharedStorage.csproj" />
+    <ProjectReference Include="SharedStorage/SharedStorage.csproj" />
+    <ProjectReference Include="Utils/Utils.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="SharedStorage\**\*.cs" />
+    <Compile Remove="SharedStorage/**/*.cs" />
+    <Compile Remove="Utils/**/*.cs" />
   </ItemGroup>
 </Project>
