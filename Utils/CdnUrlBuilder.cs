@@ -19,12 +19,14 @@ public static class CdnUrlBuilder
   private const string ContainerMusic = "music";
   private const string ContainerVideo = "video";
 
-  public static string ResolveCdnEndpoint(string containerName, string blobName, string? paramsString = null)
+  public static string ResolveCdnUrl(string containerName, string blobName, string? paramsString = null)
   {
     if (string.IsNullOrWhiteSpace(containerName))
       throw new ArgumentException("Container name cannot be null or empty.", nameof(containerName));
     if (string.IsNullOrWhiteSpace(blobName))
       throw new ArgumentException("Blob name cannot be null or empty.", nameof(blobName));
+    if (IsMockStorage.IsMockBlobName(blobName))
+      throw new ArgumentException("Blob name cannot be a mock blob.", nameof(blobName));
 
     // Validate container name
     var validContainers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

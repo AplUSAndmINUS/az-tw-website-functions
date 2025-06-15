@@ -1,5 +1,4 @@
 using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
 
 namespace SharedStorage.Services;
 
@@ -26,18 +25,32 @@ public record BlobDownloadResult
     }
 }
 
-public interface IBlobStorageService
+public record BlobReference(string FileName, string CdnUrl, DateTimeOffset? LastModified = null, long? Size = null)
 {
-    BlobContainerClient GetBlobContainerClient(string containerName);
-    Task<BlobClient> GetBlobClientAsync(string containerName, string blobName);
-    Task<BlobPageResult> GetBlobsAsync(
-        string containerName,
-        string? prefix = null,
-        int pageSize = 25,
-        string? continuationToken = null
-    );
-
-    Task<BlobDownloadResult> DownloadBlobAsync(string containerName, string blobName);
-    Task UploadBlobAsync(string containerName, string blobName, Stream content);
-    Task DeleteBlobAsync(string containerName, string blobName);
+    public BlobReference(string fileName, string cdnUrl)
+        : this(fileName, cdnUrl, null, null) { }
 }
+public interface IBlobStorageService
+    {
+        BlobContainerClient GetBlobContainerClient(string containerName);
+        Task<BlobClient> GetBlobClientAsync(string containerName, string blobName);
+        Task<BlobPageResult> GetBlobsAsync(
+            string containerName,
+            string? prefix = null,
+            int pageSize = 25,
+            string? continuationToken = null
+        );
+
+        Task<IList<BlobReference>> GetBlobReferencesAsync(
+            string containerName,
+            string? prefix = null,
+            int pageSize = 25,
+            string? continuationToken = null
+        );
+
+        Task<BlobReference> GetBlobReferenceAsync(string containerName, string blobName);
+
+        Task<BlobDownloadResult> DownloadBlobAsync(string containerName, string blobName);
+        Task UploadBlobAsync(string containerName, string blobName, Stream content);
+        Task DeleteBlobAsync(string containerName, string blobName);
+    }

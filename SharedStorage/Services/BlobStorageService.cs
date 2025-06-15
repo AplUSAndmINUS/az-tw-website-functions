@@ -4,6 +4,7 @@ using Azure;
 using Microsoft.Extensions.Logging;
 using SharedStorage.Validators;
 using System.Reflection.Metadata;
+using Utils;
 
 namespace SharedStorage.Services;
 public class BlobStorageService : IBlobStorageService
@@ -48,6 +49,7 @@ public class BlobStorageService : IBlobStorageService
         }
     }
 
+    // Used for internal operations, not exposed in the interface
     public async Task<BlobPageResult> GetBlobsAsync(
         string containerName,
         string? prefix = null,
@@ -80,6 +82,44 @@ public class BlobStorageService : IBlobStorageService
         }
     }
 
+    // Used for Public CDN blob storage ONLY in Production
+    public async Task<IList<BlobReference>> GetBlobReferencesAsync(
+        string containerName,
+        string? prefix = null,
+        int pageSize = 25,
+        string? continuationToken = null)
+    {
+        await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
+        var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+        var blobReferences = new List<BlobReference>();
+
+        await foreach (var blob in containerClient.GetBlobsAsync(prefix: prefix))
+        {
+            var blobName = blob.Name;
+            var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(containerName, blobName);
+            blobReferences.Add(new BlobReference(blobName, cdnUrl));
+        }
+
+        return blobReferences;
+    }
+
+    public async Task<BlobReference> GetBlobReferenceAsync(string containerName, string blobName)
+{
+        await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
+
+        var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+        var blobClient = containerClient.GetBlobClient(blobName);
+
+        var exists = await blobClient.ExistsAsync();
+        if (!exists)
+        {
+            throw new ArgumentException($"Blob '{blobName}' does not exist in container '{containerName}'.", nameof(blobName));
+        }
+
+        var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(containerName, blobName);
+        return new BlobReference(blobName, cdnUrl);
+    }
+
     public async Task<BlobDownloadResult> DownloadBlobAsync(string containerName, string blobName)
     {
         var blobClient = await GetBlobClientAsync(containerName, blobName);
@@ -109,12 +149,11 @@ public class BlobStorageService : IBlobStorageService
     {
         var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
-
+        await containerClient.CreateIfNotExistsAsync();
         _logger.LogInformation("Uploading blob {BlobName} to container {ContainerName}", blobName, containerName);
 
         try
         {
-            await containerClient.CreateIfNotExistsAsync();
             var blobClient = containerClient.GetBlobClient(blobName);
             await blobClient.UploadAsync(content, overwrite: true);
             _logger.LogInformation("Blob {BlobName} uploaded successfully to container {ContainerName}", blobName, containerName);
