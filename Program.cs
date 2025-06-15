@@ -16,13 +16,16 @@ var storageAccountName = configuration["StorageAccountName"];
 // Register storage services
 builder.Services.AddSingleton<IBlobStorageService>(sp =>
 {
+    var storageAccountName = configuration["StorageAccountName"];
     var logger = sp.GetRequiredService<ILogger<BlobStorageService>>();
+    var imageConversionService = sp.GetRequiredService<IImageService>();
+    var thumbnailService = sp.GetRequiredService<IThumbnailService>();
 
     try
     {
         logger.LogInformation("Creating blob storage client for {StorageAccount}", storageAccountName ?? "unknown");
 
-        return new BlobStorageService(storageAccountName!, logger);
+        return new BlobStorageService(storageAccountName!, logger, imageConversionService, thumbnailService);
     }
     catch (Exception ex)
     {
@@ -31,6 +34,7 @@ builder.Services.AddSingleton<IBlobStorageService>(sp =>
     }
 });
 
+// Register table storage service
 builder.Services.AddSingleton<ITableStorageService>(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<TableStorageService>>();
@@ -51,10 +55,7 @@ builder.Services.AddSingleton<ITableStorageService>(sp =>
 // Register custom logger
 builder.Services.AddSingleton<AppInsightsLogger>();
 
-// Register image and thumbnail services
-builder.Services.AddSingleton<IImageService, ImageConversionService>();
-builder.Services.AddSingleton<IThumbnailService, ThumbnailService>();
-
+// Configure Functions application
 builder.ConfigureFunctionsWebApplication();
 
 builder.Services
