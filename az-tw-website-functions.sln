@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "az-tw-website-functions", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedStorage", "SharedStorage\SharedStorage.csproj", "{DF23F9E0-4026-4E28-BAA9-74EE104CA28E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils", "Utils\Utils.csproj", "{A9CBDC67-C768-45A8-BC4F-9C5411148918}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +22,10 @@ Global
 		{DF23F9E0-4026-4E28-BAA9-74EE104CA28E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF23F9E0-4026-4E28-BAA9-74EE104CA28E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DF23F9E0-4026-4E28-BAA9-74EE104CA28E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A9CBDC67-C768-45A8-BC4F-9C5411148918}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A9CBDC67-C768-45A8-BC4F-9C5411148918}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A9CBDC67-C768-45A8-BC4F-9C5411148918}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A9CBDC67-C768-45A8-BC4F-9C5411148918}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
