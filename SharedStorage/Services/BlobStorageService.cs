@@ -18,8 +18,8 @@ public class BlobStorageService : IBlobStorageService
     public BlobStorageService(
         string storageAccountName,
         ILogger<BlobStorageService> logger,
-        ILogger<ImageConversionService> imageLogger,
-        ILogger<ThumbnailService> thumbnailLogger)
+        IImageService imageConversionService,
+        IThumbnailService thumbnailService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -29,8 +29,8 @@ public class BlobStorageService : IBlobStorageService
         _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential());
         _logger.LogInformation("Blob storage client created for {Endpoint}", endpoint);
 
-        _imageConversionService = new ImageConversionService(imageLogger);
-        _thumbnailService = new ThumbnailService(thumbnailLogger);
+        _imageConversionService = imageConversionService ?? throw new ArgumentNullException(nameof(imageConversionService));
+        _thumbnailService = thumbnailService ?? throw new ArgumentNullException(nameof(thumbnailService));
     }
 
     public async Task<BlobClient> GetBlobClientAsync(string containerName, string blobName)
