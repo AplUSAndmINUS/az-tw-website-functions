@@ -8,6 +8,9 @@ public static class CdnUrlBuilder
   private const string CdnEndpointMusic = "https://music.terencewaters.com";
   private const string CdnEndpointVideos = "https://videos.terencewaters.com";
 
+  // Mock Azure storage URL which point directly to Azure Blob Storage
+  private const string MockCdnBlobStorageUrl = "https://aztwwebsitestorage.blob.core.windows.net";
+
   // Blob container names
   private const string ContainerDocuments = "documents";
   private const string ContainerArtworkImages = "artwork-images";
@@ -21,6 +24,9 @@ public static class CdnUrlBuilder
 
   public static string ResolveCdnUrl(string containerName, string blobName, string? paramsString = null)
   {
+    if (containerName.Contains("mock"))
+      return $"{MockCdnBlobStorageUrl}/{containerName}/{blobName}";
+
     if (string.IsNullOrWhiteSpace(containerName))
       throw new ArgumentException("Container name cannot be null or empty.", nameof(containerName));
     if (string.IsNullOrWhiteSpace(blobName))
