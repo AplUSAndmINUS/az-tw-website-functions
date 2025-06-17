@@ -16,7 +16,6 @@
   <ItemGroup>
     <ProjectReference Include="SharedStorage/SharedStorage.csproj" />
     <ProjectReference Include="Utils/Utils.csproj" />
-    <ProjectReference Include="src/BlogPosts/BlogPosts/BlogPosts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="SharedStorage/**/*.cs" />
