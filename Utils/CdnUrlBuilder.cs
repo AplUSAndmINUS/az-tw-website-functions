@@ -1,5 +1,7 @@
 namespace Utils;
 
+using Utils.Constants;
+
 public static class CdnUrlBuilder
 {
   // CDN endpoints for content types
@@ -7,71 +9,44 @@ public static class CdnUrlBuilder
   private const string CdnEndpointImages = "https://images.terencewaters.com";
   private const string CdnEndpointMusic = "https://music.terencewaters.com";
   private const string CdnEndpointVideos = "https://videos.terencewaters.com";
+  private const string CdnEndpointMedia = "https://media.terencewaters.com";
 
   // Mock Azure storage URL which point directly to Azure Blob Storage
   private const string MockCdnBlobStorageUrl = "https://aztwwebsitestorage.blob.core.windows.net";
+  private const string MockCdnTableStorageUrl = "https://aztwwebsitestorage.table.core.windows.net";
 
-  // Blob container names
-  private const string ContainerDocuments = "documents";
-  private const string ContainerArtworkImages = "artwork-images";
-  private const string ContainerBlogImages = "blog-images";
-  private const string ContainerBooksImages = "books-images";
-  private const string ContainerPortfolioImages = "portfolio-images";
-  private const string ContainerLivestreamImages = "livestream-images";
-  private const string ContainerLivestreamVideo = "livestream-video";
-  private const string ContainerMusic = "music";
-  private const string ContainerVideo = "video";
-
-  public static string ResolveCdnUrl(string containerName, string blobName, string? paramsString = null)
+  public static string ResolveCdnUrl(ContentSections section, AssetType? assetType, string blobName, string? paramsString = null, bool isMockStorage = false)
   {
-    if (containerName.Contains("mock"))
-      return $"{MockCdnBlobStorageUrl}/{containerName}/{blobName}";
-
-    if (string.IsNullOrWhiteSpace(containerName))
-      throw new ArgumentException("Container name cannot be null or empty.", nameof(containerName));
     if (string.IsNullOrWhiteSpace(blobName))
       throw new ArgumentException("Blob name cannot be null or empty.", nameof(blobName));
-    if (IsMockStorage.IsMockBlobName(blobName))
+    if (blobName.Contains("mock"))
       throw new ArgumentException("Blob name cannot be a mock blob.", nameof(blobName));
 
-    // Validate container name
-    var validContainers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-      ContainerDocuments,
-      ContainerArtworkImages,
-      ContainerBlogImages,
-      ContainerBooksImages,
-      ContainerPortfolioImages,
-      ContainerLivestreamImages,
-      ContainerLivestreamVideo,
-      ContainerMusic,
-      ContainerVideo
-    };
+    if (isMockStorage)
+      return $"{MockCdnBlobStorageUrl}/{ContentNameResolver.GetBlobContainerName(section, assetType, true)}/{blobName}";
 
-    if (!validContainers.Contains(containerName, StringComparer.OrdinalIgnoreCase))
-      throw new ArgumentException($"Unknown container name: {containerName}", nameof(containerName));
+    string containerName = ContentNameResolver.GetBlobContainerName(section, assetType);
 
     // Build the CDN URL
-    var cdnUrl = BuildCdnUrl(containerName, blobName);
+    var cdnUrl = BuildCdnUrl(section, assetType, containerName, blobName);
 
     // Append query parameters if provided
     if (!string.IsNullOrWhiteSpace(paramsString))
-    {
-      cdnUrl += $"?{paramsString}";
-    }
+      cdnUrl += $"?{paramsString.TrimStart('?')}";
 
     return cdnUrl;
   }
 
-  private static string BuildCdnUrl(string containerName, string blobName)
+  private static string BuildCdnUrl(ContentSections section, AssetType? assetType, string containerName, string blobName)
   {
-    return containerName.ToLowerInvariant() switch
+    return (section, assetType) switch
     {
-      ContainerDocuments => $"{CdnEndpointDocuments}/{containerName}/{blobName}",
-      ContainerArtworkImages or ContainerBlogImages or ContainerBooksImages or ContainerPortfolioImages or ContainerLivestreamImages => $"{CdnEndpointImages}/{containerName}/{blobName}",
-      ContainerLivestreamVideo or ContainerVideo => $"{CdnEndpointVideos}/{containerName}/{blobName}",
-      ContainerMusic => $"{CdnEndpointMusic}/{containerName}/{blobName}",
-      _ => throw new ArgumentException($"Unknown container name: {containerName}", nameof(containerName)),
+      (ContentSections.Documents, _) => $"{CdnEndpointDocuments}/{containerName}/{blobName}",
+      (_, AssetType.Images) => $"{CdnEndpointImages}/{containerName}/{blobName}",
+      (_, AssetType.Video) => $"{CdnEndpointVideos}/{containerName}/{blobName}",
+      (_, AssetType.Media) => $"{CdnEndpointMedia}/{containerName}/{blobName}",
+      (ContentSections.Music, _) => $"{CdnEndpointMusic}/{containerName}/{blobName}",
+      _ => throw new ArgumentException($"No CDN endpoint configured for section {section} with asset type {assetType}", nameof(section))
     };
   }
 }

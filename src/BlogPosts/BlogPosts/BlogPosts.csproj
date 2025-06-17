@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.15.1" OutputItemType="Analyzer" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.15.1" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.16.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../SharedStorage/SharedStorage.csproj" />
