@@ -27,7 +27,7 @@ public class AuthorModelMapper
     if (string.IsNullOrWhiteSpace(value))
       return null;
 
-    return value.Length <= maxLength ? value : value.Substring(0, maxLength);
+    return value!.Length <= maxLength ? value : value[..maxLength];
   }
   public static AuthorModel Map(AuthorEntity author, AuthorImagesMetadataEntity? image)
   {
@@ -44,13 +44,13 @@ public class AuthorModelMapper
       LastName = Required(SafeTrim(author.LastName), nameof(author.LastName)),
       Email = Required(SafeTrim(author.Email), nameof(author.Email)),
       Username = Required(SafeTrim(author.Username), nameof(author.Username)),
-      DisplayName = SafeTrim(author?.DisplayName) ?? author.Username!, // Fallback to username if display name is empty
-      Location = SafeTrim(author?.Location),
-      Bio = SafeTrim(author?.Bio),
-      Website = NormalizeUrl(author?.Website),
-      TwitterHandle = SafeTrim(author?.TwitterHandle),
-      InstagramHandle = SafeTrim(author?.InstagramHandle),
-      LinkedInHandle = SafeTrim(author?.LinkedInHandle),
+      DisplayName = SafeTrim(author.DisplayName) ?? author.Username, // Fallback to username if display name is empty
+      Location = SafeTrim(author.Location),
+      Bio = SafeTrim(author.Bio),
+      Website = NormalizeUrl(author.Website),
+      TwitterHandle = SafeTrim(author.TwitterHandle),
+      InstagramHandle = SafeTrim(author.InstagramHandle),
+      LinkedInHandle = SafeTrim(author.LinkedInHandle),
 
       ProfileImageUrl = image?.CdnUrl,
       ThumbnailUrl = image?.ThumbnailCdnUrl,
