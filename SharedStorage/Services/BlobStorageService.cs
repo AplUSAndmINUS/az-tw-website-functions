@@ -6,8 +6,10 @@ using Microsoft.Extensions.Logging;
 using SharedStorage.Validators;
 using System.Reflection.Metadata;
 using Utils;
+using Utils.Constants;
 
 namespace SharedStorage.Services;
+
 public class BlobStorageService : IBlobStorageService
 {
     private readonly BlobServiceClient _blobServiceClient;
@@ -106,7 +108,8 @@ public class BlobStorageService : IBlobStorageService
         await foreach (var blob in containerClient.GetBlobsAsync(prefix: prefix))
         {
             var blobName = blob.Name;
-            var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(containerName, blobName);
+            var (section, assetType) = ParseContainerName(containerName);
+            var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName);
             blobReferences.Add(new BlobReference(blobName, cdnUrl));
         }
 
@@ -114,7 +117,7 @@ public class BlobStorageService : IBlobStorageService
     }
 
     public async Task<BlobReference> GetBlobReferenceAsync(string containerName, string blobName)
-{
+    {
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
 
         var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
@@ -126,7 +129,8 @@ public class BlobStorageService : IBlobStorageService
             throw new ArgumentException($"Blob '{blobName}' does not exist in container '{containerName}'.", nameof(blobName));
         }
 
-        var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(containerName, blobName);
+        var (section, assetType) = ParseContainerName(containerName);
+        var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName);
         return new BlobReference(blobName, cdnUrl);
     }
 
@@ -200,11 +204,18 @@ public class BlobStorageService : IBlobStorageService
             _logger.LogInformation("Thumbnail blob {ThumbnailBlobName} uploaded successfully to container {ContainerName}", thumbnailBlobName, containerName);
 
             _logger.LogInformation("Blob {BlobName} uploaded successfully to container {ContainerName}", blobName, containerName);
+            var (section, assetType) = ParseContainerName(containerName);
+
+            // For upload operations, use direct Azure Blob URLs
+            var mainBlobUrl = blobClient.Uri.ToString();
+            var thumbnailBlobUrl = thumbnailBlobClient.Uri.ToString();
+
+            // Return Media Reference with direct URLs
             return new MediaReference(
                 blobName,
                 thumbnailBlobName,
-                CdnUrlBuilder.ResolveCdnUrl(containerName, blobName),
-                CdnUrlBuilder.ResolveCdnUrl(containerName, thumbnailBlobName)
+                mainBlobUrl,
+                thumbnailBlobUrl
             );
         }
         catch (RequestFailedException ex)
@@ -240,5 +251,62 @@ public class BlobStorageService : IBlobStorageService
     public BlobContainerClient GetBlobContainerClient(string containerName)
     {
         return _blobServiceClient.GetBlobContainerClient(containerName);
+    }
+
+    private (ContentSections section, AssetType? assetType) ParseContainerName(string containerName)
+    {
+        // Special handling for hyphenated container names
+        string[] parts = containerName.Split('-');
+
+        // Try to match container name directly from ContentNameResolver first to ensure exact matching
+        foreach (ContentSections contentSection in Enum.GetValues(typeof(ContentSections)))
+        {
+            // Try non-hyphenated first (exact section match)
+            string sectionName = contentSection.ToString().ToLowerInvariant();
+            if (string.Equals(containerName, sectionName, StringComparison.OrdinalIgnoreCase))
+            {
+                return (contentSection, null);
+            }
+
+            // Try with asset types
+            foreach (AssetType type in Enum.GetValues(typeof(AssetType)))
+            {
+                string expectedName = ContentNameResolver.GetBlobContainerName(contentSection, type);
+                if (string.Equals(containerName, expectedName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return (contentSection, type);
+                }
+            }
+        }
+
+        // Handle potential hyphenated names by checking the first part
+        if (parts.Length > 1)
+        {
+            foreach (ContentSections contentSection in Enum.GetValues(typeof(ContentSections)))
+            {
+                if (string.Equals(parts[0], contentSection.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    // Determine asset type from the second part
+                    string assetPart = parts[1].ToLowerInvariant();
+
+                    switch (assetPart)
+                    {
+                        case "images":
+                            return (contentSection, AssetType.Images);
+                        case "video":
+                            return (contentSection, AssetType.Video);
+                        case "media":
+                            return (contentSection, AssetType.Media);
+                        case "data":
+                            return (contentSection, AssetType.Data);
+                        default:
+                            return (contentSection, null);
+                    }
+                }
+            }
+        }
+
+        // If we still can't determine, throw an exception
+        throw new ArgumentException($"Unable to determine content section for container: {containerName}", nameof(containerName));
     }
 }
