@@ -31,4 +31,43 @@ public class AuthorEntity : ITableEntity
   {
     DisplayName = $"{FirstName} {LastName}".Trim();
   }
+
+  public static string Required(string? value, string fieldName)
+  {
+    if (string.IsNullOrWhiteSpace(value))
+      throw new ArgumentException($"Field '{fieldName}' is required.");
+    return value;
+  }
+
+  public static string? SafeTrim(string? value, int maxLength = 100)
+  {
+    if (string.IsNullOrWhiteSpace(value))
+      return null;
+
+    return value!.Length <= maxLength ? value : value[..maxLength];
+  }
+
+  public static AuthorEntity FromModel(AuthorModel model, string partitionKey, string rowKey)
+  {
+    return new AuthorEntity
+    {
+      PartitionKey = partitionKey,
+      RowKey = rowKey,
+      FirstName = Required(SafeTrim(model.FirstName), nameof(model.FirstName)),
+      LastName = Required(SafeTrim(model.LastName), nameof(model.LastName)),
+      Email = Required(SafeTrim(model.Email), nameof(model.Email)),
+      Username = Required(SafeTrim(model.Username), nameof(model.Username)),
+      DisplayName = string.IsNullOrWhiteSpace(model.DisplayName)
+            ? model.Username
+            : model.DisplayName,
+      Location = SafeTrim(model.Location),
+      Bio = SafeTrim(model.Bio),
+      Website = SafeTrim(model.Website),
+      TwitterHandle = SafeTrim(model.TwitterHandle),
+      InstagramHandle = SafeTrim(model.InstagramHandle),
+      LinkedInHandle = SafeTrim(model.LinkedInHandle),
+      ProfileImageFileName = SafeTrim(model.ProfileImageUrl),
+      ProfileImageBlobContainer = null // you can assign if it's known
+    };
+  }
 }
