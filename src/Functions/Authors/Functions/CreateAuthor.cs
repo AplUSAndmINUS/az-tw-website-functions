@@ -5,17 +5,17 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
-using az_tw_website_functions.SharedStorage.Services.TableStorageService;
+using SharedStorage.Services;
 using SixLabors.ImageSharp.Metadata;
 using System.Drawing;
 
 namespace az_tw_website_functions.src.Functions.Authors.Functions;
 
-public class CreateAuthor(ITableStorageService<AuthorEntity> tableStorageService)
+public class CreateAuthor
 {
-  private readonly ITableStorageService<AuthorEntity> _tableStorageService;
+  private readonly ITableStorageService _tableStorageService;
 
-  public CreateAuthor(ITableStorageService<AuthorEntity> tableStorageService)
+  public CreateAuthor(ITableStorageService tableStorageService)
   {
     _tableStorageService = tableStorageService;
   }
