@@ -45,6 +45,14 @@ jobs:
     - name: 'Build the Function App'
       run: dotnet build --configuration Release --output ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
 
+    - name: Generate robots.txt for mock environments
+      if: contains(env.USE_MOCK_STORAGE, 'true')
+      run: |
+        # Create a robots.txt file to disallow all web crawlers
+        echo "Generating robots.txt for mock environment"
+        echo -e "User-agent: *\nDisallow: /" > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/robots.txt
+    
+
     - name: 'Run Azure Functions Action'
       uses: Azure/functions-action@v1
       id: fa
