@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights.WorkerService;
 using SharedStorage.Services;
 using Utils;
+using Utils.Validation;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
@@ -22,6 +23,15 @@ var host = new HostBuilder()
             var thumbnailService = sp.GetRequiredService<IThumbnailService>();
 
             return new BlobStorageService(storageAccountName!, logger, imageConversionService, thumbnailService);
+        });
+
+        services.AddSingleton<IAPIKeyValidator>(sp =>
+        {
+            var validApiKey = configuration["X_API_ENVIRONMENT_KEY"];
+            if (string.IsNullOrWhiteSpace(validApiKey))
+                throw new InvalidOperationException("Missing X_API_ENVIRONMENT_KEY in configuration.");
+
+            return new ApiKeyValidator(validApiKey);
         });
 
         services.AddSingleton<ITableStorageService>(sp =>
