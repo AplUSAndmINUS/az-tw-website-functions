@@ -17,7 +17,6 @@
   <ItemGroup>
     <ProjectReference Include="../../SharedStorage/SharedStorage.csproj" />
     <ProjectReference Include="../../Utils/Utils.csproj" />
-    <ProjectReference Include="../../Utils/PostmanGenerator/PostmanGenerator.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../../Program.cs" />
