@@ -4,7 +4,6 @@ using Azure.Identity;
 using Azure;
 using Microsoft.Extensions.Logging;
 using SharedStorage.Validators;
-using System.Reflection.Metadata;
 using Utils;
 using Utils.Constants;
 

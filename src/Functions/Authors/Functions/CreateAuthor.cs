@@ -4,11 +4,10 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
-using System.Threading.Tasks;
+
 using SharedStorage.Services;
-using SixLabors.ImageSharp.Metadata;
-using System.Drawing;
 using Utils;
+using Utils.Constants;
 
 namespace az_tw_website_functions.src.Functions.Authors.Functions;
 
@@ -55,7 +54,7 @@ public class CreateAuthor
       var entity = AuthorEntity.FromModel(input, partitionKey, rowKey);
 
       // 4. Persist to Table Storage
-      await _tableStorageService.UpsertEntityAsync(entity);
+      await _tableStorageService.UpsertEntityAsync(tableName, entity);
 
       // 5. Map the clean, persisted entity into the DTO (image metadata blank for now)
       var dto = AuthorModelMapper.Map(entity, null);
