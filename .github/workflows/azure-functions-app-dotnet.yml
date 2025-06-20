@@ -8,7 +8,7 @@ env:
   AZURE_FUNCTIONAPP_NAME: az-tw-website-${{ github.ref_name == 'master' && 'production' || github.ref_name }}
   AZURE_FUNCTIONAPP_PACKAGE_PATH: './output'
   X_API_ENVIRONMENT_KEY: ${{ secrets.X_API_ENVIRONMENT_KEY }}
-  USE_MOCK_STORAGE: ${{ secrets.USE_MOCK_STORAGE }}
+  USE_MOCK_STORAGE: ${{ vars.USE_MOCK_STORAGE }}
   DOTNET_VERSION: '8.0.x'                   
 
 jobs:
@@ -30,12 +30,14 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }} # set up AZURE_RBAC_CREDENTIALS secrets in your repository
 
     - name: 'Inject Function App Settings'
+      env:
+        USE_MOCK_STORAGE: ${{ env.USE_MOCK_STORAGE != '' && env.USE_MOCK_STORAGE || 'false' }}
       run: |
         az functionapp config appsettings set \
           --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
           --resource-group az-tw-website-functions \
           --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
-                      USE_MOCK_STORAGE="${{ env.USE_MOCK_STORAGE }}"
+                      USE_MOCK_STORAGE="${USE_MOCK_STORAGE}"
 
     - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
       uses: actions/setup-dotnet@v4
@@ -43,14 +45,15 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: 'Build the Function App'
-      run: dotnet build --configuration Release --output ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        run: dotnet publish --configuration Release --output ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
 
     - name: Generate robots.txt for mock environments
-      if: contains(${{ env.USE_MOCK_STORAGE }}, 'true')
-      run: |
+      if: env.USE_MOCK_STORAGE == 'true'
+      run: | 
         # Create a robots.txt file to disallow all web crawlers
         echo "Generating robots.txt for mock environment"
         echo -e "User-agent: *\nDisallow: /" > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/robots.txt
+
 
     - name: 'Run Azure Functions Action'
       uses: Azure/functions-action@v1
