@@ -51,9 +51,6 @@ jobs:
         # Create a robots.txt file to disallow all web crawlers
         echo "Generating robots.txt for mock environment"
         echo -e "User-agent: *\nDisallow: /" > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/robots.txt
-    
-    - name: Generate Postman Collection
-      run: dotnet run --project ./Utils/PostmanGenerator/PostmanGenerator.csproj ${{ github.ref_name }}
 
     - name: 'Run Azure Functions Action'
       uses: Azure/functions-action@v1
