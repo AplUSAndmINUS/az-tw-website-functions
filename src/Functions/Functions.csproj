@@ -22,12 +22,15 @@
     <Compile Include="../../Program.cs" />
   </ItemGroup>
   <ItemGroup>
-  <None Update="host.json">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </None>
-</ItemGroup>
+    <None Include="host.json">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
   <Target Name="CopyConfigFiles" AfterTargets="Build">
     <Copy SourceFiles="host.json" DestinationFolder="$(OutDir)" />
     <Copy SourceFiles="local.settings.json" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyConfigFiles" AfterTargets="Publish">
+    <Copy SourceFiles="host.json" DestinationFolder="$(PublishDir)" />
   </Target>
 </Project>
