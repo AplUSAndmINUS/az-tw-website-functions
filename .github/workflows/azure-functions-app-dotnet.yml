@@ -46,7 +46,7 @@ jobs:
       run: dotnet build --configuration Release --output ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
 
     - name: Generate robots.txt for mock environments
-      if: contains(env.USE_MOCK_STORAGE, 'true')
+      if: contains(${{ env.USE_MOCK_STORAGE }}, 'true')
       run: |
         # Create a robots.txt file to disallow all web crawlers
         echo "Generating robots.txt for mock environment"
