@@ -3,6 +3,7 @@ using Utils;
 using Utils.Validation;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace az_tw_website_functions.Functions
 {
