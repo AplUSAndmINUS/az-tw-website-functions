@@ -2,34 +2,47 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
-    <OutputType>Exe</OutputType>
+    <!-- this tells MSBuild to import the Worker SDK targets -->
     <UseWorkerSdk>true</UseWorkerSdk>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>az_tw_website_functions</RootNamespace>
   </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.17.0" OutputItemType="Analyzer" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.1.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.17.0" />
-    <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.23.0" />
+    <!-- Core Worker SDK -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk"
+                      Version="1.*"
+                      OutputItemType="Analyzer" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker"
+                      Version="1.*" />
+
+    <!-- Bindings you use -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http"
+                      Version="3.*" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Blobs"
+                      Version="5.*" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Tables"
+                      Version="1.4.3" />
+
+    <!-- App Insights for isolated worker -->
+    <PackageReference Include="Microsoft.ApplicationInsights.WorkerService"
+                      Version="2.*" />
+
+    <!-- Add this line: brings in IServiceCollection.AddSingleton, etc. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection"
+                    Version="8.*" />
   </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="../../SharedStorage/SharedStorage.csproj" />
-    <ProjectReference Include="../../Utils/Utils.csproj" />
+    <!-- Your shared‑lib projects -->
+    <ProjectReference Include="..\..\SharedStorage\SharedStorage.csproj" />
+    <ProjectReference Include="..\..\Utils\Utils.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="../../Program.cs" />
-  </ItemGroup>
+
+  <!-- Ensure host.json goes to publish -->
   <ItemGroup>
     <None Include="host.json">
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
   </ItemGroup>
-  <Target Name="CopyConfigFiles" AfterTargets="Build">
-    <Copy SourceFiles="host.json" DestinationFolder="$(OutDir)" />
-  </Target>
-  <Target Name="CopyConfigFiles" AfterTargets="Publish">
-    <Copy SourceFiles="host.json" DestinationFolder="$(PublishDir)" />
-  </Target>
 </Project>
