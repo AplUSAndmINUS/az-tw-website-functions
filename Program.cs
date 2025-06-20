@@ -46,6 +46,6 @@ var host = new HostBuilder()
     })
     .Build();
 
-Console.WriteLine("BlogPosts function app is starting...");
+Console.WriteLine("az_tw_website_functions function app is starting...");
 
 host.Run();
