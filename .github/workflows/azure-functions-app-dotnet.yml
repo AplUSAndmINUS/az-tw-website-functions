@@ -31,13 +31,14 @@ jobs:
 
     - name: 'Inject Function App Settings'
       env:
-        USE_MOCK_STORAGE: ${{ env.USE_MOCK_STORAGE != '' && env.USE_MOCK_STORAGE || 'false' }}
+        USE_MOCK_STORAGE: "${{ env.USE_MOCK_STORAGE != '' && env.USE_MOCK_STORAGE || 'false' }}"
       run: |
         az functionapp config appsettings set \
           --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
           --resource-group az-tw-website-functions \
           --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
-                      USE_MOCK_STORAGE="${USE_MOCK_STORAGE}"
+                      USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
+                      FUNCTIONS_WORKER_RUNTIME=dotnet-isolated \
 
     - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
       uses: actions/setup-dotnet@v4
@@ -54,7 +55,17 @@ jobs:
         echo "Generating robots.txt for mock environment"
         echo -e "User-agent: *\nDisallow: /" > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/robots.txt
 
+    - name: List output package contents
+      run: |
+        echo "Showing contents of output folder..."
+        find ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
 
+    - name: Inspect zip structure
+      run: |
+        cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        zip -r ../deploy-package.zip .
+        unzip -l ../deploy-package.zip
+ 
     - name: 'Run Azure Functions Action'
       uses: Azure/functions-action@v1
       id: fa
