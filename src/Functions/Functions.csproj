@@ -28,7 +28,6 @@
   </ItemGroup>
   <Target Name="CopyConfigFiles" AfterTargets="Build">
     <Copy SourceFiles="host.json" DestinationFolder="$(OutDir)" />
-    <Copy SourceFiles="local.settings.json" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
   <Target Name="CopyConfigFiles" AfterTargets="Publish">
     <Copy SourceFiles="host.json" DestinationFolder="$(PublishDir)" />
