@@ -2,6 +2,8 @@ using System.Text.Json;
 
 namespace Utils.PostmanGenerator;
 
+// this file is not used in the project
+// it is a utility to generate Postman collections for the API
 public class Generator
 {
   public static void Main(string[] args)

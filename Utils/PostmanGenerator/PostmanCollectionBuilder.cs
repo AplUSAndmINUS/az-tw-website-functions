@@ -2,6 +2,10 @@ using Utils.Constants;
 
 namespace Utils.PostmanGenerator;
 
+// This class builds a Postman collection for the Azure TW Functions API
+// It requires an environment variable "X_API_ENVIRONMENT_KEY" to be set for the API
+// The environment can be "develop", "test", or "production"
+// It generates a collection with a single request for the various functions in the API
 public class PostmanCollectionBuilder
 {
   public static object Build(string env)
