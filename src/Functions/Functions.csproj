@@ -21,6 +21,11 @@
   <ItemGroup>
     <Compile Include="../../Program.cs" />
   </ItemGroup>
+  <ItemGroup>
+  <None Update="host.json">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </None>
+</ItemGroup>
   <Target Name="CopyConfigFiles" AfterTargets="Build">
     <Copy SourceFiles="host.json" DestinationFolder="$(OutDir)" />
     <Copy SourceFiles="local.settings.json" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
