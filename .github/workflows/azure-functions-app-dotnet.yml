@@ -39,7 +39,8 @@ jobs:
           --resource-group az-tw-website-functions \
           --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
                       USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
-                      FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
+                      FUNCTIONS_WORKER_RUNTIME=dotnet-isolated \
+                      STORAGE_ACCOUNT_NAME="${{ env.STORAGE_ACCOUNT_NAME }}" \
 
     - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
       uses: actions/setup-dotnet@v4
