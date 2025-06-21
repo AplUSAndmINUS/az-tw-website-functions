@@ -42,14 +42,14 @@
                     //     return new TableStorageService(storageAccountName!, logger);
                     // });
 
-//                     services.AddSingleton<IAPIKeyValidator>(sp =>
-//                     {
-//                         var validApiKey = configuration["X_API_ENVIRONMENT_KEY"];
-//                         if (string.IsNullOrWhiteSpace(validApiKey))
-//                             throw new InvalidOperationException("Missing X_API_ENVIRONMENT_KEY in configuration.");
+                    // services.AddSingleton<IAPIKeyValidator>(sp =>
+                    // {
+                    //     var validApiKey = configuration["X_API_ENVIRONMENT_KEY"];
+                    //     if (string.IsNullOrWhiteSpace(validApiKey))
+                    //         throw new InvalidOperationException("Missing X_API_ENVIRONMENT_KEY in configuration.");
 
-//                         return new ApiKeyValidator(validApiKey);
-//                     });
+                    //     return new ApiKeyValidator(validApiKey);
+                    // });
 
 //                     services.AddSingleton<AppInsightsLogger>();
 
@@ -110,6 +110,17 @@ public class Program
                 {
                     var logger = sp.GetRequiredService<ILogger<TableStorageService>>();
                     return new TableStorageService(storageAccountName!, logger);
+                });
+
+                // Register APIKeyValidator
+                services.AddSingleton<IAPIKeyValidator>(sp =>
+                {
+                    var validApiKey = configuration["X_API_ENVIRONMENT_KEY"]
+                        ?? Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY");
+                    if (string.IsNullOrWhiteSpace(validApiKey))
+                        throw new InvalidOperationException("Missing X_API_ENVIRONMENT_KEY in configuration.");
+
+                    return new ApiKeyValidator(validApiKey);
                 });
             })
             .ConfigureFunctionsWorkerDefaults()
