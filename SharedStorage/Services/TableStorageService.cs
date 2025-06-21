@@ -10,17 +10,17 @@ namespace SharedStorage.Services;
 public class TableStorageService : ITableStorageService
 {
     private readonly TableServiceClient _tableServiceClient;
-    private readonly AppInsightsLogger<TableStorageService> _logger;
+    private readonly IAppInsightsLogger<TableStorageService> _appLogger;
 
-    public TableStorageService(string storageAccountName, AppInsightsLogger<TableStorageService> logger)
+    public TableStorageService(string storageAccountName, IAppInsightsLogger<TableStorageService> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _appLogger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        _logger.LogInformation("Creating table client for {Table}", storageAccountName ?? "unknown");
+        _appLogger.LogInformation("Creating table client for {Table}", storageAccountName ?? "unknown");
 
         var endpoint = $"https://{storageAccountName}.table.core.windows.net";
         _tableServiceClient = new TableServiceClient(new Uri(endpoint), new DefaultAzureCredential());
-        _logger.LogInformation("Table client created for {Endpoint}", endpoint);
+        _appLogger.LogInformation("Table client created for {Endpoint}", endpoint);
     }
 
     public async Task<TableEntity?> GetEntityAsync(string tableName, string partitionKey, string rowKey)
@@ -30,22 +30,35 @@ public class TableStorageService : ITableStorageService
         // Validate table name
         TableNameValidator.ValidateTableName(tableName);
 
+        if (string.IsNullOrWhiteSpace(partitionKey))
+        {
+            throw new ArgumentNullException(nameof(partitionKey), "PartitionKey cannot be null or empty.");
+        }
+
+        _appLogger.LogTableQuery(
+            tableName,
+            nameof(GetEntityAsync),
+            filter: null,
+            pageSize: 1,
+            continuationToken: null
+        );
+
         try
         {
-            _logger.LogInformation("Retrieving entity from table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
+            _appLogger.LogInformation("Retrieving entity from table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
             var response = await client.GetEntityIfExistsAsync<TableEntity>(partitionKey, rowKey);
 
-            _logger.LogInformation("Entity retrieved successfully from table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
+            _appLogger.LogInformation("Entity retrieved successfully from table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
             return response.Value;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _logger.LogWarning("Entity not found in table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
+            _appLogger.LogWarning("Entity not found in table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
             return null;
         }
     }
 
-    public async Task<TablePageResult>GetEntitiesAsync(
+    public async Task<TablePageResult> GetEntitiesAsync(
         string tableName,
         string? filter = null,
         int pageSize = 25,
@@ -54,13 +67,21 @@ public class TableStorageService : ITableStorageService
         TableNameValidator.ValidateTableName(tableName);
         var client = _tableServiceClient.GetTableClient(tableName);
 
-        _logger.LogInformation("Retrieving entities from table {TableName} with filter {Filter} and page size {PageSize} token {Token}", tableName, filter ?? "null", pageSize, continuationToken ?? "null");
+        _appLogger.LogInformation("Retrieving entities from table {TableName} with filter {Filter} and page size {PageSize} token {Token}", tableName, filter ?? "null", pageSize, continuationToken ?? "null");
+
+        _appLogger.LogTableQuery(
+            tableName,
+            nameof(GetEntitiesAsync),
+            filter,
+            pageSize,
+            continuationToken
+        );
 
         try
         {
             await foreach (var page in client.QueryAsync<TableEntity>(filter).AsPages(continuationToken, pageSize))
             {
-                _logger.LogInformation("Successfully retrieved {Count} entities from table {TableName}", page.Values.Count, tableName);
+                _appLogger.LogInformation("Successfully retrieved {Count} entities from table {TableName}", page.Values.Count, tableName);
                 return new TablePageResult(
                     Entities: page.Values,
                     ContinuationToken: page.ContinuationToken,
@@ -78,7 +99,7 @@ public class TableStorageService : ITableStorageService
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError("Failed to retrieve entities from table {TableName}", ex, tableName);
+            _appLogger.LogError("Failed to retrieve entities from table {TableName}", ex, tableName);
             throw;
         }
     }
@@ -90,15 +111,27 @@ public class TableStorageService : ITableStorageService
         // Validate table name
         TableNameValidator.ValidateTableName(tableName);
 
+        if (entity == null)
+        {
+            throw new ArgumentNullException(nameof(entity), "Entity cannot be null.");
+        }
+
+        _appLogger.LogTableEntryUpsert(
+            tableName,
+            nameof(UpsertEntityAsync),
+            entity.PartitionKey,
+            entity.RowKey
+        );
+
         try
         {
-            _logger.LogInformation("Upserting entity into table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, entity.PartitionKey, entity.RowKey);
+            _appLogger.LogInformation("Upserting entity into table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, entity.PartitionKey, entity.RowKey);
             await client.UpsertEntityAsync(entity);
-            _logger.LogInformation("Entity upserted successfully into table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, entity.PartitionKey, entity.RowKey);
+            _appLogger.LogInformation("Entity upserted successfully into table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, entity.PartitionKey, entity.RowKey);
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError("Failed to upsert entity into table {TableName}", ex, tableName);
+            _appLogger.LogError("Failed to upsert entity into table {TableName}", ex, tableName);
             throw;
         }
     }
@@ -110,25 +143,38 @@ public class TableStorageService : ITableStorageService
         // Validate table name
         TableNameValidator.ValidateTableName(tableName);
 
+        if (string.IsNullOrWhiteSpace(partitionKey))
+        {
+            throw new ArgumentNullException(nameof(partitionKey), "PartitionKey cannot be null or empty.");
+        }
+
+        _appLogger.LogTableEntryDelete(
+            tableName,
+            nameof(DeleteEntityAsync),
+            partitionKey,
+            rowKey
+        );
+
         try
         {
-            _logger.LogInformation("Deleting entity from table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
+            _appLogger.LogInformation("Deleting entity from table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
             await client.DeleteEntityAsync(partitionKey, rowKey);
-            _logger.LogInformation("Entity deleted successfully from table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
+            _appLogger.LogInformation("Entity deleted successfully from table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _logger.LogWarning("Entity not found in table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
+            _appLogger.LogWarning("Entity not found in table {TableName} with PartitionKey {PartitionKey} and RowKey {RowKey}", tableName, partitionKey, rowKey);
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError("Failed to delete entity from table {TableName}", ex, tableName);
+            _appLogger.LogError("Failed to delete entity from table {TableName}", ex, tableName);
             throw;
         }
     }
 
     public TableClient GetTableClient(string tableName)
     {
+        _appLogger.LogInformation("Getting TableClient for table {TableName}", tableName);
         return _tableServiceClient.GetTableClient(tableName);
     }
 }

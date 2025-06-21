@@ -15,46 +15,46 @@ public record ImageConversionResult(Stream Content, int Width, int Height, strin
 
 public class ImageConversionService : IImageService
 {
-  private readonly AppInsightsLogger<ImageConversionService> _logger;
+  private readonly IAppInsightsLogger<ImageConversionService> _appLogger;
 
-  public ImageConversionService(AppInsightsLogger<ImageConversionService> logger)
+  public ImageConversionService(IAppInsightsLogger<ImageConversionService> logger)
   {
-    _logger = logger;
+    _appLogger = logger;
   }
 
   public async Task<ImageConversionResult> ConvertToWebPAsync(Stream input)
   {
     if (input == null)
     {
-      _logger.LogError("Input stream is null. Cannot convert to WebP.", new ArgumentNullException(nameof(input)));
+      _appLogger.LogError("Input stream is null. Cannot convert to WebP.", new ArgumentNullException(nameof(input)));
       throw new ArgumentNullException(nameof(input), "Input stream cannot be null.");
     }
     if (!input.CanRead)
     {
-      _logger.LogError("Input stream is not readable. Cannot convert to WebP.", new InvalidOperationException("Input stream must be readable."));
+      _appLogger.LogError("Input stream is not readable. Cannot convert to WebP.", new InvalidOperationException("Input stream must be readable."));
       throw new InvalidOperationException("Input stream must be readable.");
     }
     if (input.Length == 0)
     {
-      _logger.LogError("Input stream is empty. Cannot convert to WebP.", new InvalidOperationException("Input stream cannot be empty."));
+      _appLogger.LogError("Input stream is empty. Cannot convert to WebP.", new InvalidOperationException("Input stream cannot be empty."));
       throw new InvalidOperationException("Input stream cannot be empty.");
     }
-    _logger.LogInformation("Starting WebP conversion for input stream of size {Size} bytes.", input.Length);
+    _appLogger.LogInformation("Starting WebP conversion for input stream of size {Size} bytes.", input.Length);
 
     try
     {
       // Load the image from the input stream
-      _logger.LogInformation("Loading image from input stream for WebP conversion.");
+      _appLogger.LogInformation("Loading image from input stream for WebP conversion.");
       input.Position = 0; // Reset stream position to the beginning
       using var image = await Image.LoadAsync(input);
       // remove JPG EXIF rotation if present
       image.Mutate(x => x.AutoOrient());
 
-      _logger.LogInformation("Image loaded successfully. Dimensions: {Width}x{Height}", image.Width, image.Height);
+      _appLogger.LogInformation("Image loaded successfully. Dimensions: {Width}x{Height}", image.Width, image.Height);
 
       if (image.Width < 600 || image.Height < 600)
       {
-        _logger.LogInformation("Resizing image for WebP conversion due to insufficient dimensions: {Width}x{Height}.", image.Width, image.Height);
+        _appLogger.LogInformation("Resizing image for WebP conversion due to insufficient dimensions: {Width}x{Height}.", image.Width, image.Height);
         double scaleFactor = 600.0 / Math.Min(image.Width, image.Height);
         image.Mutate(x => x.Resize(new ResizeOptions
         {
@@ -74,7 +74,7 @@ public class ImageConversionService : IImageService
       // Save the image as WebP
       await image.SaveAsWebpAsync(output, new WebpEncoder { Quality = 85 });
 
-      _logger.LogInformation("WebP conversion completed successfully. Size: {Size} bytes", output.Length);
+      _appLogger.LogInformation("WebP conversion completed successfully. Size: {Size} bytes", output.Length);
 
       output.Position = 0; // Reset stream position to the beginning for reading
       return new ImageConversionResult(output, resizedWidth, resizedHeight, "webp");
@@ -82,7 +82,7 @@ public class ImageConversionService : IImageService
 
     catch (Exception ex)
     {
-      _logger.LogError("Error converting image to WebP format.", ex);
+      _appLogger.LogError("Error converting image to WebP format.", ex);
       throw new InvalidOperationException("Failed to convert image to WebP format.", ex);
     }
   }
