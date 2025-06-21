@@ -6,8 +6,9 @@ namespace Utils;
 public interface IAppInsightsLogger<T>
     where T : notnull
 {
-    void LogInformation(string message);
-    void LogError(string message, Exception ex);
+    void LogInformation(string message, params object[] args);
+    void LogError(string message, Exception ex, params object[] args);
+    void LogWarning(string message, params object[] args);
 }
 
 public class AppInsightsLogger<T> : IAppInsightsLogger<T>
@@ -22,15 +23,45 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
         _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
     }
 
-    public void LogInformation(string message)
+    public void LogInformation(string message, params object[] args)
     {
-        _logger.LogInformation(message);
-        _telemetryClient.TrackTrace(message);
+        if (args != null && args.Length > 0)
+        {
+            message = string.Format(message, args);
+        }
+
+        // Log to both ILogger and Application Insights
+        {
+            _logger.LogInformation(message);
+            _telemetryClient.TrackTrace(message);
+        }
     }
 
-    public void LogError(string message, Exception ex)
+    public void LogError(string message, Exception ex, params object[] args)
     {
-        _logger.LogError(ex, message);
-        _telemetryClient.TrackException(ex, new Dictionary<string, string> { { "Message", message } });
+        if (args != null && args.Length > 0)
+        {
+            message = string.Format(message, args);
+        }
+
+        // Log to both ILogger and Application Insights
+        {
+            _logger.LogError(ex, message);
+            _telemetryClient.TrackException(ex, new Dictionary<string, string> { { "Message", message } });
+        }
+    }
+    
+    public void LogWarning(string message, params object[] args)
+    {
+        if (args != null && args.Length > 0)
+        {
+            message = string.Format(message, args);
+        }
+
+        // Log to both ILogger and Application Insights
+        {
+            _logger.LogWarning(message);
+            _telemetryClient.TrackTrace(message);
+        }
     }
 }
