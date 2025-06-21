@@ -33,6 +33,10 @@
     <!-- Add this line: brings in IServiceCollection.AddSingleton, etc. -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection"
                     Version="8.*" />
+
+    <!-- For logging -->
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.*" />
+  
   </ItemGroup>
 
   <ItemGroup>

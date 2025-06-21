@@ -1,7 +1,7 @@
-namespace Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights;
 
+namespace Utils;
 public class AppInsightsLogger
 {
     private readonly ILogger<AppInsightsLogger> _logger;

@@ -70,6 +70,7 @@
 using SharedStorage.Services;
 using Utils;
 using Utils.Validation;
+using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -123,11 +124,17 @@ public class Program
                     return new ApiKeyValidator(validApiKey);
                 });
 
+                // Register Application Insights telemetry
+                services.AddApplicationInsightsTelemetryWorkerService();
+                services.AddSingleton<TelemetryClient>();
+
                 // Register AppInsightsLogger
-                // services.AddSingleton<AppInsightsLogger>();
+                services.AddSingleton<AppInsightsLogger>();
             })
             .ConfigureFunctionsWorkerDefaults()
             .Build();
+
+        Console.WriteLine("az_tw_website_functions function app is starting...");
 
         host.Run();
     }
