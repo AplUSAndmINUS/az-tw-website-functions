@@ -2,12 +2,21 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights;
 
 namespace Utils;
-public class AppInsightsLogger
+
+public interface IAppInsightsLogger<T>
+    where T : notnull
 {
-    private readonly ILogger<AppInsightsLogger> _logger;
+    void LogInformation(string message);
+    void LogError(string message, Exception ex);
+}
+
+public class AppInsightsLogger<T> : IAppInsightsLogger<T>
+    where T : notnull
+{
+    private readonly ILogger<T> _logger;
     private readonly TelemetryClient _telemetryClient;
 
-    public AppInsightsLogger(ILogger<AppInsightsLogger> logger, TelemetryClient telemetryClient)
+    public AppInsightsLogger(ILogger<T> logger, TelemetryClient telemetryClient)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
