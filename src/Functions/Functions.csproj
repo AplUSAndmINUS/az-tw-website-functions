@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Functions</RootNamespace>
     <!-- this tells MSBuild to import the Worker SDK targets -->
     <UseWorkerSdk>true</UseWorkerSdk>
     <ImplicitUsings>enable</ImplicitUsings>
