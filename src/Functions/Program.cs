@@ -36,11 +36,11 @@
                     //     return new BlobStorageService(storageAccountName!, logger, imageConversionService, thumbnailService);
                     // });
 
-//                     services.AddSingleton<ITableStorageService>(sp =>
-//                     {
-//                         var logger = sp.GetRequiredService<ILogger<TableStorageService>>();
-//                         return new TableStorageService(storageAccountName!, logger);
-//                     });
+                    // services.AddSingleton<ITableStorageService>(sp =>
+                    // {
+                    //     var logger = sp.GetRequiredService<ILogger<TableStorageService>>();
+                    //     return new TableStorageService(storageAccountName!, logger);
+                    // });
 
 //                     services.AddSingleton<IAPIKeyValidator>(sp =>
 //                     {
@@ -103,6 +103,13 @@ public class Program
                     var thumbnailService = sp.GetRequiredService<IThumbnailService>();
 
                     return new BlobStorageService(storageAccountName!, logger, imageConversionService, thumbnailService);
+                });
+
+                // Register TableStorageService
+                services.AddSingleton<ITableStorageService>(sp =>
+                {
+                    var logger = sp.GetRequiredService<ILogger<TableStorageService>>();
+                    return new TableStorageService(storageAccountName!, logger);
                 });
             })
             .ConfigureFunctionsWorkerDefaults()
