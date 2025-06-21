@@ -306,6 +306,7 @@ public class BlobStorageService : IBlobStorageService
         }
 
         // If we still can't determine, throw an exception
+        _logger.LogInformation("Unable to parse container name {ContainerName}", containerName);
         throw new ArgumentException($"Unable to determine content section for container: {containerName}", nameof(containerName));
     }
 }

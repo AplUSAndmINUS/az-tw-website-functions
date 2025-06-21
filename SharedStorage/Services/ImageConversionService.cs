@@ -2,6 +2,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;
 using Microsoft.Extensions.Logging;
+using Utils;
 
 namespace SharedStorage.Services;
 
@@ -14,9 +15,9 @@ public record ImageConversionResult(Stream Content, int Width, int Height, strin
 
 public class ImageConversionService : IImageService
 {
-  private readonly ILogger<ImageConversionService> _logger;
+  private readonly AppInsightsLogger<ImageConversionService> _logger;
 
-  public ImageConversionService(ILogger<ImageConversionService> logger)
+  public ImageConversionService(AppInsightsLogger<ImageConversionService> logger)
   {
     _logger = logger;
   }
@@ -25,9 +26,20 @@ public class ImageConversionService : IImageService
   {
     if (input == null)
     {
-      _logger.LogError("Input stream is null. Cannot convert to WebP.");
+      _logger.LogError("Input stream is null. Cannot convert to WebP.", new ArgumentNullException(nameof(input)));
       throw new ArgumentNullException(nameof(input), "Input stream cannot be null.");
     }
+    if (!input.CanRead)
+    {
+      _logger.LogError("Input stream is not readable. Cannot convert to WebP.", new InvalidOperationException("Input stream must be readable."));
+      throw new InvalidOperationException("Input stream must be readable.");
+    }
+    if (input.Length == 0)
+    {
+      _logger.LogError("Input stream is empty. Cannot convert to WebP.", new InvalidOperationException("Input stream cannot be empty."));
+      throw new InvalidOperationException("Input stream cannot be empty.");
+    }
+    _logger.LogInformation("Starting WebP conversion for input stream of size {Size} bytes.", input.Length);
 
     try
     {
@@ -61,16 +73,16 @@ public class ImageConversionService : IImageService
 
       // Save the image as WebP
       await image.SaveAsWebpAsync(output, new WebpEncoder { Quality = 85 });
-      
+
       _logger.LogInformation("WebP conversion completed successfully. Size: {Size} bytes", output.Length);
-      
+
       output.Position = 0; // Reset stream position to the beginning for reading
       return new ImageConversionResult(output, resizedWidth, resizedHeight, "webp");
     }
 
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error converting image to WebP format.");
+      _logger.LogError("Error converting image to WebP format.", ex);
       throw new InvalidOperationException("Failed to convert image to WebP format.", ex);
     }
   }

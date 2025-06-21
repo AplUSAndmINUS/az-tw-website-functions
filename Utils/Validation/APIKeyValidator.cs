@@ -61,11 +61,3 @@ public class ApiKeyValidator : IAPIKeyValidator
         return _errorMessage;
     }
 }
-
-/* Usage example:
-  var apiKeyValidator = new ApiKeyValidator("your-valid-api-key");
-  if (!apiKeyValidator.IsValid(requestApiKey))
-  {
-      return new BadRequestObjectResult(apiKeyValidator.GetErrorMessage());
-  }
-*/
