@@ -3,15 +3,16 @@ using Azure.Identity;
 using Azure;
 using Microsoft.Extensions.Logging;
 using SharedStorage.Validators;
+using Utils;
 
 namespace SharedStorage.Services;
 
 public class TableStorageService : ITableStorageService
 {
     private readonly TableServiceClient _tableServiceClient;
-    private readonly ILogger<TableStorageService> _logger;
-    
-    public TableStorageService(string storageAccountName, ILogger<TableStorageService> logger)
+    private readonly AppInsightsLogger<TableStorageService> _logger;
+
+    public TableStorageService(string storageAccountName, AppInsightsLogger<TableStorageService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -77,7 +78,7 @@ public class TableStorageService : ITableStorageService
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Failed to retrieve entities from table {TableName}", tableName);
+            _logger.LogError("Failed to retrieve entities from table {TableName}", ex, tableName);
             throw;
         }
     }
@@ -97,7 +98,7 @@ public class TableStorageService : ITableStorageService
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Failed to upsert entity into table {TableName}", tableName);
+            _logger.LogError("Failed to upsert entity into table {TableName}", ex, tableName);
             throw;
         }
     }
@@ -121,7 +122,7 @@ public class TableStorageService : ITableStorageService
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Failed to delete entity from table {TableName}", tableName);
+            _logger.LogError("Failed to delete entity from table {TableName}", ex, tableName);
             throw;
         }
     }

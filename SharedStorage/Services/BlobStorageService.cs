@@ -12,13 +12,13 @@ namespace SharedStorage.Services;
 public class BlobStorageService : IBlobStorageService
 {
     private readonly BlobServiceClient _blobServiceClient;
-    private readonly ILogger<BlobStorageService> _logger;
+    private readonly IAppInsightsLogger<BlobStorageService> _logger;
     private readonly IImageService _imageConversionService;
     private readonly IThumbnailService _thumbnailService;
 
     public BlobStorageService(
         string storageAccountName,
-        ILogger<BlobStorageService> logger,
+        IAppInsightsLogger<BlobStorageService> logger,
         IImageService imageConversionService,
         IThumbnailService thumbnailService)
     {
@@ -55,7 +55,7 @@ public class BlobStorageService : IBlobStorageService
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _logger.LogError(ex, "Blob '{BlobName}' not found in container '{ContainerName}'", blobName, containerName);
+            _logger.LogError("Blob '{BlobName}' not found in container '{ContainerName}'", ex, blobName, containerName);
             throw new ArgumentException($"Blob '{blobName}' does not exist in container '{containerName}'.", nameof(blobName));
         }
     }
@@ -71,7 +71,7 @@ public class BlobStorageService : IBlobStorageService
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
         var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
 
-        _logger.LogInformation("Retrieving blobs from container {ContainerName} with prefix {Prefix}, page size {PageSize}, token {Token}", containerName, prefix, pageSize, continuationToken);
+        _logger.LogInformation("Retrieving blobs from container {ContainerName} with prefix {Prefix}, page size {PageSize}, token {Token}", containerName, prefix, pageSize, continuationToken ?? string.Empty, Array.Empty<object>());
 
         try
         {
@@ -88,7 +88,7 @@ public class BlobStorageService : IBlobStorageService
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Failed to retrieve blobs from container {ContainerName}", containerName);
+            _logger.LogError("Failed to retrieve blobs from container {ContainerName}", ex, containerName);
             throw;
         }
     }
@@ -148,12 +148,12 @@ public class BlobStorageService : IBlobStorageService
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _logger.LogError(ex, "Blob {BlobName} not found in container {ContainerName}", blobName, containerName);
+            _logger.LogError("Blob {BlobName} not found in container {ContainerName}", ex, blobName, containerName);
             throw new ArgumentException($"Blob '{blobName}' does not exist in container '{containerName}'.", nameof(blobName));
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Failed to download blob {BlobName} from container {ContainerName}", blobName, containerName);
+            _logger.LogError("Failed to download blob {BlobName} from container {ContainerName}", ex, blobName, containerName);
             throw;
         }
     }
@@ -219,7 +219,7 @@ public class BlobStorageService : IBlobStorageService
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Failed to upload blob {BlobName} to container {ContainerName}", blobName, containerName);
+            _logger.LogError("Failed to upload blob {BlobName} to container {ContainerName}", ex, blobName, containerName);
             throw;
         }
     }
@@ -242,7 +242,7 @@ public class BlobStorageService : IBlobStorageService
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Failed to delete blob {BlobName} from container {ContainerName}", blobName, containerName);
+            _logger.LogError("Failed to delete blob {BlobName} from container {ContainerName}", ex, blobName, containerName);
             throw;
         }
     }

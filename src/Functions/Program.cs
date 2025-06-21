@@ -30,7 +30,7 @@ public class Program
                 // Register BlobStorageService
                 services.AddSingleton<IBlobStorageService>(sp =>
                 {
-                    var logger = sp.GetRequiredService<AppInsightsLogger<BlobStorageService>>();
+                    var logger = sp.GetRequiredService<IAppInsightsLogger<BlobStorageService>>();
                     var imageConversionService = sp.GetRequiredService<IImageService>();
                     var thumbnailService = sp.GetRequiredService<IThumbnailService>();
 
