@@ -1,0 +1,34 @@
+namespace Utils.Validation;
+
+public static class DataValidation
+{
+    public static string Required(string? value, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException($"Field '{fieldName}' is required.");
+        return value;
+    }
+
+    public static string? SafeTrim(string? value, int maxLength = 100)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return value.Length <= maxLength ? value : value[..maxLength];
+    }
+
+    public static string? NormalizeUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+
+        // Ensure URL starts with http:// or https://
+        if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            url = "https://" + url.TrimStart('/');
+        }
+
+        return url;
+    }
+}
