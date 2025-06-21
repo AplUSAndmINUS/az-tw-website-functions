@@ -51,7 +51,7 @@
                     //     return new ApiKeyValidator(validApiKey);
                     // });
 
-//                     services.AddSingleton<AppInsightsLogger>();
+                    // services.AddSingleton<AppInsightsLogger>();
 
 //                     services.AddApplicationInsightsTelemetryWorkerService();
 
@@ -122,6 +122,9 @@ public class Program
 
                     return new ApiKeyValidator(validApiKey);
                 });
+
+                // Register AppInsightsLogger
+                // services.AddSingleton<AppInsightsLogger>();
             })
             .ConfigureFunctionsWorkerDefaults()
             .Build();
