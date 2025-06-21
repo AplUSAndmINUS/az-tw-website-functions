@@ -27,14 +27,14 @@
 // services.AddSingleton<IImageService, ImageConversionService>();
 // services.AddSingleton<IThumbnailService, ThumbnailService>();
 
-//                     services.AddSingleton<IBlobStorageService>(sp =>
-//                     {
-//                         var logger = sp.GetRequiredService<ILogger<BlobStorageService>>();
-//                         var imageConversionService = sp.GetRequiredService<IImageService>();
-//                         var thumbnailService = sp.GetRequiredService<IThumbnailService>();
+                    // services.AddSingleton<IBlobStorageService>(sp =>
+                    // {
+                    //     var logger = sp.GetRequiredService<ILogger<BlobStorageService>>();
+                    //     var imageConversionService = sp.GetRequiredService<IImageService>();
+                    //     var thumbnailService = sp.GetRequiredService<IThumbnailService>();
 
-//                         return new BlobStorageService(storageAccountName!, logger, imageConversionService, thumbnailService);
-//                     });
+                    //     return new BlobStorageService(storageAccountName!, logger, imageConversionService, thumbnailService);
+                    // });
 
 //                     services.AddSingleton<ITableStorageService>(sp =>
 //                     {
@@ -94,6 +94,16 @@ public class Program
                 // Register these services first so they can be injected into BlobStorageService
                 services.AddSingleton<IImageService, ImageConversionService>();
                 services.AddSingleton<IThumbnailService, ThumbnailService>();
+
+                // Register BlobStorageService
+                services.AddSingleton<IBlobStorageService>(sp =>
+                {
+                    var logger = sp.GetRequiredService<ILogger<BlobStorageService>>();
+                    var imageConversionService = sp.GetRequiredService<IImageService>();
+                    var thumbnailService = sp.GetRequiredService<IThumbnailService>();
+
+                    return new BlobStorageService(storageAccountName!, logger, imageConversionService, thumbnailService);
+                });
             })
             .ConfigureFunctionsWorkerDefaults()
             .Build();
