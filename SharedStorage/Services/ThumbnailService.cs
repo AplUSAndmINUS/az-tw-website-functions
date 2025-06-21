@@ -2,6 +2,7 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;
 using Microsoft.Extensions.Logging;
+using Utils;
 
 namespace SharedStorage.Services;
 
@@ -14,9 +15,9 @@ public record ThumbnailResult(Stream Content, int Width, int Height, string Form
 
 public class ThumbnailService : IThumbnailService
 {
-  private readonly ILogger<ThumbnailService> _logger;
+  private readonly AppInsightsLogger<ThumbnailService> _logger;
 
-  public ThumbnailService(ILogger<ThumbnailService> logger)
+  public ThumbnailService(AppInsightsLogger<ThumbnailService> logger)
   {
     _logger = logger;
   }
@@ -25,9 +26,20 @@ public class ThumbnailService : IThumbnailService
   {
     if (input == null)
     {
-      _logger.LogError("Input stream is null. Cannot generate thumbnail.");
+      _logger.LogError("Input stream is null. Cannot generate thumbnail.", new ArgumentNullException(nameof(input)));
       throw new ArgumentNullException(nameof(input), "Input stream cannot be null.");
     }
+    if (!input.CanRead)
+    {
+      _logger.LogError("Input stream is not readable. Cannot generate thumbnail.", new InvalidOperationException("Input stream must be readable."));
+      throw new InvalidOperationException("Input stream must be readable.");
+    }
+    if (input.Length == 0)
+    {
+      _logger.LogError("Input stream is empty. Cannot generate thumbnail.", new InvalidOperationException("Input stream cannot be empty."));
+      throw new InvalidOperationException("Input stream cannot be empty.");
+    }
+    _logger.LogInformation("Starting WebP thumbnail generation for input stream of size {Size} bytes.", input.Length);
 
     try
     {
@@ -74,7 +86,7 @@ public class ThumbnailService : IThumbnailService
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Failed to generate WebP thumbnail.");
+      _logger.LogError("Failed to generate WebP thumbnail.", ex);
       throw new InvalidOperationException("Failed to generate WebP thumbnail.", ex);
     }
   }

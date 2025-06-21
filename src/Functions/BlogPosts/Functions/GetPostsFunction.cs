@@ -2,14 +2,15 @@
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using System.Net;
+using Utils;
 
 namespace BlogPosts
 {
   public class PlaceholderFunction
   {
-    private readonly ILogger _logger;
+    private readonly AppInsightsLogger<PlaceholderFunction> _logger;
 
-    public PlaceholderFunction(ILogger<PlaceholderFunction> logger)
+    public PlaceholderFunction(AppInsightsLogger<PlaceholderFunction> logger)
     {
       _logger = logger;
     }
