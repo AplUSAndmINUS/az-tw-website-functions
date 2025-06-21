@@ -54,7 +54,7 @@ public class TableStorageService : ITableStorageService
         TableNameValidator.ValidateTableName(tableName);
         var client = _tableServiceClient.GetTableClient(tableName);
 
-        _logger.LogInformation("Retrieving entities from table {TableName} with filter {Filter} and page size {PageSize} token {Token}", tableName, filter, pageSize, continuationToken);
+        _logger.LogInformation("Retrieving entities from table {TableName} with filter {Filter} and page size {PageSize} token {Token}", tableName, filter ?? "null", pageSize, continuationToken ?? "null");
 
         try
         {

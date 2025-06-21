@@ -71,7 +71,7 @@ public class BlobStorageService : IBlobStorageService
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
         var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
 
-        _logger.LogInformation("Retrieving blobs from container {ContainerName} with prefix {Prefix}, page size {PageSize}, token {Token}", containerName, prefix, pageSize, continuationToken ?? string.Empty, Array.Empty<object>());
+        _logger.LogInformation("Retrieving blobs from container {ContainerName} with prefix {Prefix}, page size {PageSize}, token {Token}", containerName, prefix ?? "null", pageSize, continuationToken ?? "null");
 
         try
         {
