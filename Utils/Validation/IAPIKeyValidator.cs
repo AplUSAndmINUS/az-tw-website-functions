@@ -1,3 +1,5 @@
+using Microsoft.Azure.Functions.Worker.Http;
+
 namespace Utils.Validation;
 
 public interface IAPIKeyValidator
@@ -13,5 +15,7 @@ public interface IAPIKeyValidator
     /// Gets the error message if the API key is invalid.
     /// </summary>
     /// <returns>The error message or null if the API key is valid.</returns>
+
+    bool TryValidateHeader(HttpRequestData req, out HttpResponseData? unauthorizedResponse);
     string? GetErrorMessage();
 }
