@@ -8,17 +8,17 @@ namespace BlogPosts
 {
   public class PlaceholderFunction
   {
-    private readonly AppInsightsLogger<PlaceholderFunction> _logger;
+    private readonly AppInsightsLogger<PlaceholderFunction> _appLogger;
 
     public PlaceholderFunction(AppInsightsLogger<PlaceholderFunction> logger)
     {
-      _logger = logger;
+      _appLogger = logger;
     }
 
     [Function("Ping")]
     public HttpResponseData Run([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
     {
-      _logger.LogInformation("Ping function triggered.");
+      _appLogger.LogInformation("Ping function triggered.");
 
       var response = req.CreateResponse(HttpStatusCode.OK);
       response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
