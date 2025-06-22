@@ -1,43 +1,90 @@
 name: Notify Platform of Shared Code Changes
 
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 on:
-  push:
-    paths:
-      - 'SharedStorage/**'
-      - 'Utils/**'
+    push:
+        paths:
+            - "SharedStorage/**"
+            - "Utils/**"
 
 jobs:
-  notify:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create issue in platform repo
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.CROSS_REPO_TOKEN }}
-          script: |
-            const changedFiles = await github.rest.repos.compareCommits({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              base: context.payload.before,
-              head: context.payload.after
-            });
+    check-token:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check for CROSS_REPO_TOKEN
+              env:
+                  CROSS_REPO_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
+              run: |
+                  if [ -z "$CROSS_REPO_TOKEN" ]; then
+                    echo "::error::CROSS_REPO_TOKEN secret is not set. Please add it to your repository secrets."
+                    exit 1
+                  fi
 
-            const modified = changedFiles.data.files
-              .filter(f => f.filename.startsWith('SharedStorage/') || f.filename.startsWith('Utils/'))
-              .map(f => `- \`${f.filename}\``)
-              .join('\n');
-
-            if (modified.length === 0) {
-              console.log("No relevant files changed.");
-              return;
-            }
-
-            await github.rest.issues.create({
-              owner: 'AplUSAndmINUS',
-              repo: 'tw-az-functions-platform',
-              title: `🔄 Sync needed: Shared files changed in ${context.repo.repo}`,
-              body: `The following shared files were modified in \`${context.repo.repo}\`:\n\n${modified}\n\nCommit: ${context.payload.after}\n\n[View commit](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${context.payload.after})`,
-              labels: ['sync', 'platform']
-            });
-            
-            console.log("Issue created in platform repo to notify about shared code changes.");
+    notify:
+        needs: check-token
+        runs-on: ubuntu-latest
+        steps:
+            - name: Create issue in platform repo
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.CROSS_REPO_TOKEN }}
+                  script: |
+                      try {
+                        const changedFiles = await github.rest.repos.compareCommits({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          base: context.payload.before,
+                          head: context.payload.after
+                        });
+                        
+                        // Group by directory
+                        const changes = {
+                          'SharedStorage': [],
+                          'Utils': []
+                        };
+                        
+                        changedFiles.data.files
+                          .filter(f => f.filename.startsWith('SharedStorage/') || f.filename.startsWith('Utils/'))
+                          .forEach(f => {
+                            const dir = f.filename.startsWith('SharedStorage/') ? 'SharedStorage' : 'Utils';
+                            changes[dir].push(`- \`${f.filename}\` (${f.status})`);
+                          });
+                        
+                        // Check if there are any changes
+                        const hasChanges = Object.values(changes).some(arr => arr.length > 0);
+                        
+                        if (!hasChanges) {
+                          console.log("No relevant files changed.");
+                          return;
+                        }
+                        
+                        // Format the message
+                        let body = `The following shared files were changed in \`${context.repo.repo}\`:\n\n`;
+                        
+                        if (changes['SharedStorage'].length > 0) {
+                          body += `### SharedStorage Changes\n${changes['SharedStorage'].join('\n')}\n\n`;
+                        }
+                        
+                        if (changes['Utils'].length > 0) {
+                          body += `### Utils Changes\n${changes['Utils'].join('\n')}\n\n`;
+                        }
+                        
+                        const branchName = context.ref.replace('refs/heads/', '');
+                        body += `\nBranch: \`${branchName}\`\nCommit: ${context.payload.after}\n\n[View commit](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${context.payload.after})`;
+                        
+                        await github.rest.issues.create({
+                          owner: 'AplUSAndmINUS',
+                          repo: 'tw-az-functions-platform',
+                          title: `🔄 Sync needed: Shared files changed in ${context.repo.repo}`,
+                          body: body,
+                          labels: ['sync', 'platform']
+                        });
+                        
+                        console.log("Issue created in platform repo to notify about shared code changes.");
+                      } catch (error) {
+                        console.error(`Error creating notification issue: ${error.message}`);
+                        core.setFailed(`Failed to create notification issue: ${error.message}`);
+                      }
