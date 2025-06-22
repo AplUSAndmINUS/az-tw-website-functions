@@ -12,9 +12,9 @@ public class ApiKeyValidator : IAPIKeyValidator
     private string? _errorMessage;
     private readonly IAppInsightsLogger<ApiKeyValidator> _appLogger;
 
-    public ApiKeyValidator(string validApiKey, IAppInsightsLogger<ApiKeyValidator> appLogger, bool enforceGet = false)
+    public ApiKeyValidator(string validApiKey, IAppInsightsLogger<ApiKeyValidator> appLogger, bool? enforceGet = false)
     {
-        _enforceGet = enforceGet;
+        _enforceGet = enforceGet ?? false;
         _validApiKey = validApiKey;
         _appLogger = appLogger;
     }
@@ -43,6 +43,15 @@ public class ApiKeyValidator : IAPIKeyValidator
         return true;
     }
 
+    public async Task ValidateOrThrowAsync(HttpRequestData req)
+    {
+        if (!IsValid(...))
+        {
+            _appLogger.LogError($"API key validation failed: {_errorMessage}", new Exception(_errorMessage));
+            throw new UnauthorizedAccessException(_errorMessage ?? "Unauthorized access due to invalid API key.");
+        }
+    }
+
     public bool TryValidateHeader(HttpRequestData req, out HttpResponseData? unauthorizedResponse)
     {
         unauthorizedResponse = null;
@@ -50,7 +59,7 @@ public class ApiKeyValidator : IAPIKeyValidator
 
         if (_errorMessage != null)
         {
-            unauthorizedResponse = req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
+            unauthorizedResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
             unauthorizedResponse.Headers.Add("Content-Type", "application/json");
             unauthorizedResponse.WriteString($"{{\"error\": \"{_errorMessage}\"}}");
 
