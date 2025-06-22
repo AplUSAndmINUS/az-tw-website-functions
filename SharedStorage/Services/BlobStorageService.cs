@@ -2,10 +2,10 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Identity;
 using Azure;
-using Microsoft.Extensions.Logging;
 using SharedStorage.Validators;
 using Utils;
 using Utils.Constants;
+using Utils.Validation;
 
 namespace SharedStorage.Services;
 
@@ -23,7 +23,11 @@ public class BlobStorageService : IBlobStorageService
         IThumbnailService thumbnailService)
     {
         _appLogger = logger ?? throw new ArgumentNullException(nameof(logger));
-
+        if (string.IsNullOrWhiteSpace(storageAccountName))
+        {
+            _appLogger.LogError("Storage account name is null or empty.", new ArgumentException("Storage account name cannot be null or empty.", nameof(storageAccountName)));
+            throw new ArgumentException("Storage account name cannot be null or empty.", nameof(storageAccountName));
+        }
         _appLogger.LogInformation("Creating blob storage client for {StorageAccount}", storageAccountName ?? "unknown");
 
         var endpoint = $"https://{storageAccountName}.blob.core.windows.net";
