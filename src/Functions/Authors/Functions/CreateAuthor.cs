@@ -2,6 +2,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Functions.Authors.Models;
 using Functions.Authors.Validators;
+using Functions.Authors.Services;
 using System.Net;
 using SharedStorage.Services;
 using Utils;
@@ -19,20 +20,18 @@ public class CreateAuthor
   private readonly ITableStorageService _tableStorageService;
   private readonly IAPIKeyValidator _apiKeyValidator;
 
-  private readonly string _authorTable = (Environment.GetEnvironmentVariable("AUTHORS_TABLE_NAME")?.ToLowerInvariant()) ?? "defaultauthortable";
+  private readonly IAuthorService _authorService;
   private readonly string _validApiKey = Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY") ?? "default_key";
-  private readonly string _tableName;
 
   // Constructor to inject the logger
   public CreateAuthor(IAppInsightsLogger<CreateAuthor> logger, ITableStorageService tableStorageService,
-    IAPIKeyValidator apiKeyValidator)
+    IAPIKeyValidator apiKeyValidator, IAuthorService authorService)
   {
     _appLogger = logger;
     _tableStorageService = tableStorageService;
     _apiKeyValidator = apiKeyValidator;
-    _tableName = Environment.GetEnvironmentVariable("USE_MOCK_STORAGE") == "true" ? "mock" + _authorTable : _authorTable;
+    _authorService = authorService;
     _appLogger.LogInformation("CreateAuthor function initialized.");
-    _appLogger.LogInformation($"Using table: {_tableName}");
   }
 
   private static HttpResponseData CreateValidationErrorResponse(HttpRequestData req, IEnumerable<string> errors)
@@ -107,15 +106,18 @@ public class CreateAuthor
 
     // Now, do stuff with the validated model
     _appLogger.LogInformation("Author model validated successfully. Proceeding to create the author.");
-    var entity = AuthorEntity.FromModel(model, model.AuthorSlug, "profile");
-    
-    await _tableStorageService.UpsertEntityAsync(_tableName, entity);
 
-    // For now, we will return a simple response indicating success. (No logic has happened yet)
+    // Create the author using the AuthorService
+    var result = await _authorService.CreateAuthorAsync(model);
     var response = req.CreateResponse(HttpStatusCode.Created);
+
+    // Set the response headers and body
+    response.Headers.Add("Location", $"/authors/{result.AuthorSlug}");
     response.Headers.Add("Content-Type", "application/json; charset=utf-8");
-    response.WriteString("{\"message\":\"Author created successfully.\"}");
-    _appLogger.LogInformation("Author created successfully with PartitionKey: {PartitionKey}, RowKey: {RowKey}", entity.PartitionKey, entity.RowKey);
+    response.WriteString(JsonSerializer.Serialize(result));
+
+    // Log the successful creation of the author
+    _appLogger.LogInformation("Author created successfully.");
     return response;
   }
 }
