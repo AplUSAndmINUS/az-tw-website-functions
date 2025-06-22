@@ -17,6 +17,19 @@ public static class DataValidation
         return value.Length <= maxLength ? value : value[..maxLength];
     }
 
+    public static string? RequireMinLength(string? value, int minLength, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length < minLength)
+            throw new ArgumentException($"Field '{fieldName}' must be at least {minLength} characters long.");
+        return value;
+    }
+
+    public static string? IsValidEmail(string? email, string fieldName)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(email ?? string.Empty, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            throw new ArgumentException($"Field '{fieldName}' must be a valid email address.");
+        return email;
+    }
     public static int? RequirePositiveInt(int? value, string fieldName)
     {
         if (!value.HasValue || value <= 0)
