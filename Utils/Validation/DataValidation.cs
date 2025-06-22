@@ -30,6 +30,19 @@ public static class DataValidation
             throw new ArgumentException($"Field '{fieldName}' must be a valid email address.");
         return email;
     }
+
+    public static bool TryValidateEmail(string? email)
+    {
+        try
+        {
+            _ = IsValidEmail(email, "Email");
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
     public static int? RequirePositiveInt(int? value, string fieldName)
     {
         if (!value.HasValue || value <= 0)
@@ -58,4 +71,6 @@ public static class DataValidation
 
         return url;
     }
+
+    public static 
 }

@@ -1,6 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Functions.Authors.Models;
+using Functions.Authors.Validators;
 using System.Net;
 using SharedStorage.Services;
 using Utils;
@@ -34,7 +35,15 @@ public class CreateAuthor
     _appLogger.LogInformation($"Using table: {_tableName}");
   }
 
-  [Function("CreateAuthor")]
+  private static HttpResponseData CreateValidationErrorResponse(HttpRequestData req, IEnumerable<string> errors)
+  {
+    var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+    errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+    errorResponse.WriteString(JsonSerializer.Serialize(new { errors }));
+    return errorResponse;
+  }
+
+  [Function("CreateAuthorAsync")]
   public async Task<HttpResponseData> Run(
     [HttpTrigger(AuthorizationLevel.Function, "post", Route = "authors")] HttpRequestData req,
     FunctionContext executionContext)
@@ -42,25 +51,71 @@ public class CreateAuthor
   {
     // Log the function execution context
     // You can use this logger to log information, warnings, errors, etc.
+    _appLogger.LogInformation("Validating API key for CreateAuthor function.");
+    // Validate the API key
+    try
+    {
+      await _apiKeyValidator.ValidateOrThrowAsync(req);
+      _appLogger.LogInformation("API key validation successful.");
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+      _appLogger.LogError($"Unauthorized access attempt: {ex.Message}", ex);
+      return req.CreateResponse(HttpStatusCode.Unauthorized);
+    }
+
     _appLogger.LogInformation("Creating a new author.");
+    AuthorModel? model = null;
 
-    // Deserialize the data payload to create a new author
-    var body = await new StreamReader(req.Body).ReadToEndAsync();
+    try
+    {
+      var body = await new StreamReader(req.Body).ReadToEndAsync();
+      // Deserialize the data payload to create a new author
+      model = JsonSerializer.Deserialize<AuthorModel>(body, new JsonSerializerOptions
+      {
+        PropertyNameCaseInsensitive = true,
+        AllowTrailingCommas = true,
+        ReadCommentHandling = JsonCommentHandling.Skip
+      });
 
-    // apply it to the AuthorModel
-    var model = JsonSerializer.Deserialize<AuthorModel>(body);
+      // Check if the model is null before validation
+      if (model == null)
+      {
+        var modelNullErrors = new[] { "Invalid or missing author data." };
+        _appLogger.LogError("Author model is null.", new ArgumentNullException(nameof(model)));
+        return CreateValidationErrorResponse(req, modelNullErrors);
+      }
 
-    // Data validation to ensure no null or empty values from the AuthorEntity and ModelMapper
-    var authorEntity = AuthorEntity.FromModel(model, model.AuthorSlug, "profile");
+      // Validate the model using the AuthorModelDataValidator
+      _appLogger.LogInformation("Validating author model data.");
+      if (!AuthorModelDataValidator.TryValidate(model, out var errors))
+      {
+        _appLogger.LogError("Author model validation failed.", new Exception(string.Join(" | ", errors)));
+        return CreateValidationErrorResponse(req, errors);
+      }
+    }
+    catch (JsonException ex)
+    {
+      _appLogger.LogError("Failed to deserialize author data.", ex);
+      return CreateValidationErrorResponse(req, new[] { "Invalid JSON format." });
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("An unexpected error occurred while processing the request.", ex);
+      return req.CreateResponse(HttpStatusCode.InternalServerError);
+    }
 
-    // Request processing logic goes here
-    // For example, you might read the request body, validate input,
-    // and create a new author entity in your data store.
+    // Now, do stuff with the validated model
+    _appLogger.LogInformation("Author model validated successfully. Proceeding to create the author.");
+    var entity = AuthorEntity.FromModel(model, model.AuthorSlug, "profile");
+    
+    await _tableStorageService.UpsertEntityAsync(_tableName, entity);
 
     // For now, we will return a simple response indicating success. (No logic has happened yet)
     var response = req.CreateResponse(HttpStatusCode.Created);
     response.Headers.Add("Content-Type", "application/json; charset=utf-8");
     response.WriteString("{\"message\":\"Author created successfully.\"}");
-    return Task.FromResult(response);
+    _appLogger.LogInformation("Author created successfully with PartitionKey: {PartitionKey}, RowKey: {RowKey}", entity.PartitionKey, entity.RowKey);
+    return response;
   }
 }

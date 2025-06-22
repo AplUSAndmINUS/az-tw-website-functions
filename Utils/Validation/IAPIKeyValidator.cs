@@ -17,5 +17,7 @@ public interface IAPIKeyValidator
     /// <returns>The error message or null if the API key is valid.</returns>
 
     bool TryValidateHeader(HttpRequestData req, out HttpResponseData? unauthorizedResponse);
+
+    Task ValidateOrThrowAsync(HttpRequestData req);
     string? GetErrorMessage();
 }
