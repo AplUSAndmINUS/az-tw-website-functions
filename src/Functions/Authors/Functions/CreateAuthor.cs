@@ -18,7 +18,7 @@ public class CreateAuthor
   private readonly ITableStorageService _tableStorageService;
   private readonly IAPIKeyValidator _apiKeyValidator;
 
-  private readonly string _authorTable = (Environment.GetEnvironmentVariable("AUTHORS_TABLE_NAME")?.ToLowerInvariant() ?? "defaultauthortable";
+  private readonly string _authorTable = (Environment.GetEnvironmentVariable("AUTHORS_TABLE_NAME")?.ToLowerInvariant()) ?? "defaultauthortable";
   private readonly string _validApiKey = Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY") ?? "default_key";
   private readonly string _tableName;
 
