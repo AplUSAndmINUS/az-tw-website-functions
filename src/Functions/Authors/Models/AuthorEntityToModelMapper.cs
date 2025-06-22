@@ -2,7 +2,7 @@ namespace Functions.Authors.Models;
 
 using Utils.Validation;
 
-public class AuthorModelMapper
+public static class AuthorEntityToModelMapper
 {
 
   public static AuthorModel Map(AuthorEntity author, AuthorImagesMetadataEntity? image)
