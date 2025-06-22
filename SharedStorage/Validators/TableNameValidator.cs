@@ -2,9 +2,9 @@ namespace SharedStorage.Validators;
 
 public static class TableNameValidator
 {
-  public static void ValidateTableName(string tableName)
+  public static string ValidateTableName(string tableName)
   {
-    
+
     if (string.IsNullOrEmpty(tableName))
     {
       throw new ArgumentException("Table name cannot be null or empty.", nameof(tableName));
@@ -19,5 +19,7 @@ public static class TableNameValidator
     {
       throw new ArgumentException("Table name must start with a letter and only contain alphanumeric characters.", nameof(tableName));
     }
+    
+    return tableName.ToLowerInvariant();
   }
 }
