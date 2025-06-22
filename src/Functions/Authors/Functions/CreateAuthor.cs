@@ -21,7 +21,6 @@ public class CreateAuthor
   private readonly IAPIKeyValidator _apiKeyValidator;
 
   private readonly IAuthorService _authorService;
-  private readonly string _validApiKey = Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY") ?? "default_key";
 
   // Constructor to inject the logger
   public CreateAuthor(IAppInsightsLogger<CreateAuthor> logger, ITableStorageService tableStorageService,
