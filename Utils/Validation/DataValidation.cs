@@ -17,6 +17,20 @@ public static class DataValidation
         return value.Length <= maxLength ? value : value[..maxLength];
     }
 
+    public static int? RequirePositiveInt(int? value, string fieldName)
+    {
+        if (!value.HasValue || value <= 0)
+            throw new ArgumentException($"Field '{fieldName}' must be a positive integer.");
+        return value.Value;
+    }
+
+    public static long? RequirePositiveLong(long? value, string fieldName)
+    {
+        if (!value.HasValue || value <= 0)
+            throw new ArgumentException($"Field '{fieldName}' must be a positive long integer.");
+        return value.Value;
+    }
+
     public static string? NormalizeUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
