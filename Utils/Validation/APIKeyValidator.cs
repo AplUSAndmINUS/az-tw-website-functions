@@ -8,16 +8,18 @@ namespace Utils.Validation;
 public class ApiKeyValidator : IAPIKeyValidator
 {
     private readonly string _validApiKey;
+    private readonly bool _enforceGet;
     private string? _errorMessage;
     private readonly IAppInsightsLogger<ApiKeyValidator> _appLogger;
 
-    public ApiKeyValidator(string validApiKey, IAppInsightsLogger<ApiKeyValidator> appLogger)
+    public ApiKeyValidator(string validApiKey, IAppInsightsLogger<ApiKeyValidator> appLogger, bool enforceGet = false)
     {
+        _enforceGet = enforceGet;
         _validApiKey = validApiKey;
         _appLogger = appLogger;
     }
 
-    public bool IsValid(string? apiKey)
+    public bool IsValid(string? apiKey, HttpRequestData req)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
         {
@@ -32,6 +34,10 @@ public class ApiKeyValidator : IAPIKeyValidator
             _errorMessage = "Invalid API key.";
             return false;
         }
+        
+        // If the API key is valid, check if the request method is GET
+        if (!_enforceGet && req.Method.Equals("GET", StringComparison.OrdinalIgnoreCase))
+            return true;
 
         _errorMessage = null;
         return true;
@@ -40,7 +46,7 @@ public class ApiKeyValidator : IAPIKeyValidator
     public bool TryValidateHeader(HttpRequestData req, out HttpResponseData? unauthorizedResponse)
     {
         unauthorizedResponse = null;
-        IsValid(req.Headers.TryGetValues("x-api-key", out var apiKeyValues) ? apiKeyValues.FirstOrDefault() : null);
+        IsValid(req.Headers.TryGetValues("x-api-key", out var apiKeyValues) ? apiKeyValues.FirstOrDefault() : null, req);
 
         if (_errorMessage != null)
         {
