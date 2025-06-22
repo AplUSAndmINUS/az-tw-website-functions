@@ -21,6 +21,8 @@ public class AuthorModel
   public string? ProfileImageFileName { get; set; } = default!; // e.g. "terence-waters.jpg"
   public string? ProfileImageCdnUrl { get; set; } = default!;
   public string? ThumbnailCdnUrl { get; set; } = default!; // fallback if null
+
+  public bool HasValidProfileImage { get; set; } = false; // Indicates if the profile image is valid and available
   public string? ImageContentType { get; set; } = default!;
   public long? ImageSizeBytes { get; set; }
 
