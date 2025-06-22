@@ -16,12 +16,11 @@ public class AuthorService : IAuthorService
   private readonly IAppInsightsLogger<AuthorService> _appLogger;
   private readonly string _tableName;
 
-  public AuthorService(ITableStorageService tableStorageService, IAppInsightsLogger<AuthorService> appLogger, string tableName)
+  public AuthorService(ITableStorageService tableStorageService, IAppInsightsLogger<AuthorService> appLogger)
   {
-    // Validate the table name
-    var rawTableName = Environment.GetEnvironmentVariable("AUTHORS_TABLE_NAME") ?? tableName;
+    // Get table name from environment variable with fallback to "authors"
+    var rawTableName = Environment.GetEnvironmentVariable("AUTHORS_TABLE_NAME") ?? "authors";
 
-    // Then instantiate the AuthorService with the other services and table name
     _tableName = TableNameValidator.ValidateTableName(rawTableName);
     _tableStorageService = tableStorageService;
     _appLogger = appLogger;
@@ -34,12 +33,16 @@ public class AuthorService : IAuthorService
 
     try
     {
-      var entity = AuthorEntity.FromModel(model, model.AuthorSlug ?? model.Username, "profile");
+      // Calculate the slug once and use it consistently
+      var authorSlug = model.AuthorSlug ?? model.Username;
+
+      // Pass the slug as the partitionKey
+      var entity = AuthorEntity.FromModel(model, authorSlug, "profile");
       await _tableStorageService.UpsertEntityAsync(_tableName, entity);
 
       return new AuthorDTO
       {
-        AuthorSlug = entity.AuthorSlug,
+        AuthorSlug = entity.AuthorSlug, // This now correctly uses the computed property
         DisplayName = entity.DisplayName,
         FirstName = entity.FirstName,
         LastName = entity.LastName,

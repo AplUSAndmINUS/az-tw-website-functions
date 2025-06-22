@@ -34,6 +34,16 @@ public class AuthorEntity : ITableEntity
   public int? ImageWidth { get; set; } // e.g. 800
   public int? ImageHeight { get; set; } // e.g. 600
   public string? ProfileImageBlobContainer { get; set; } = default!;
+
+  /// <summary>
+  /// Creates an AuthorEntity from an AuthorModel.
+  /// </summary>
+  /// <param name="model">The author model to convert.</param>
+  /// <param name="partitionKey">The partition key to use for the entity.</param>
+  /// <param name="rowKey">The row key to use for the entity. Defaults to "profile".</param>
+  /// <returns>A new AuthorEntity instance.</returns>
+  /// <exception cref="ArgumentNullException">Thrown when any required field is null.</exception>
+  /// <exception cref="ArgumentException">Thrown when validation fails for any field.</exception>
   public static AuthorEntity FromModel(AuthorModel model, string partitionKey, string rowKey = "profile")
   {
     // Match the same validation as Map method
@@ -71,6 +81,7 @@ public class AuthorEntity : ITableEntity
       HasValidProfileImage = !string.IsNullOrWhiteSpace(model.ProfileImageFileName) &&
                              !string.IsNullOrWhiteSpace(model.ProfileImageCdnUrl) &&
                              !string.IsNullOrWhiteSpace(model.ThumbnailCdnUrl),
+
       ImageContentType = DataValidation.SafeTrim(model.ImageContentType) ?? "image/jpeg", // default to JPEG if not specified
       ImageSizeBytes = DataValidation.RequirePositiveLong(model.ImageSizeBytes, nameof(model.ImageSizeBytes)) ?? 0,
       ImageWidth = DataValidation.RequirePositiveInt(model.ImageWidth, nameof(model.ImageWidth)) ?? 0,
