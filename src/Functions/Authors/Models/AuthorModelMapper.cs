@@ -15,7 +15,7 @@ public class AuthorModelMapper
 
     return new AuthorModel
     {
-      AuthorSlug = author.AuthorSlug,
+      AuthorSlug = DataValidation.Required(DataValidation.SafeTrim(author.AuthorSlug), nameof(author.AuthorSlug)),
       FirstName = DataValidation.Required(DataValidation.SafeTrim(author.FirstName), nameof(author.FirstName)),
       LastName = DataValidation.Required(DataValidation.SafeTrim(author.LastName), nameof(author.LastName)),
       Email = DataValidation.Required(DataValidation.SafeTrim(author.Email), nameof(author.Email)),
@@ -29,15 +29,15 @@ public class AuthorModelMapper
       LinkedInHandle = DataValidation.SafeTrim(author.LinkedInHandle),
       BlueskyHandle = DataValidation.SafeTrim(author.BlueskyHandle),
 
-      ProfileImageUrl = image?.CdnUrl,
-      ThumbnailUrl = image?.ThumbnailCdnUrl,
-      ImageContentType = image?.ContentType,
-      ImageSizeBytes = image?.SizeInBytes,
-      ImageWidth = image?.Width,
-      ImageHeight = image?.Height,
+      ProfileImageBlobContainer = DataValidation.SafeTrim(image?.ProfileImageBlobContainer) ?? "authors-images",
+      ProfileImageFileName = DataValidation.SafeTrim(image?.ProfileImageFileName),
+      ProfileImageCdnUrl = DataValidation.SafeTrim(image?.ProfileImageCdnUrl) ?? "/images/default-profile.png",
+      ThumbnailCdnUrl = DataValidation.SafeTrim(image?.ThumbnailCdnUrl) ?? "/images/default-profile-thumbnail.png",
 
-      CdnUrl = image?.CdnUrl ?? "/images/default-profile.png",
-      ThumbnailCdnUrl = image?.ThumbnailCdnUrl ?? "/images/default-profile-thumbnail.png"
+      ImageContentType = DataValidation.SafeTrim(image?.ImageContentType),
+      ImageSizeBytes = DataValidation.RequirePositiveLong(image?.ImageSizeBytes, nameof(image.ImageSizeBytes)),
+      ImageWidth = DataValidation.RequirePositiveInt(image?.ImageWidth, nameof(image.ImageWidth)),
+      ImageHeight = DataValidation.RequirePositiveInt(image?.ImageHeight, nameof(image.ImageHeight)),
     };
   }
 }

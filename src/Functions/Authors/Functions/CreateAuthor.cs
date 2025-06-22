@@ -11,10 +11,10 @@ public class CreateAuthor
   // This function is a placeholder for creating an author.
   // The actual implementation will depend on your specific requirements.
   // You can use this function to handle HTTP requests to create a new author.
-  private readonly ILogger<CreateAuthor> _appLogger;
+  private readonly IAppInsightsLogger<CreateAuthor> _appLogger;
 
   // Constructor to inject the logger
-  public CreateAuthor(ILogger<CreateAuthor> logger)
+  public CreateAuthor(IAppInsightsLogger<CreateAuthor> logger)
   {
     _appLogger = logger;
   }

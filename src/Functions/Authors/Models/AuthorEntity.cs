@@ -1,6 +1,7 @@
 using Azure.Data.Tables;
 using Azure;
 using Utils.Validation;
+using System.Drawing;
 
 namespace Functions.Authors.Models;
 
@@ -17,6 +18,7 @@ public class AuthorEntity : ITableEntity
   public string Email { get; set; } = default!;
   public string Username { get; set; } = default!; // e.g. "terencewaters"
   public string DisplayName { get; set; } = default!; // e.g. "Terence Waters"
+  public string AuthorSlug => PartitionKey; // e.g. "terence-waters"
   public string? Location { get; set; } = default!; // e.g. "San Francisco, CA"
   public string? Bio { get; set; } = default!;
   public string? Website { get; set; } = default!; // e.g. "https://terencewaters.com"
@@ -25,8 +27,13 @@ public class AuthorEntity : ITableEntity
   public string? InstagramHandle { get; set; } = default!; // e.g. "@terencewaters"
   public string? LinkedInHandle { get; set; } = default!;
   public string? BlueskyHandle { get; set; } = default!; // e.g. "@terencewaters.bsky.social"
-  public string AuthorSlug => PartitionKey; // e.g. "terence-waters"
   public string? ProfileImageFileName { get; set; } = default!;
+  public string? ProfileImageCdnUrl { get; set; } = default!; // e.g. "https://example.com/images/terence-waters.jpg"
+  public string? ThumbnailCdnUrl { get; set; } = default!; // e.g. "https://example.com/images/terence-waters-thumbnail.jpg"
+  public string? ImageContentType { get; set; } = default!; // e.g. "image/jpeg"
+  public long? ImageSizeBytes { get; set; } // e.g. 204800 (200 KB)
+  public int? ImageWidth { get; set; } // e.g. 800
+  public int? ImageHeight { get; set; } // e.g. 600
   public string? ProfileImageBlobContainer { get; set; } = default!;
 
   public AuthorEntity()
@@ -53,8 +60,17 @@ public class AuthorEntity : ITableEntity
       TwitterHandle = DataValidation.SafeTrim(model.TwitterHandle),
       InstagramHandle = DataValidation.SafeTrim(model.InstagramHandle),
       LinkedInHandle = DataValidation.SafeTrim(model.LinkedInHandle),
-      ProfileImageFileName = DataValidation.SafeTrim(model.ProfileImageUrl),
-      ProfileImageBlobContainer = null // you can assign if it's known
+      BlueskyHandle = DataValidation.SafeTrim(model.BlueskyHandle),
+
+      ProfileImageBlobContainer = DataValidation.SafeTrim(model.ProfileImageBlobContainer), // you can assign if it's known
+      ProfileImageFileName = DataValidation.SafeTrim(model.ProfileImageFileName),
+      ProfileImageCdnUrl = DataValidation.NormalizeUrl(model.ProfileImageCdnUrl ?? "/images/default-profile.png"),
+      ThumbnailCdnUrl = DataValidation.NormalizeUrl(model.ThumbnailCdnUrl ?? "/images/default-profile-thumbnail.png"),
+
+      ImageContentType = DataValidation.SafeTrim(model.ImageContentType) ?? "image/jpeg", // default to JPEG if not specified
+      ImageSizeBytes = DataValidation.RequirePositiveLong(model.ImageSizeBytes, nameof(model.ImageSizeBytes)) ?? 0,
+      ImageWidth = DataValidation.RequirePositiveInt(model.ImageWidth, nameof(model.ImageWidth)) ?? 0,
+      ImageHeight = DataValidation.RequirePositiveInt(model.ImageHeight, nameof(model.ImageHeight)) ?? 0
     };
   }
 }
