@@ -3,6 +3,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using System.Net;
 using SharedStorage.Services;
 using Utils;
+using Utils.Validation;
 
 namespace Functions.Authors.Functions;
 
@@ -12,11 +13,21 @@ public class CreateAuthor
   // The actual implementation will depend on your specific requirements.
   // You can use this function to handle HTTP requests to create a new author.
   private readonly IAppInsightsLogger<CreateAuthor> _appLogger;
+  private readonly ITableStorageService _tableStorageService;
+  private readonly IAPIKeyValidator _apiKeyValidator;
+
+  private readonly string _authorTable = Environment.GetEnvironmentVariable("AUTHORS_TABLE_NAME") ?? "DefaultAuthorTable";
+  private readonly string _validApiKey = Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY") ?? "default_key";
+  private readonly string _tableName;
 
   // Constructor to inject the logger
-  public CreateAuthor(IAppInsightsLogger<CreateAuthor> logger)
+  public CreateAuthor(IAppInsightsLogger<CreateAuthor> logger, ITableStorageService tableStorageService,
+    IAPIKeyValidator apiKeyValidator)
   {
     _appLogger = logger;
+    _tableStorageService = tableStorageService;
+    _apiKeyValidator = apiKeyValidator;
+    _tableName = Environment.GetEnvironmentVariable("USE_MOCK_STORAGE") == "true" ? "mock" + _authorTable : _authorTable;
     _appLogger.LogInformation("CreateAuthor function initialized.");
   }
 
@@ -41,17 +52,3 @@ public class CreateAuthor
     return Task.FromResult(response);
   }
 }
-
-// Example:
-// [Function("CreateAuthor")]
-// public async Task<HttpResponseData> Run(
-//   [HttpTrigger(AuthorizationLevel.Function, "post", Route = "authors")] HttpRequestData req,
-//   FunctionContext executionContext)
-// {
-//   var logger = executionContext.GetLogger("CreateAuthor");
-//   logger.LogInformation("Creating a new author.");
-//
-//   // Your logic to create an author goes here
-//
-//   return req.CreateResponse(HttpStatusCode.Created);
-// }
