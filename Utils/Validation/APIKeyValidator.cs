@@ -43,13 +43,15 @@ public class ApiKeyValidator : IAPIKeyValidator
         return true;
     }
 
-    public async Task ValidateOrThrowAsync(HttpRequestData req)
+    public Task ValidateOrThrowAsync(HttpRequestData req)
     {
-        if (!IsValid(...))
+        var apiKey = req.Headers.TryGetValues("x-api-key", out var apiKeyValues) ? apiKeyValues.FirstOrDefault() : null;
+        if (!IsValid(apiKey, req))
         {
             _appLogger.LogError($"API key validation failed: {_errorMessage}", new Exception(_errorMessage));
             throw new UnauthorizedAccessException(_errorMessage ?? "Unauthorized access due to invalid API key.");
         }
+        return Task.CompletedTask;
     }
 
     public bool TryValidateHeader(HttpRequestData req, out HttpResponseData? unauthorizedResponse)
