@@ -1,7 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
 using System.Net;
+using SharedStorage.Services;
 using Utils;
 
 namespace Functions.Authors.Functions;
@@ -11,12 +11,22 @@ public class CreateAuthor
   // This function is a placeholder for creating an author.
   // The actual implementation will depend on your specific requirements.
   // You can use this function to handle HTTP requests to create a new author.
+<<<<<<< Updated upstream
   private readonly ILogger<CreateAuthor> _appLogger;
 
   // Constructor to inject the logger
   public CreateAuthor(ILogger<CreateAuthor> logger)
+=======
+  private readonly IAppInsightsLogger<CreateAuthor> _appLogger;
+  private readonly ITableStorageService _tableStorageService;
+
+  // Constructor to inject the logger
+  public CreateAuthor(IAppInsightsLogger<CreateAuthor> logger, ITableStorageService tableStorageService)
+>>>>>>> Stashed changes
   {
     _appLogger = logger;
+    _tableStorageService = tableStorageService;
+    _appLogger.LogInformation("CreateAuthor function initialized.");
   }
 
   [Function("CreateAuthor")]
