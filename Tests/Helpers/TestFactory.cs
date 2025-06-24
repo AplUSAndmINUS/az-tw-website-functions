@@ -25,12 +25,9 @@ public static class TestFactory
     var request = new Mock<HttpRequestData>(context);
     
     // Setup body
-    Stream bodyStream = new MemoryStream();
-    if (!string.IsNullOrEmpty(jsonBody))
-    {
-      var bytes = Encoding.UTF8.GetBytes(jsonBody);
-      bodyStream = new MemoryStream(bytes);
-    }
+    var bodyStream = new MemoryStream(
+      string.IsNullOrEmpty(jsonBody) ? Array.Empty<byte>() : Encoding.UTF8.GetBytes(jsonBody)
+    );
     request.Setup(r => r.Body).Returns(bodyStream);
     
     // Setup method and URL
