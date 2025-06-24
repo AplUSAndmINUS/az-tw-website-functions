@@ -55,7 +55,8 @@ public class Program
 
                     var appLogger = sp.GetRequiredService<IAppInsightsLogger<ApiKeyValidator>>();
                     return new ApiKeyValidator(validApiKey, appLogger);
-                });
+                });                // Register Author Service
+                services.AddSingleton<Functions.Authors.Services.IAuthorService, Functions.Authors.Services.AuthorService>();
 
                 // Register Application Insights telemetry
                 services.AddApplicationInsightsTelemetryWorkerService();
