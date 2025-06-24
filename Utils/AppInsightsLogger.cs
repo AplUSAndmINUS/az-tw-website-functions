@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using Microsoft.ApplicationInsights.DataContracts;
 
 namespace Utils;
 
@@ -30,46 +33,51 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
         _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
     }
 
+    private string SafeFormat(string message, object[] args)
+    {
+        if (string.IsNullOrWhiteSpace(message)) return string.Empty;
+        try
+        {
+            return (args != null && args.Length > 0) ? string.Format(message, args) : message;
+        }
+        catch (FormatException ex)
+        {
+            _appLogger.LogWarning(ex, "Failed to format message. Original message: {Message}, Args: {@Args}", message, args);
+            _telemetryClient.TrackTrace("Format failure", SeverityLevel.Warning, new Dictionary<string, string>
+            {
+                { "OriginalMessage", message },
+                { "ArgsJson", System.Text.Json.JsonSerializer.Serialize(args)
+            }
+    });
+
+            return message; // Use unformatted message as fallback
+        }
+        catch (Exception ex)
+        {
+            _appLogger.LogError(ex, "Unexpected error formatting message: {Message} with args: {Args}", message, args);
+            return message;
+        }
+    }
+
     public void LogInformation(string message, params object[] args)
     {
-        if (args != null && args.Length > 0)
-        {
-            message = string.Format(message, args);
-        }
-
-        // Log to both ILogger and Application Insights
-        {
-            _appLogger.LogInformation(message);
-            _telemetryClient.TrackTrace(message);
-        }
+        string finalMessage = SafeFormat(message, args);
+        _appLogger.LogInformation(finalMessage);
+        _telemetryClient.TrackTrace(finalMessage);
     }
 
     public void LogError(string message, Exception ex, params object[] args)
     {
-        if (args != null && args.Length > 0)
-        {
-            message = string.Format(message, args);
-        }
-
-        // Log to both ILogger and Application Insights
-        {
-            _appLogger.LogError(ex, message);
-            _telemetryClient.TrackException(ex, new Dictionary<string, string> { { "Message", message } });
-        }
+        string finalMessage = SafeFormat(message, args);
+        _appLogger.LogError(ex, finalMessage);
+        _telemetryClient.TrackException(ex, new Dictionary<string, string> { { "Message", finalMessage } });
     }
 
     public void LogWarning(string message, params object[] args)
     {
-        if (args != null && args.Length > 0)
-        {
-            message = string.Format(message, args);
-        }
-
-        // Log to both ILogger and Application Insights
-        {
-            _appLogger.LogWarning(message);
-            _telemetryClient.TrackTrace(message);
-        }
+        string finalMessage = SafeFormat(message, args);
+        _appLogger.LogWarning(finalMessage);
+        _telemetryClient.TrackTrace(finalMessage, SeverityLevel.Warning, new Dictionary<string, string> { { "Message", finalMessage } });
     }
 
     public void LogBlobQuery(string containerName, string functionName, string? prefix, int pageSize, string? continuationToken)
