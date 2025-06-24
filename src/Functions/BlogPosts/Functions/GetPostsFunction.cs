@@ -4,27 +4,25 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using Utils;
 
-namespace BlogPosts
+namespace Functions.BlogPosts.Functions;
+public class PlaceholderFunction
 {
-  public class PlaceholderFunction
+  private readonly IAppInsightsLogger<PlaceholderFunction> _appLogger;
+
+  public PlaceholderFunction(IAppInsightsLogger<PlaceholderFunction> logger)
   {
-    private readonly AppInsightsLogger<PlaceholderFunction> _appLogger;
+    _appLogger = logger;
+  }
 
-    public PlaceholderFunction(AppInsightsLogger<PlaceholderFunction> logger)
-    {
-      _appLogger = logger;
-    }
+  [Function("Ping")]
+  public HttpResponseData Run([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+  {
+    _appLogger.LogInformation("Ping function triggered.");
 
-    [Function("Ping")]
-    public HttpResponseData Run([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
-    {
-      _appLogger.LogInformation("Ping function triggered.");
+    var response = req.CreateResponse(HttpStatusCode.OK);
+    response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
+    response.WriteString("OK");
 
-      var response = req.CreateResponse(HttpStatusCode.OK);
-      response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-      response.WriteString("OK");
-
-      return response;
-    }
+    return response;
   }
 }
