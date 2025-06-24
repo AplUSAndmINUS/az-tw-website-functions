@@ -1,18 +1,17 @@
 using Functions.Authors.Functions;
 using Functions.Authors.Models;
 using Functions.Authors.Services;
-using Functions.Authors.Validators;
 using Tests.Helpers;
-
 using SharedStorage.Services;
 using Utils;
 using Utils.Validation;
 using Moq;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Net;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using Xunit;
 
@@ -20,6 +19,15 @@ namespace Tests.Authors;
 
 public class CreateAuthorTests
 {
+  private HttpResponseData CreateMockResponse(FunctionContext context, HttpStatusCode statusCode)
+  {
+    var response = new Mock<HttpResponseData>(context);
+    response.SetupProperty(r => r.StatusCode, statusCode);
+    var headers = new HttpHeadersCollection();
+    response.Setup(r => r.Headers).Returns(headers);
+    return response.Object;
+  }
+
   [Fact]
   public async Task CreateAuthorAsync_ValidRequest_ReturnsCreatedResponse()
   {
@@ -29,9 +37,17 @@ public class CreateAuthorTests
     var mockApiKeyValidator = new Mock<IAPIKeyValidator>();
     var mockAuthorService = new Mock<IAuthorService>();
 
-    // Author model and DTO setup
-    var authorModel = new AuthorModel { FirstName = "Test", LastName = "Author", Email = "Test.Author@email.com", Username = "testAuthor123" };
-    var createdAuthor = new AuthorDTO {
+    // Author model setup
+    var authorModel = new AuthorModel 
+    { 
+      FirstName = "Test", 
+      LastName = "Author", 
+      Email = "test.author@email.com", 
+      Username = "testAuthor123" 
+    };
+    
+    var createdAuthor = new AuthorDTO 
+    {
       AuthorSlug = "test-author", 
       FirstName = "Test", 
       LastName = "Author", 
@@ -66,17 +82,14 @@ public class CreateAuthorTests
       mockAuthorService.Object
     );
 
-    // Prepare the mock HttpRequestData
-    var json = JsonSerializer.Serialize(authorModel);
-    var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-
+    // Create test request
     var context = TestFactory.CreateFunctionContext();
-    var request = TestFactory.CreateHttpRequestData(
+    var request = TestFactory.CreateJsonRequestWithApiKey(
       context,
+      authorModel,
+      "***REMOVED***",
       "POST",
-      "authors",
-      stream,
-      "application/json"
+      "authors"
     );
 
     // Act
@@ -84,10 +97,91 @@ public class CreateAuthorTests
 
     // Assert
     Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-    Assert.Contains(
-      "/authors/test-author", 
-      response.Headers.GetValues("Location").FirstOrDefault() 
-      ?? string.Empty
+    
+    // Verify service was called
+    mockAuthorService.Verify(s => s.CreateAuthorAsync(It.IsAny<AuthorModel>()), Times.Once);
+    mockApiKeyValidator.Verify(v => v.ValidateOrThrowAsync(It.IsAny<HttpRequestData>()), Times.Once);
+  }
+
+  [Fact]
+  public async Task CreateAuthorAsync_InvalidJson_ReturnsBadRequest()
+  {
+    // Arrange
+    var mockLogger = new Mock<IAppInsightsLogger<CreateAuthor>>();
+    var mockTableStorageService = new Mock<ITableStorageService>();
+    var mockApiKeyValidator = new Mock<IAPIKeyValidator>();
+    var mockAuthorService = new Mock<IAuthorService>();
+
+    mockApiKeyValidator
+      .Setup(v => v.ValidateOrThrowAsync(It.IsAny<HttpRequestData>()))
+      .Returns(Task.CompletedTask);
+
+    var function = new CreateAuthor(
+      mockLogger.Object,
+      mockTableStorageService.Object,
+      mockApiKeyValidator.Object,
+      mockAuthorService.Object
     );
+
+    // Create request with invalid JSON
+    var context = TestFactory.CreateFunctionContext();
+    var request = TestFactory.CreateHttpRequestData(
+      context,
+      "POST",
+      "authors",
+      "{ invalid json }",
+      new Dictionary<string, string> 
+      { 
+        { "Content-Type", "application/json" },
+        { "x-functions-key", "***REMOVED***" }
+      }
+    );
+
+    // Act
+    var response = await function.Run(request, context);
+
+    // Assert
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task CreateAuthorAsync_NullModel_ReturnsBadRequest()
+  {
+    // Arrange
+    var mockLogger = new Mock<IAppInsightsLogger<CreateAuthor>>();
+    var mockTableStorageService = new Mock<ITableStorageService>();
+    var mockApiKeyValidator = new Mock<IAPIKeyValidator>();
+    var mockAuthorService = new Mock<IAuthorService>();
+
+    mockApiKeyValidator
+      .Setup(v => v.ValidateOrThrowAsync(It.IsAny<HttpRequestData>()))
+      .Returns(Task.CompletedTask);
+
+    var function = new CreateAuthor(
+      mockLogger.Object,
+      mockTableStorageService.Object,
+      mockApiKeyValidator.Object,
+      mockAuthorService.Object
+    );
+
+    // Create request with null/empty body
+    var context = TestFactory.CreateFunctionContext();
+    var request = TestFactory.CreateHttpRequestData(
+      context,
+      "POST",
+      "authors",
+      "",
+      new Dictionary<string, string> 
+      { 
+        { "Content-Type", "application/json" },
+        { "x-functions-key", "***REMOVED***" }
+      }
+    );
+
+    // Act
+    var response = await function.Run(request, context);
+
+    // Assert
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
 }

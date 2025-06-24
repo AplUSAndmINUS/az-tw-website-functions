@@ -1,9 +1,12 @@
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.Functions.Worker;
 using Moq;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 
 namespace Tests.Helpers;
 
@@ -11,38 +14,90 @@ public static class TestFactory
 {
   public static FunctionContext CreateFunctionContext() =>
     new Mock<FunctionContext>().Object;
-  
+
   public static HttpRequestData CreateHttpRequestData(
     FunctionContext context,
     string method,
     string url,
-    Stream body,
-    string contentType)
+    string jsonBody,
+    Dictionary<string, string> headers)
   {
     var request = new Mock<HttpRequestData>(context);
-    request.Setup(r => r.Body).Returns(body);
-    request.Setup(r => r.Method).Returns(method);
-    request.Setup(r => r.Headers).Returns(new HttpHeadersCollection
+    
+    // Setup body
+    Stream bodyStream = new MemoryStream();
+    if (!string.IsNullOrEmpty(jsonBody))
     {
-      { "Content-Type", contentType }
-    });
+      var bytes = Encoding.UTF8.GetBytes(jsonBody);
+      bodyStream = new MemoryStream(bytes);
+    }
+    request.Setup(r => r.Body).Returns(bodyStream);
+    
+    // Setup method and URL
+    request.Setup(r => r.Method).Returns(method);
     request.Setup(r => r.Url).Returns(new Uri($"https://localhost:7071/{url}"));
-    request.Setup(r => r.CreateResponse(It.IsAny<HttpStatusCode>()))
-            .Returns<HttpStatusCode>(code =>
-            {
-              var response = new Mock<HttpResponseData>(context);
-              response.SetupProperty(r => r.StatusCode, code);
-              response.Setup(r => r.Headers).Returns(new HttpHeadersCollection());
-              response.Setup(r => r.Body).Returns(new MemoryStream());
-              response.Setup(r => r.WriteString(It.IsAny<string>()))
-                      .Callback<string>(s =>
-                      {
-                        var stream = new MemoryStream(Encoding.UTF8.GetBytes(s));
-                        response.Object.Body = stream;
-                      });
-              return response.Object;
-            });
-
+    
+    // Setup headers
+    var headerCollection = new HttpHeadersCollection();
+    if (headers != null)
+    {
+      foreach (var header in headers)
+      {
+        headerCollection.Add(header.Key, header.Value);
+      }
+    }
+    request.Setup(r => r.Headers).Returns(headerCollection);
+    
     return request.Object;
+  }
+  
+  public static HttpRequestData CreateJsonRequest<T>(
+    FunctionContext context,
+    T data,
+    string method,
+    string url,
+    Dictionary<string, string> additionalHeaders)
+  {
+    var json = JsonSerializer.Serialize(data);
+    var headers = new Dictionary<string, string>
+    {
+      { "Content-Type", "application/json" }
+    };
+    
+    if (additionalHeaders != null)
+    {
+      foreach (var header in additionalHeaders)
+      {
+        headers[header.Key] = header.Value;
+      }
+    }
+    
+    return CreateHttpRequestData(context, method, url, json, headers);
+  }
+  
+  public static HttpRequestData CreateJsonRequestWithApiKey<T>(
+    FunctionContext context,
+    T data,
+    string apiKey,
+    string method,
+    string url)
+  {
+    var headers = new Dictionary<string, string>
+    {
+      { "x-functions-key", apiKey }
+    };
+    
+    return CreateJsonRequest(context, data, method, url, headers);
+  }
+
+  public static Stream CreateJsonStream<T>(T data)
+  {
+    var json = JsonSerializer.Serialize(data);
+    return new MemoryStream(Encoding.UTF8.GetBytes(json));
+  }
+  
+  public static Stream CreateStringStream(string content)
+  {
+    return new MemoryStream(Encoding.UTF8.GetBytes(content));
   }
 }
