@@ -2,13 +2,15 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using System.Net;
 using System.Text.Json;
-using Utils;
 
+using Utils;
 using Functions.Authors.Services;
-using Functions.Authors.Models;
-using SharedStorage.Services;
 
 namespace Functions.Authors.Functions;
+
+// Endpoint: GET /authors/{slug}
+// Description: Retrieves an author by their slug. If the author exists, it returns the author's details.
+// If the author does not exist, it returns a 404 Not Found error.
 
 public class GetAuthorFunction
 {

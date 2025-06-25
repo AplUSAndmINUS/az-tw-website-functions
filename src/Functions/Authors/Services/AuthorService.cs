@@ -95,30 +95,9 @@ public class AuthorService : IAuthorService
         return null;
       }
 
-      return new AuthorDTO
-      {
-        AuthorSlug = entity.AuthorSlug,
-        DisplayName = entity.DisplayName,
-        FirstName = entity.FirstName,
-        LastName = entity.LastName,
-        Username = entity.Username,
+      var dto = AuthorDTOMapper.ToDTO(entity, null);
 
-        // Email is not included in the DTO for privacy reasons
-        // Email = entity.Email,
-        Location = entity.Location,
-        Bio = entity.Bio,
-        Website = entity.Website,
-        TwitterHandle = entity.TwitterHandle,
-        InstagramHandle = entity.InstagramHandle,
-        LinkedInHandle = entity.LinkedInHandle,
-        BlueskyHandle = entity.BlueskyHandle,
-
-        // Profile image properties
-        HasValidProfileImage = entity.HasValidProfileImage,
-        ProfileImageFileName = entity.ProfileImageFileName,
-        ProfileImageCdnUrl = entity.ProfileImageCdnUrl,
-        ThumbnailCdnUrl = entity.ThumbnailCdnUrl
-      };
+      return dto;
     }
     catch (Exception ex)
     {
