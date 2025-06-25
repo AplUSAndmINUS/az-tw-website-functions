@@ -1,87 +1,87 @@
 name: Deploy DotNet project to Azure Function App
 
 on:
-  push:
-    branches: ["develop", "test", "master"]
+    push:
+        branches: ["develop", "test", "master"]
 
 env:
-  AZURE_FUNCTIONAPP_NAME: az-tw-website-${{ github.ref_name == 'master' && 'production' || github.ref_name }}
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: './output'
-  StorageAccountName: ${{ secrets.STORAGE_ACCOUNT_NAME }}
-  X_API_ENVIRONMENT_KEY: ${{ secrets.X_API_ENVIRONMENT_KEY }}
-  USE_MOCK_STORAGE: ${{ vars.USE_MOCK_STORAGE }}
-  DOTNET_VERSION: '8.0.x'                   
+    AZURE_FUNCTIONAPP_NAME: az-tw-website-${{ github.ref_name == 'master' && 'production' || github.ref_name }}
+    AZURE_FUNCTIONAPP_PACKAGE_PATH: "./output"
+    StorageAccountName: ${{ secrets.STORAGE_ACCOUNT_NAME }}
+    X_API_ENVIRONMENT_KEY: ${{ secrets.X_API_ENVIRONMENT_KEY }}
+    USE_MOCK_STORAGE: ${{ vars.USE_MOCK_STORAGE }}
+    DOTNET_VERSION: "8.0.x"
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    environment: ${{ github.ref_name }}
-    steps:
-    # Print out the environment we're deploying to'
-    - name: Print Deployment Target
-      run: 'echo "🔁 Deploying to environment: ${{ github.ref_name }}"'
-      
-    - name: 'Checkout GitHub Action'
-      uses: actions/checkout@v4
+    build-and-deploy:
+        runs-on: ubuntu-latest
+        environment: ${{ github.ref_name }}
+        steps:
+            # Print out the environment we're deploying to'
+            - name: Print Deployment Target
+              run: 'echo "🔁 Deploying to environment: ${{ github.ref_name }}"'
 
-    # Using Azure Credentials RBAC, so commented out lines 41-44
-    - name: 'Login via Azure CLI'
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }} # set up AZURE_RBAC_CREDENTIALS secrets in your repository
+            - name: "Checkout GitHub Action"
+              uses: actions/checkout@v4
 
-    - name: 'Inject Function App Settings'
-      env:
-        USE_MOCK_STORAGE: "${{ env.USE_MOCK_STORAGE != '' && env.USE_MOCK_STORAGE || 'false' }}"
-      run: |
-        if [ "${{ github.ref_name }}" = "master" ]; then
-          echo "🔒 Production build: omitting FUNCTIONS_WORKER_RUNTIME"
-          az functionapp config appsettings set \
-            --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-            --resource-group az-tw-website-functions \
-            --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
-                        USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
-                        StorageAccountName="${{ env.StorageAccountName }}"
-        else
-          echo "✅ Non-prod build: including FUNCTIONS_WORKER_RUNTIME"
-          az functionapp config appsettings set \
-            --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-            --resource-group az-tw-website-functions \
-            --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
-                        USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
-                        StorageAccountName="${{ env.StorageAccountName }}" \
-                        FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
-        fi
+            # Using Azure Credentials RBAC, so commented out lines 41-44
+            - name: "Login via Azure CLI"
+              uses: azure/login@v1
+              with:
+                  creds: ${{ secrets.AZURE_CREDENTIALS }} # set up AZURE_RBAC_CREDENTIALS secrets in your repository
 
-    - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+            - name: "Inject Function App Settings"
+              env:
+                  USE_MOCK_STORAGE: "${{ env.USE_MOCK_STORAGE != '' && env.USE_MOCK_STORAGE || 'false' }}"
+              run: |
+                  if [ "${{ github.ref_name }}" = "master" ]; then
+                    echo "🔒 Production build: omitting FUNCTIONS_WORKER_RUNTIME"
+                    az functionapp config appsettings set \
+                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                      --resource-group az-tw-website-functions \
+                      --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
+                                  USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
+                                  StorageAccountName="${{ env.StorageAccountName }}"
+                  else
+                    echo "✅ Non-prod build: including FUNCTIONS_WORKER_RUNTIME"
+                    az functionapp config appsettings set \
+                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                      --resource-group az-tw-website-functions \
+                      --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
+                                  USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
+                                  StorageAccountName="${{ env.StorageAccountName }}" \
+                                  FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
+                  fi
 
-    - name: 'Build the Function App'
-      run: dotnet publish ./src/Functions/Functions.csproj --configuration Release --output ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+            - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Generate robots.txt for mock environments
-      if: env.USE_MOCK_STORAGE == 'true'
-      run: | 
-        # Create a robots.txt file to disallow all web crawlers
-        echo "Generating robots.txt for mock environment"
-        echo -e "User-agent: *\nDisallow: /" > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/robots.txt
+            - name: "Build the Function App"
+              run: dotnet publish ./src/Functions/Functions.csproj --configuration Release --output ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
 
-    - name: List output package contents
-      run: |
-        echo "Showing contents of output folder..."
-        find ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+            - name: Generate robots.txt for mock environments
+              if: env.USE_MOCK_STORAGE == 'true'
+              run: |
+                  # Create a robots.txt file to disallow all web crawlers
+                  echo "Generating robots.txt for mock environment"
+                  echo -e "User-agent: *\nDisallow: /" > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/robots.txt
 
-    - name: Inspect zip structure
-      run: |
-        cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-        zip -r ../deploy-package.zip .
-        unzip -l ../deploy-package.zip
- 
-    - name: 'Run Azure Functions Action'
-      uses: Azure/functions-action@v1
-      id: fa
-      with:
-        app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-        package: '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+            - name: List output package contents
+              run: |
+                  echo "Showing contents of output folder..."
+                  find ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+
+            - name: Inspect zip structure
+              run: |
+                  cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+                  zip -r ../deploy-package.zip .
+                  unzip -l ../deploy-package.zip
+
+            - name: "Run Azure Functions Action"
+              uses: Azure/functions-action@v1
+              id: fa
+              with:
+                  app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+                  package: "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
