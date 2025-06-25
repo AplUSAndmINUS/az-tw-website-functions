@@ -7,18 +7,26 @@ namespace Functions.BlogPosts.Services;
 
 public interface IBlogPostService
 {
+  // Table storage functions
+  Task<BlogPostDTO?> GetPostAsync(string slug, bool? isPublished = true);
   Task<BlogPostDTO?> GetPostsAsync(string? authorSlug = null, string? category = null, string? status = null, string? tag = null, int? limit = null, int? offset = null);
+  Task<BlogPostDTO?> GetPostsByCategoryAsync(string category, bool? isPublished = true, int? limit = null, int? offset = null);
   Task<BlogPostDTO?> DeletePostAsync(string slug);
   Task<BlogPostDTO> UpsertPostAsync(string slug, BlogPostModel model);
+
+  // Blob storage functions
+  Task UploadBlogPostImageAsync(string slug, string imageUrl, string? description = null);
+  Task UploadBlogPostMediaAsync(string slug, string mediaUrl, string? description = null);
 }
 
 public class BlogPostService : IBlogPostService
 {
+  private readonly IBlobStorageService _blobStorageService;
   private readonly ITableStorageService _tableStorageService;
   private readonly IAppInsightsLogger<BlogPostService> _appLogger;
   private readonly string _tableName;
 
-  public BlogPostService(ITableStorageService tableStorageService, IAppInsightsLogger<BlogPostService> appLogger)
+  public static BlogPostService(IBlobStorageService blobStorageService, ITableStorageService tableStorageService, IAppInsightsLogger<BlogPostService> appLogger)
   {
     // Get table name from environment variable with fallback to "blogposts"
     var rawTableName = Environment.GetEnvironmentVariable("BLOGPOSTS_TABLE_NAME") ?? "blog";

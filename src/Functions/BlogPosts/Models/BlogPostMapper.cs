@@ -24,11 +24,8 @@ public static class BlogPostMapper
     ArgumentNullException.ThrowIfNull(model.Category);
     ArgumentNullException.ThrowIfNull(model.TagsList);
 
-    // Custom validation: At least one of ImageUrl or MediaUrl must be provided
-    if (string.IsNullOrWhiteSpace(model.ImageUrl) && string.IsNullOrWhiteSpace(model.MediaUrl))
-    {
-      throw new ArgumentException("At least one of ImageUrl or MediaUrl must be provided.", nameof(model));
-    }
+    // Media validation is now optional since media references can be added later
+    // Business logic can enforce media requirements at the service level if needed
 
     var entity = new BlogPostEntity
     {
@@ -40,10 +37,9 @@ public static class BlogPostMapper
       Slug = DataValidation.Required(DataValidation.SafeTrim(model.Slug, 100), nameof(model.Slug)),
       Category = DataValidation.Required(DataValidation.SafeTrim(model.Category, 50), nameof(model.Category)),
       Status = DataValidation.SafeTrim(model.Status, 20) ?? "Draft",
-      MediaUrl = DataValidation.NormalizeUrl(model.MediaUrl),
-      MediaDescription = DataValidation.SafeTrim(model.MediaDescription, 200),
-      ImageUrl = DataValidation.NormalizeUrl(model.ImageUrl),
-      ImageDescription = DataValidation.SafeTrim(model.ImageDescription, 200),
+      FeaturedImageId = model.FeaturedImageId,
+      FeaturedMediaId = model.FeaturedMediaId,
+      MediaReferencesJson = model.MediaReferencesJson ?? "[]",
       PublishDate = model.PublishDate,
       LastModified = DateTime.UtcNow, // Always update LastModified on conversion
       TagsJson = JsonSerializer.Serialize(model.TagsList),
@@ -86,10 +82,9 @@ public static class BlogPostMapper
       Slug = entity.Slug,
       Category = entity.Category,
       Status = entity.Status,
-      MediaUrl = entity.MediaUrl,
-      MediaDescription = entity.MediaDescription,
-      ImageUrl = entity.ImageUrl,
-      ImageDescription = entity.ImageDescription,
+      FeaturedImageId = entity.FeaturedImageId,
+      FeaturedMediaId = entity.FeaturedMediaId,
+      MediaReferencesJson = entity.MediaReferencesJson,
       PublishDate = entity.PublishDate,
       LastModified = entity.LastModified,
       TagsList = DeserializeTags(entity.TagsJson)
@@ -119,10 +114,9 @@ public static class BlogPostMapper
       Slug = model.Slug,
       Category = model.Category,
       Status = model.Status,
-      MediaUrl = model.MediaUrl,
-      MediaDescription = model.MediaDescription,
-      ImageUrl = model.ImageUrl,
-      ImageDescription = model.ImageDescription,
+      FeaturedImageId = model.FeaturedImageId,
+      FeaturedMediaId = model.FeaturedMediaId,
+      MediaReferencesJson = model.MediaReferencesJson,
       PublishDate = model.PublishDate,
       LastModified = model.LastModified,
       TagsList = model.TagsList
@@ -152,10 +146,9 @@ public static class BlogPostMapper
       Slug = entity.Slug,
       Category = entity.Category,
       Status = entity.Status,
-      MediaUrl = entity.MediaUrl,
-      MediaDescription = entity.MediaDescription,
-      ImageUrl = entity.ImageUrl,
-      ImageDescription = entity.ImageDescription,
+      FeaturedImageId = entity.FeaturedImageId,
+      FeaturedMediaId = entity.FeaturedMediaId,
+      MediaReferencesJson = entity.MediaReferencesJson,
       PublishDate = entity.PublishDate,
       LastModified = entity.LastModified,
       TagsList = DeserializeTags(entity.TagsJson)
@@ -186,10 +179,9 @@ public static class BlogPostMapper
       Slug = dto.Slug,
       Category = dto.Category,
       Status = dto.Status,
-      MediaUrl = string.IsNullOrEmpty(dto.MediaUrl) ? null : dto.MediaUrl,
-      MediaDescription = string.IsNullOrEmpty(dto.MediaDescription) ? null : dto.MediaDescription,
-      ImageUrl = string.IsNullOrEmpty(dto.ImageUrl) ? null : dto.ImageUrl,
-      ImageDescription = string.IsNullOrEmpty(dto.ImageDescription) ? null : dto.ImageDescription,
+      FeaturedImageId = dto.FeaturedImageId,
+      FeaturedMediaId = dto.FeaturedMediaId,
+      MediaReferencesJson = dto.MediaReferencesJson,
       PublishDate = dto.PublishDate,
       LastModified = dto.LastModified,
       TagsList = dto.TagsList
@@ -235,10 +227,9 @@ public static class BlogPostMapper
     entity.Slug = DataValidation.Required(DataValidation.SafeTrim(model.Slug, 100), nameof(model.Slug));
     entity.Category = DataValidation.Required(DataValidation.SafeTrim(model.Category, 50), nameof(model.Category));
     entity.Status = DataValidation.SafeTrim(model.Status, 20) ?? "Draft";
-    entity.MediaUrl = DataValidation.NormalizeUrl(model.MediaUrl);
-    entity.MediaDescription = DataValidation.SafeTrim(model.MediaDescription, 200);
-    entity.ImageUrl = DataValidation.NormalizeUrl(model.ImageUrl);
-    entity.ImageDescription = DataValidation.SafeTrim(model.ImageDescription, 200);
+    entity.FeaturedImageId = model.FeaturedImageId;
+    entity.FeaturedMediaId = model.FeaturedMediaId;
+    entity.MediaReferencesJson = model.MediaReferencesJson ?? "[]";
     entity.PublishDate = model.PublishDate;
     entity.LastModified = DateTime.UtcNow;
     entity.TagsJson = JsonSerializer.Serialize(model.TagsList);
