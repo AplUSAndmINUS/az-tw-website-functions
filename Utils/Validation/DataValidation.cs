@@ -24,6 +24,13 @@ public static class DataValidation
         return value;
     }
 
+    public static string? RequireAtLeastOne(string? value1, string? value2, string fieldName1, string fieldName2)
+    {
+        if (string.IsNullOrWhiteSpace(value1) && string.IsNullOrWhiteSpace(value2))
+            throw new ArgumentException($"At least one of '{fieldName1}' or '{fieldName2}' must be provided.");
+        return value1 ?? value2;
+    }
+
     public static string? IsValidEmail(string? email, string fieldName)
     {
         if (!System.Text.RegularExpressions.Regex.IsMatch(email ?? string.Empty, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
@@ -57,18 +64,25 @@ public static class DataValidation
         return value.Value;
     }
 
+    /// <summary>
+    /// Normalizes and validates a URL string
+    /// </summary>
+    /// <param name="url">The URL to normalize</param>
+    /// <returns>A normalized URL or null if invalid</returns>
     public static string? NormalizeUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
             return null;
 
-        // Ensure URL starts with http:// or https://
-        if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-            !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        var trimmed = url.Trim();
+
+        // Basic URL validation
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
         {
-            url = "https://" + url.TrimStart('/');
+            return uri.ToString();
         }
 
-        return url;
+        return null;
     }
 }
