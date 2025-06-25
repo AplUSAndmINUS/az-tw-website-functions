@@ -13,13 +13,11 @@ namespace Functions.Authors.Functions;
 public class GetAuthorFunction
 {
   private readonly IAppInsightsLogger<GetAuthorFunction> _appLogger;
-  private readonly ITableStorageService _tableStorageService;
   private readonly IAuthorService _authorService;
 
-  public GetAuthorFunction(IAppInsightsLogger<GetAuthorFunction> logger, ITableStorageService tableStorageService, IAuthorService authorService, string? query)
+  public GetAuthorFunction(IAppInsightsLogger<GetAuthorFunction> logger, IAuthorService authorService, string? query)
   {
     _appLogger = logger;
-    _tableStorageService = tableStorageService;
     _authorService = authorService;
     _appLogger.LogInformation("GetAuthorFunction initialized with query: {Query}", query ?? "null");
   }
