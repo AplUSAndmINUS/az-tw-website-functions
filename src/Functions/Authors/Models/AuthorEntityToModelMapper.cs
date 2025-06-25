@@ -24,13 +24,13 @@ public static class AuthorEntityToModelMapper
         nameof(author.Username)
       ),
       DisplayName = DataValidation.SafeTrim(author.DisplayName) ?? author.Username, // Fallback to username if display name is empty
-      Location = DataValidation.RequireMinLength(DataValidation.SafeTrim(author.Location), 2, nameof(author.Location)) ?? null,
-      Bio = DataValidation.RequireMinLength(DataValidation.SafeTrim(author.Bio), 10, nameof(author.Bio)) ?? null,
+      Location = string.IsNullOrWhiteSpace(author.Location) ? null : DataValidation.RequireMinLength(DataValidation.SafeTrim(author.Location), 2, nameof(author.Location)),
+      Bio = string.IsNullOrWhiteSpace(author.Bio) ? null : DataValidation.RequireMinLength(DataValidation.SafeTrim(author.Bio), 10, nameof(author.Bio)),
       Website = DataValidation.NormalizeUrl(author.Website),
-      TwitterHandle = DataValidation.RequireMinLength(DataValidation.SafeTrim(author.TwitterHandle), 3, nameof(author.TwitterHandle)) ?? null,
-      InstagramHandle = DataValidation.RequireMinLength(DataValidation.SafeTrim(author.InstagramHandle), 3, nameof(author.InstagramHandle)) ?? null,
-      LinkedInHandle = DataValidation.RequireMinLength(DataValidation.SafeTrim(author.LinkedInHandle), 3, nameof(author.LinkedInHandle)) ?? null,
-      BlueskyHandle = DataValidation.RequireMinLength(DataValidation.SafeTrim(author.BlueskyHandle), 3, nameof(author.BlueskyHandle)) ?? null,
+      TwitterHandle = string.IsNullOrWhiteSpace(author.TwitterHandle) ? null : DataValidation.RequireMinLength(DataValidation.SafeTrim(author.TwitterHandle), 3, nameof(author.TwitterHandle)),
+      InstagramHandle = string.IsNullOrWhiteSpace(author.InstagramHandle) ? null : DataValidation.RequireMinLength(DataValidation.SafeTrim(author.InstagramHandle), 3, nameof(author.InstagramHandle)),
+      LinkedInHandle = string.IsNullOrWhiteSpace(author.LinkedInHandle) ? null : DataValidation.RequireMinLength(DataValidation.SafeTrim(author.LinkedInHandle), 3, nameof(author.LinkedInHandle)),
+      BlueskyHandle = string.IsNullOrWhiteSpace(author.BlueskyHandle) ? null : DataValidation.RequireMinLength(DataValidation.SafeTrim(author.BlueskyHandle), 3, nameof(author.BlueskyHandle)),
 
       ProfileImageBlobContainer = DataValidation.SafeTrim(image?.ProfileImageBlobContainer) ?? "authors-images",
       ProfileImageFileName = DataValidation.SafeTrim(image?.ProfileImageFileName),
