@@ -65,6 +65,50 @@ public class TableStorageService : ITableStorageService
         }
     }
 
+    public async Task<T?> GetEntityAsync<T>(string tableName, string partitionKey, string rowKey) where T : class, ITableEntity, new()
+    {
+        var resolvedTableName = ResolveTableName(tableName);
+        _appLogger.LogInformation("Resolving table name to {ResolvedTableName}", resolvedTableName);
+
+        TableNameValidator.ValidateTableName(resolvedTableName);
+        var client = _tableServiceClient.GetTableClient(resolvedTableName);
+
+        if (string.IsNullOrWhiteSpace(partitionKey))
+        {
+            throw new ArgumentNullException(nameof(partitionKey), "PartitionKey cannot be null or empty.");
+        }
+
+        _appLogger.LogTableQuery(
+            tableName,
+            nameof(GetEntityAsync),
+            filter: null,
+            pageSize: 1,
+            continuationToken: null
+        );
+
+        try
+        {
+            _appLogger.LogInformation("Retrieving entity of type {EntityType} from table {TableName} (resolved: {ResolvedTableName}) with PartitionKey {PartitionKey} and RowKey {RowKey}", typeof(T).Name, tableName, resolvedTableName, partitionKey, rowKey);
+            var response = await client.GetEntityIfExistsAsync<T>(partitionKey, rowKey);
+
+            if (response.HasValue)
+            {
+                _appLogger.LogInformation("Entity of type {EntityType} retrieved successfully from table {TableName} (resolved: {ResolvedTableName}) with PartitionKey {PartitionKey} and RowKey {RowKey}", typeof(T).Name, tableName, resolvedTableName, partitionKey, rowKey);
+                return response.Value;
+            }
+            else
+            {
+                _appLogger.LogWarning("Entity of type {EntityType} not found in table {TableName} (resolved: {ResolvedTableName}) with PartitionKey {PartitionKey} and RowKey {RowKey}", typeof(T).Name, tableName, resolvedTableName, partitionKey, rowKey);
+                return null;
+            }
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            _appLogger.LogWarning("Entity of type {EntityType} not found in table {TableName} (resolved: {ResolvedTableName}) with PartitionKey {PartitionKey} and RowKey {RowKey}", typeof(T).Name, tableName, resolvedTableName, partitionKey, rowKey);
+            return null;
+        }
+    }
+
     public async Task<TablePageResult> GetEntitiesAsync(
         string tableName,
         string? filter = null,
