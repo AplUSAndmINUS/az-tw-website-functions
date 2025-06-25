@@ -38,28 +38,37 @@ public class BlobStorageService : IBlobStorageService
         _thumbnailService = thumbnailService ?? throw new ArgumentNullException(nameof(thumbnailService));
     }
 
+    private static string ResolveContainerName(string containerName)
+    {
+        var useMock = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+        return useMock ? $"mock-{containerName}" : containerName;
+    }
+
     public async Task<BlobClient> GetBlobClientAsync(string containerName, string blobName)
     {
+        var resolvedContainerName = ResolveContainerName(containerName);
+        _appLogger.LogInformation("Resolving container name to {ResolvedContainerName}", resolvedContainerName);
+
         // Validate container name
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
 
         try
         {
-            _appLogger.LogInformation("Retrieving blob client for container {ContainerName} and blob {BlobName}", containerName, blobName);
-            var response = await _blobServiceClient.GetBlobContainerClient(containerName).GetBlobClient(blobName).ExistsAsync();
+            _appLogger.LogInformation("Retrieving blob client for container {ContainerName} (resolved: {ResolvedContainerName}) and blob {BlobName}", containerName, resolvedContainerName, blobName);
+            var response = await _blobServiceClient.GetBlobContainerClient(resolvedContainerName).GetBlobClient(blobName).ExistsAsync();
 
             if (!response)
             {
                 throw new ArgumentException($"Blob '{blobName}' does not exist in container '{containerName}'.", nameof(blobName));
             }
 
-            _appLogger.LogInformation("Blob client retrieved successfully for container {ContainerName} and blob {BlobName}", containerName, blobName);
+            _appLogger.LogInformation("Blob client retrieved successfully for container {ContainerName} (resolved: {ResolvedContainerName}) and blob {BlobName}", containerName, resolvedContainerName, blobName);
 
-            return _blobServiceClient.GetBlobContainerClient(containerName).GetBlobClient(blobName);
+            return _blobServiceClient.GetBlobContainerClient(resolvedContainerName).GetBlobClient(blobName);
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _appLogger.LogError("Blob '{BlobName}' not found in container '{ContainerName}'", ex, blobName, containerName);
+            _appLogger.LogError("Blob '{BlobName}' not found in container '{ContainerName}' (resolved: '{ResolvedContainerName}')", ex, blobName, containerName, resolvedContainerName);
             throw new ArgumentException($"Blob '{blobName}' does not exist in container '{containerName}'.", nameof(blobName));
         }
     }
@@ -73,9 +82,13 @@ public class BlobStorageService : IBlobStorageService
     {
         // Validate container name
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
-        var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
 
-        _appLogger.LogInformation("Retrieving blobs from container {ContainerName} with prefix {Prefix}, page size {PageSize}, token {Token}", containerName, prefix ?? "null", pageSize, continuationToken ?? "null");
+        // update container to use mock if needed
+        var resolvedContainerName = ResolveContainerName(containerName);
+        _appLogger.LogInformation("Resolving container name to {ResolvedContainerName}", resolvedContainerName);
+        var containerClient = _blobServiceClient.GetBlobContainerClient(resolvedContainerName);
+
+        _appLogger.LogInformation("Retrieving blobs from container {ContainerName} (resolved: {ResolvedContainerName}) with prefix {Prefix}, page size {PageSize}, token {Token}", containerName, resolvedContainerName, prefix ?? "null", pageSize, continuationToken ?? "null");
 
         try
         {
@@ -87,12 +100,12 @@ public class BlobStorageService : IBlobStorageService
                 break; // We only need the first page
             }
 
-            _appLogger.LogInformation("Successfully retrieved {Count} blobs from container {ContainerName}", blobs.Count, containerName);
+            _appLogger.LogInformation("Successfully retrieved {Count} blobs from container {ContainerName} (resolved: {ResolvedContainerName})", blobs.Count, containerName, resolvedContainerName);
             return new BlobPageResult(blobs, continuationToken, blobs.Count, continuationToken != null);
         }
         catch (RequestFailedException ex)
         {
-            _appLogger.LogError("Failed to retrieve blobs from container {ContainerName}", ex, containerName);
+            _appLogger.LogError("Failed to retrieve blobs from container {ContainerName} (resolved: {ResolvedContainerName})", ex, containerName, resolvedContainerName);
             throw;
         }
     }
@@ -105,10 +118,13 @@ public class BlobStorageService : IBlobStorageService
         string? continuationToken = null)
     {
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
-        var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+
+        var resolvedContainerName = ResolveContainerName(containerName);
+        _appLogger.LogInformation("Resolving container name to {ResolvedContainerName}", resolvedContainerName);
+        var containerClient = _blobServiceClient.GetBlobContainerClient(resolvedContainerName);
         var blobReferences = new List<BlobReference>();
 
-        _appLogger.LogInformation("Retrieving blob references from container {ContainerName} with prefix {Prefix}, page size {PageSize}, token {Token}", containerName, prefix ?? "null", pageSize, continuationToken ?? "null");
+        _appLogger.LogInformation("Retrieving blob references from container {ContainerName} (resolved: {ResolvedContainerName}) with prefix {Prefix}, page size {PageSize}, token {Token}", containerName, resolvedContainerName, prefix ?? "null", pageSize, continuationToken ?? "null");
 
         await foreach (var blob in containerClient.GetBlobsAsync(prefix: prefix))
         {
@@ -125,19 +141,21 @@ public class BlobStorageService : IBlobStorageService
     {
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
 
-        var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+        var resolvedContainerName = ResolveContainerName(containerName);
+        _appLogger.LogInformation("Resolving container name to {ResolvedContainerName}", resolvedContainerName);
+        var containerClient = _blobServiceClient.GetBlobContainerClient(resolvedContainerName);
         var blobClient = containerClient.GetBlobClient(blobName);
 
         var exists = await blobClient.ExistsAsync();
 
-        _appLogger.LogInformation("Retrieving blob reference for container {ContainerName} and blob {BlobName}", containerName, blobName);
+        _appLogger.LogInformation("Retrieving blob reference for container {ContainerName} (resolved: {ResolvedContainerName}) and blob {BlobName}", containerName, resolvedContainerName, blobName);
         if (exists)
         {
-            _appLogger.LogInformation("Blob reference retrieved successfully for container {ContainerName} and blob {BlobName}", containerName, blobName);
+            _appLogger.LogInformation("Blob reference retrieved successfully for container {ContainerName} (resolved: {ResolvedContainerName}) and blob {BlobName}", containerName, resolvedContainerName, blobName);
         }
         else
         {
-            _appLogger.LogWarning("Blob {BlobName} does not exist in container {ContainerName}", blobName, containerName);
+            _appLogger.LogWarning("Blob {BlobName} does not exist in container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
         }
 
         var (section, assetType) = ParseContainerName(containerName);
@@ -147,10 +165,12 @@ public class BlobStorageService : IBlobStorageService
 
     public async Task<BlobDownloadResult> DownloadBlobAsync(string containerName, string blobName)
     {
-        var blobClient = await GetBlobClientAsync(containerName, blobName);
+        var resolvedContainerName = ResolveContainerName(containerName);
+        _appLogger.LogInformation("Resolving container name to {ResolvedContainerName}", resolvedContainerName);
+        var blobClient = await GetBlobClientAsync(resolvedContainerName, blobName);
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
 
-        _appLogger.LogInformation("Downloading blob {BlobName} from container {ContainerName}", blobName, containerName);
+        _appLogger.LogInformation("Downloading blob {BlobName} from container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
         _appLogger.LogBlobDownload(
             containerName,
             nameof(DownloadBlobAsync),
@@ -160,27 +180,29 @@ public class BlobStorageService : IBlobStorageService
         try
         {
             var downloadResponse = await blobClient.DownloadAsync();
-            _appLogger.LogInformation("Blob {BlobName} downloaded successfully from container {ContainerName}", blobName, containerName);
+            _appLogger.LogInformation("Blob {BlobName} downloaded successfully from container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
             return new BlobDownloadResult(downloadResponse.Value.Content, downloadResponse.Value.ContentLength, downloadResponse.GetRawResponse().Headers.ContentType);
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _appLogger.LogError("Blob {BlobName} not found in container {ContainerName}", ex, blobName, containerName);
+            _appLogger.LogError("Blob {BlobName} not found in container {ContainerName} (resolved: {ResolvedContainerName})", ex, blobName, containerName, resolvedContainerName);
             throw new ArgumentException($"Blob '{blobName}' does not exist in container '{containerName}'.", nameof(blobName));
         }
         catch (RequestFailedException ex)
         {
-            _appLogger.LogError("Failed to download blob {BlobName} from container {ContainerName}", ex, blobName, containerName);
+            _appLogger.LogError("Failed to download blob {BlobName} from container {ContainerName} (resolved: {ResolvedContainerName})", ex, blobName, containerName, resolvedContainerName);
             throw;
         }
     }
 
     public async Task<MediaReference> UploadBlobAsync(string containerName, string blobName, Stream content)
     {
-        var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+        var resolvedContainerName = ResolveContainerName(containerName);
+        _appLogger.LogInformation("Resolving container name to {ResolvedContainerName}", resolvedContainerName);
+        var containerClient = _blobServiceClient.GetBlobContainerClient(resolvedContainerName);
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
         await containerClient.CreateIfNotExistsAsync();
-        _appLogger.LogInformation("Uploading blob {BlobName} to container {ContainerName}", blobName, containerName);
+        _appLogger.LogInformation("Uploading blob {BlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
         _appLogger.LogBlobUpload(
             containerName,
             nameof(UploadBlobAsync),
@@ -216,25 +238,26 @@ public class BlobStorageService : IBlobStorageService
             thumbnail.Content.Position = 0; // Reset stream position to the beginning before upload
 
             // Upload the WebP image to the blob storage
-            _appLogger.LogInformation("Uploading main blob {BlobName} to container {ContainerName}", blobName, containerName);
+            _appLogger.LogInformation("Uploading main blob {BlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
             await blobClient.UploadAsync(convertedParams.Content, overwrite: true);
 
             // Upload the thumbnail image to the blob storage
             var thumbnailBlobName = $"thumbnails/{Path.GetFileNameWithoutExtension(blobName)}.webp";
-            _appLogger.LogInformation("Uploading thumbnail blob {ThumbnailBlobName} to container {ContainerName}", thumbnailBlobName, containerName);
+            _appLogger.LogInformation("Uploading thumbnail blob {ThumbnailBlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", thumbnailBlobName, containerName, resolvedContainerName);
             _appLogger.LogBlobUpload(
                 containerName,
                 nameof(UploadBlobAsync),
                 thumbnailBlobName,
                 thumbnail.Content.Length
             );
+
             var thumbnailBlobClient = containerClient.GetBlobClient(thumbnailBlobName);
             await thumbnailBlobClient.UploadAsync(
                 thumbnail.Content,
                 new BlobHttpHeaders { ContentType = "image/webp" });
-            _appLogger.LogInformation("Thumbnail blob {ThumbnailBlobName} uploaded successfully to container {ContainerName}", thumbnailBlobName, containerName);
+            _appLogger.LogInformation("Thumbnail blob {ThumbnailBlobName} uploaded successfully to container {ContainerName} (resolved: {ResolvedContainerName})", thumbnailBlobName, containerName, resolvedContainerName);
 
-            _appLogger.LogInformation("Blob {BlobName} uploaded successfully to container {ContainerName}", blobName, containerName);
+            _appLogger.LogInformation("Blob {BlobName} uploaded successfully to container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
             var (section, assetType) = ParseContainerName(containerName);
 
             // For upload operations, use direct Azure Blob URLs
@@ -251,38 +274,41 @@ public class BlobStorageService : IBlobStorageService
         }
         catch (RequestFailedException ex)
         {
-            _appLogger.LogError("Failed to upload blob {BlobName} to container {ContainerName}", ex, blobName, containerName);
+            _appLogger.LogError("Failed to upload blob {BlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", ex, blobName, containerName, resolvedContainerName);
             throw;
         }
     }
 
     public async Task DeleteBlobAsync(string containerName, string blobName)
     {
-        var blobClient = await GetBlobClientAsync(containerName, blobName);
+        var resolvedContainerName = ResolveContainerName(containerName);
+        _appLogger.LogInformation("Resolving container name to {ResolvedContainerName}", resolvedContainerName);
+        var blobClient = await GetBlobClientAsync(resolvedContainerName, blobName);
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
 
-        _appLogger.LogInformation("Deleting blob {BlobName} from container {ContainerName}", blobName, containerName);
+        _appLogger.LogInformation("Deleting blob {BlobName} from container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
 
         try
         {
             await blobClient.DeleteIfExistsAsync();
-            _appLogger.LogInformation("Blob {BlobName} deleted successfully from container {ContainerName}", blobName, containerName);
+            _appLogger.LogInformation("Blob {BlobName} deleted successfully from container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _appLogger.LogWarning("Blob {BlobName} not found in container {ContainerName}, nothing to delete", blobName, containerName);
+            _appLogger.LogWarning("Blob {BlobName} not found in container {ContainerName} (resolved: {ResolvedContainerName}), nothing to delete", blobName, containerName, resolvedContainerName);
         }
         catch (RequestFailedException ex)
         {
-            _appLogger.LogError("Failed to delete blob {BlobName} from container {ContainerName}", ex, blobName, containerName);
+            _appLogger.LogError("Failed to delete blob {BlobName} from container {ContainerName} (resolved: {ResolvedContainerName})", ex, blobName, containerName, resolvedContainerName);
             throw;
         }
     }
 
     public BlobContainerClient GetBlobContainerClient(string containerName)
     {
-        _appLogger.LogInformation("Retrieving BlobContainerClient for container {ContainerName}", containerName);
-        return _blobServiceClient.GetBlobContainerClient(containerName);
+        var resolvedContainerName = ResolveContainerName(containerName);
+        _appLogger.LogInformation("Retrieving BlobContainerClient for container {ContainerName}, resolved to {ResolvedContainerName}", containerName, resolvedContainerName);
+        return _blobServiceClient.GetBlobContainerClient(resolvedContainerName);
     }
 
     private (ContentSections section, AssetType? assetType) ParseContainerName(string containerName)
