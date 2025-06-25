@@ -5,11 +5,13 @@ using System.Net;
 using Utils;
 
 namespace Functions.BlogPosts.Functions;
-public class PlaceholderFunction
+public class GetPostsFunction
 {
-  private readonly IAppInsightsLogger<PlaceholderFunction> _appLogger;
+  private readonly IAppInsightsLogger<GetPostsFunction> _appLogger;
+  private readonly IAPIKeyValidator _apiKeyValidator;
+  private readonly IPostService _postService;
 
-  public PlaceholderFunction(IAppInsightsLogger<PlaceholderFunction> logger)
+  public GetPostsFunction(IAppInsightsLogger<GetPostsFunction> logger)
   {
     _appLogger = logger;
   }
