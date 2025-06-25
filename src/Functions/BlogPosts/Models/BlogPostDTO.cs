@@ -13,10 +13,10 @@ public class BlogPostDTO
   public string Slug { get; set; } = string.Empty;
   public string Category { get; set; } = string.Empty;
   public string Status { get; set; } = "Draft";
-  public string? MediaUrl { get; set; }
-  public string? MediaDescription { get; set; }
-  public string? ImageUrl { get; set; }
-  public string? ImageDescription { get; set; }
+  // Media references (storing IDs that point to media services)
+  public string? FeaturedImageId { get; set; }        // Reference to primary image in ImageService
+  public string? FeaturedMediaId { get; set; }        // Reference to primary media in MediaService
+  public string MediaReferencesJson { get; set; } = "[]"; // Array of media IDs for additional attachments
   public DateTime PublishDate { get; set; }
   public DateTime LastModified { get; set; }
   public string[] TagsList { get; set; } = [];

@@ -9,7 +9,7 @@ public class GetPostsFunction
 {
   private readonly IAppInsightsLogger<GetPostsFunction> _appLogger;
   private readonly IAPIKeyValidator _apiKeyValidator;
-  private readonly IPostService _postService;
+  private readonly IBlogPostService _blogPostService;
 
   public GetPostsFunction(IAppInsightsLogger<GetPostsFunction> logger)
   {

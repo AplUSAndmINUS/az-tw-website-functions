@@ -22,11 +22,10 @@ public class BlogPostEntity : ITableEntity
   public string Category { get; set; } = string.Empty;
   public string Status { get; set; } = "Draft";
 
-  // Media properties (nullable)
-  public string? MediaUrl { get; set; }
-  public string? MediaDescription { get; set; }
-  public string? ImageUrl { get; set; }
-  public string? ImageDescription { get; set; }
+  // Media references (storing IDs that point to media services)
+  public string? FeaturedImageId { get; set; }        // Reference to primary image in ImageService
+  public string? FeaturedMediaId { get; set; }        // Reference to primary media in MediaService
+  public string MediaReferencesJson { get; set; } = "[]"; // Array of media IDs for additional attachments
 
   // Date properties
   public DateTime PublishDate { get; set; }
@@ -76,11 +75,12 @@ public class BlogPostEntity : ITableEntity
     ArgumentNullException.ThrowIfNull(model.Category);
     ArgumentNullException.ThrowIfNull(model.TagsList);
 
-    // Custom validation: At least one of ImageUrl or MediaUrl must be provided
-    if (string.IsNullOrWhiteSpace(model.ImageUrl) && string.IsNullOrWhiteSpace(model.MediaUrl))
-    {
-      throw new ArgumentException("At least one of ImageUrl or MediaUrl must be provided.", nameof(model));
-    }
+    // Custom validation: At least one of FeaturedImageId or FeaturedMediaId should be provided for better UX
+    // Note: This is optional validation - blog posts can exist without media
+    // if (string.IsNullOrWhiteSpace(model.FeaturedImageId) && string.IsNullOrWhiteSpace(model.FeaturedMediaId))
+    // {
+    //   throw new ArgumentException("Consider providing at least one featured media item for better user experience.", nameof(model));
+    // }
 
     var entity = new BlogPostEntity
     {
@@ -92,10 +92,9 @@ public class BlogPostEntity : ITableEntity
       Slug = DataValidation.Required(DataValidation.SafeTrim(model.Slug), nameof(model.Slug)),
       Category = DataValidation.Required(DataValidation.SafeTrim(model.Category), nameof(model.Category)),
       Status = DataValidation.SafeTrim(model.Status) ?? "Draft",
-      MediaUrl = model.MediaUrl,
-      MediaDescription = model.MediaDescription,
-      ImageUrl = model.ImageUrl,
-      ImageDescription = model.ImageDescription,
+      FeaturedImageId = model.FeaturedImageId,
+      FeaturedMediaId = model.FeaturedMediaId,
+      MediaReferencesJson = model.MediaReferencesJson ?? "[]",
       PublishDate = model.PublishDate,
       LastModified = model.LastModified,
       TagsJson = JsonSerializer.Serialize(model.TagsList)
@@ -122,10 +121,9 @@ public class BlogPostEntity : ITableEntity
       Slug = Slug,
       Category = Category,
       Status = Status,
-      MediaUrl = MediaUrl,
-      MediaDescription = MediaDescription,
-      ImageUrl = ImageUrl,
-      ImageDescription = ImageDescription,
+      FeaturedImageId = FeaturedImageId,
+      FeaturedMediaId = FeaturedMediaId,
+      MediaReferencesJson = MediaReferencesJson,
       PublishDate = PublishDate,
       LastModified = LastModified,
       TagsList = string.IsNullOrEmpty(TagsJson) ? [] : JsonSerializer.Deserialize<string[]>(TagsJson) ?? []

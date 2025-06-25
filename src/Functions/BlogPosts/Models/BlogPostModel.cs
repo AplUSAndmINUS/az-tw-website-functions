@@ -19,11 +19,10 @@ public class BlogPostModel
   public string Category { get; set; } = string.Empty;
   public string Status { get; set; } = "Draft";
 
-  // Media properties (nullable)
-  public string? MediaUrl { get; set; }
-  public string? MediaDescription { get; set; }
-  public string? ImageUrl { get; set; }
-  public string? ImageDescription { get; set; }
+  // Media references (storing IDs that point to media services)
+  public string? FeaturedImageId { get; set; }        // Reference to primary image in ImageService
+  public string? FeaturedMediaId { get; set; }        // Reference to primary media in MediaService  
+  public string MediaReferencesJson { get; set; } = "[]"; // Array of media IDs for additional attachments
 
   // Date properties
   public DateTime PublishDate { get; set; }
