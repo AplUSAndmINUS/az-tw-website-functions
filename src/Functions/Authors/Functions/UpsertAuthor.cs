@@ -5,7 +5,6 @@ using Functions.Authors.Validators;
 using Functions.Authors.Helpers;
 using Functions.Authors.Services;
 using System.Net;
-using SharedStorage.Services;
 using Utils;
 using Utils.Validation;
 using System.Text.Json;
@@ -20,17 +19,15 @@ namespace Functions.Authors.Functions;
 public class UpsertAuthorAsync
 {
   private readonly IAppInsightsLogger<UpsertAuthorAsync> _appLogger;
-  private readonly ITableStorageService _tableStorageService;
   private readonly IAPIKeyValidator _apiKeyValidator;
 
   private readonly IAuthorService _authorService;
 
   // Constructor to inject the logger
-  public UpsertAuthorAsync(IAppInsightsLogger<UpsertAuthorAsync> logger, ITableStorageService tableStorageService,
+  public UpsertAuthorAsync(IAppInsightsLogger<UpsertAuthorAsync> logger,
     IAPIKeyValidator apiKeyValidator, IAuthorService authorService)
   {
     _appLogger = logger;
-    _tableStorageService = tableStorageService;
     _apiKeyValidator = apiKeyValidator;
     _authorService = authorService;
     _appLogger.LogInformation("UpsertAuthorAsync function initialized.");
@@ -74,7 +71,7 @@ public class UpsertAuthorAsync
     }
 
     _appLogger.LogInformation("Creating a new author.");
-    AuthorModel? model = null;
+    AuthorModel? model;
 
     try
     {
