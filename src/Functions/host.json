@@ -9,9 +9,11 @@
         },
         "logLevel": {
             "default": "Information",
-            "Function": "Information",
+            "Function": "Trace",
             "Host.Results": "Information",
-            "Host.Aggregator": "Information"
+            "Host.Aggregator": "Information",
+            "Utils.Validation": "Trace",
+            "Functions.Authors": "Trace"
         }
     },
     "extensions": {
