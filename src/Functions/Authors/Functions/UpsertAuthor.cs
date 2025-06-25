@@ -12,6 +12,9 @@ using System.Text.Json;
 
 namespace Functions.Authors.Functions;
 
+// Endpoint: PUT /authors/{slug}
+// Description: Upserts an author by slug. If the author exists, it updates the properties.
+// If the author does not exist, it creates a new author with the provided data.
 // TODO: Create a scaffolding PATCH function to update an author's properties
 
 public class UpsertAuthorAsync
@@ -37,7 +40,15 @@ public class UpsertAuthorAsync
   {
     var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
     errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
-    errorResponse.WriteString(JsonSerializer.Serialize(new { errors }));
+
+    var errorObject = new { errors = errors.ToArray() };
+    var jsonOptions = new JsonSerializerOptions
+    {
+      PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+      WriteIndented = true
+    };
+
+    errorResponse.WriteString(JsonSerializer.Serialize(errorObject, jsonOptions));
     return errorResponse;
   }
 
@@ -121,19 +132,37 @@ public class UpsertAuthorAsync
     }
 
     // Now, do stuff with the validated model
-    _appLogger.LogInformation("Author model validated successfully. Proceeding to create the author.");
+    _appLogger.LogInformation("Author model validated successfully. Proceeding to upsert the author.");
 
-    // Create the author using the AuthorService
-    var result = await _authorService.UpsertAuthorAsync(model);
-    var response = req.CreateResponse(HttpStatusCode.Created);
+    try
+    {
+      // Create/Update the author using the AuthorService
+      var result = await _authorService.UpsertAuthorAsync(model);
 
-    // Set the response headers and body
-    response.Headers.Add("Location", $"/authors/{result.AuthorSlug}");
-    response.Headers.Add("Content-Type", "application/json; charset=utf-8");
-    response.WriteString(JsonSerializer.Serialize(result));
+      // Create response with appropriate status code
+      var response = req.CreateResponse(HttpStatusCode.Created);
 
-    // Log the successful creation of the author
-    _appLogger.LogInformation("Author created successfully.");
-    return response;
+      // Set the response headers
+      response.Headers.Add("Location", $"/authors/{result.AuthorSlug}");
+      response.Headers.Add("Content-Type", "application/json; charset=utf-8");
+
+      // Serialize the AuthorDTO response
+      var jsonOptions = new JsonSerializerOptions
+      {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+      };
+
+      await response.WriteStringAsync(JsonSerializer.Serialize(result, jsonOptions));
+
+      // Log the successful creation/update of the author
+      _appLogger.LogInformation("Author upserted successfully with slug: {AuthorSlug}", result.AuthorSlug);
+      return response;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to upsert author: {ErrorMessage}", ex, ex.Message);
+      return req.CreateResponse(HttpStatusCode.InternalServerError);
+    }
   }
 }
