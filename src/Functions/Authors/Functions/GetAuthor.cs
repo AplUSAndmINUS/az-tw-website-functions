@@ -67,7 +67,7 @@ public class GetAuthorFunction
 
       if (author == null)
       {
-        _appLogger.LogWarning("Author not found for slug: {Slug}", slug);
+        _appLogger.LogWarning("Author not found for slug: {0}", slug);
         return CreateErrorResponse(req, "Author not found", HttpStatusCode.NotFound);
       }
       else
