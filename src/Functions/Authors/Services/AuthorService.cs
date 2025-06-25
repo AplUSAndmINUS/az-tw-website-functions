@@ -7,7 +7,7 @@ namespace Functions.Authors.Services;
 
 public interface IAuthorService
 {
-  Task<AuthorDTO> CreateAuthorAsync(AuthorModel model);
+  Task<AuthorDTO> UpsertAuthorAsync(AuthorModel model);
 }
 
 public class AuthorService : IAuthorService
@@ -27,9 +27,9 @@ public class AuthorService : IAuthorService
     _appLogger.LogInformation($"Instantiated table using table name: {_tableName}");
   }
 
-  public async Task<AuthorDTO> CreateAuthorAsync(AuthorModel model)
+  public async Task<AuthorDTO> UpsertAuthorAsync(AuthorModel model)
   {
-    _appLogger.LogInformation("Creating author entity.");
+    _appLogger.LogInformation("Upserting or creating an author entity.");
 
     try
     {
@@ -67,7 +67,7 @@ public class AuthorService : IAuthorService
     }
     catch (Exception ex)
     {
-      _appLogger.LogError("Failed to create author entity.", ex);
+      _appLogger.LogError("Failed to upsert the author entity.", ex);
       throw;
     }
   }

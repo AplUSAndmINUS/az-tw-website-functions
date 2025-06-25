@@ -2,6 +2,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Functions.Authors.Models;
 using Functions.Authors.Validators;
+using Functions.Authors.Helpers;
 using Functions.Authors.Services;
 using System.Net;
 using SharedStorage.Services;
@@ -11,26 +12,23 @@ using System.Text.Json;
 
 namespace Functions.Authors.Functions;
 
-public class CreateAuthor
+public class UpsertAuthorAsync
 {
-  // This function is a placeholder for creating an author.
-  // The actual implementation will depend on your specific requirements.
-  // You can use this function to handle HTTP requests to create a new author.
-  private readonly IAppInsightsLogger<CreateAuthor> _appLogger;
+  private readonly IAppInsightsLogger<UpsertAuthorAsync> _appLogger;
   private readonly ITableStorageService _tableStorageService;
   private readonly IAPIKeyValidator _apiKeyValidator;
 
   private readonly IAuthorService _authorService;
 
   // Constructor to inject the logger
-  public CreateAuthor(IAppInsightsLogger<CreateAuthor> logger, ITableStorageService tableStorageService,
+  public UpsertAuthorAsync(IAppInsightsLogger<UpsertAuthorAsync> logger, ITableStorageService tableStorageService,
     IAPIKeyValidator apiKeyValidator, IAuthorService authorService)
   {
     _appLogger = logger;
     _tableStorageService = tableStorageService;
     _apiKeyValidator = apiKeyValidator;
     _authorService = authorService;
-    _appLogger.LogInformation("CreateAuthor function initialized.");
+    _appLogger.LogInformation("UpsertAuthorAsync function initialized.");
   }
 
   private static HttpResponseData CreateValidationErrorResponse(HttpRequestData req, IEnumerable<string> errors)
@@ -41,15 +39,15 @@ public class CreateAuthor
     return errorResponse;
   }
 
-  [Function("CreateAuthorAsync")]
+  [Function("UpsertAuthorAsync")]
   public async Task<HttpResponseData> Run(
-    [HttpTrigger(AuthorizationLevel.Function, "post", Route = "authors")] HttpRequestData req,
+    [HttpTrigger(AuthorizationLevel.Function, "put", Route = "authors/{slug}")] HttpRequestData req, string slug,
     FunctionContext executionContext)
 
   {
     // Log the function execution context
     // You can use this logger to log information, warnings, errors, etc.
-    _appLogger.LogInformation("Validating API key for CreateAuthor function.");
+    _appLogger.LogInformation("Validating API key for UpsertAuthorAsync function.");
     // Validate the API key
     try
     {
@@ -103,11 +101,28 @@ public class CreateAuthor
       return req.CreateResponse(HttpStatusCode.InternalServerError);
     }
 
+    // check to see if the slug exists
+    // TODO: implement a check to see if the slug already exists to generate -2, -3, etc.
+    if (string.IsNullOrEmpty(model.AuthorSlug))
+    {
+      model.AuthorSlug = slug ??
+      SlugGenerator.FromName(model.FirstName, model.LastName)
+      ?? SlugGenerator.FromString(model.Username)
+      ?? SlugGenerator.FromString(model.DisplayName)
+      ?? SlugGenerator.FromAnonymous();
+      _appLogger.LogInformation($"Generated slug for author: {model.AuthorSlug}");
+    }
+    else if (!string.Equals(model.AuthorSlug, slug, StringComparison.OrdinalIgnoreCase))
+    {
+      _appLogger.LogWarning($"Slug mismatch: provided slug '{slug}' does not match model slug '{model.AuthorSlug}'.");
+      return CreateValidationErrorResponse(req, new[] { "Slug mismatch." });
+    }
+
     // Now, do stuff with the validated model
     _appLogger.LogInformation("Author model validated successfully. Proceeding to create the author.");
 
     // Create the author using the AuthorService
-    var result = await _authorService.CreateAuthorAsync(model);
+    var result = await _authorService.UpsertAuthorAsync(model);
     var response = req.CreateResponse(HttpStatusCode.Created);
 
     // Set the response headers and body
