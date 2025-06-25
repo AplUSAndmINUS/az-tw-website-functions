@@ -27,18 +27,21 @@ public class ApiKeyValidator : IAPIKeyValidator
             return false;
         }
 
-        if (!string.Equals(apiKey, _validApiKey, StringComparison.Ordinal) || (apiKey != _validApiKey && apiKey.Length < 32))
+        // Check if the API key matches the expected valid key
+        if (!string.Equals(apiKey, _validApiKey, StringComparison.Ordinal))
         {
-            // Check if the API key is not null, empty, or too short
-            // Assuming a valid API key should be at least 32 characters long
             _errorMessage = "Invalid API key.";
             return false;
         }
-        
-        // If the API key is valid, check if the request method is GET
-        if (!_enforceGet && req.Method.Equals("GET", StringComparison.OrdinalIgnoreCase))
-            return true;
 
+        // If _enforceGet is true, only allow GET requests
+        if (_enforceGet && !req.Method.Equals("GET", StringComparison.OrdinalIgnoreCase))
+        {
+            _errorMessage = "Only GET requests are allowed.";
+            return false;
+        }
+
+        // API key is valid and request method is allowed
         _errorMessage = null;
         return true;
     }
@@ -57,9 +60,9 @@ public class ApiKeyValidator : IAPIKeyValidator
     public bool TryValidateHeader(HttpRequestData req, out HttpResponseData? unauthorizedResponse)
     {
         unauthorizedResponse = null;
-        IsValid(req.Headers.TryGetValues("x-api-key", out var apiKeyValues) ? apiKeyValues.FirstOrDefault() : null, req);
+        var apiKey = req.Headers.TryGetValues("x-api-key", out var apiKeyValues) ? apiKeyValues.FirstOrDefault() : null;
 
-        if (_errorMessage != null)
+        if (!IsValid(apiKey, req))
         {
             unauthorizedResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
             unauthorizedResponse.Headers.Add("Content-Type", "application/json");

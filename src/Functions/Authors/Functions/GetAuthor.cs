@@ -4,6 +4,7 @@ using System.Net;
 using System.Text.Json;
 
 using Utils;
+using Utils.Validation;
 using Functions.Authors.Services;
 
 namespace Functions.Authors.Functions;
@@ -15,11 +16,13 @@ namespace Functions.Authors.Functions;
 public class GetAuthorFunction
 {
   private readonly IAppInsightsLogger<GetAuthorFunction> _appLogger;
+  private readonly IAPIKeyValidator _apiKeyValidator;
   private readonly IAuthorService _authorService;
 
-  public GetAuthorFunction(IAppInsightsLogger<GetAuthorFunction> logger, IAuthorService authorService)
+  public GetAuthorFunction(IAppInsightsLogger<GetAuthorFunction> logger, IAPIKeyValidator apiKeyValidator, IAuthorService authorService)
   {
     _appLogger = logger;
+    _apiKeyValidator = apiKeyValidator;
     _authorService = authorService;
     _appLogger.LogInformation("GetAuthorFunction initialized");
   }
@@ -45,6 +48,20 @@ public class GetAuthorFunction
     [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "authors/{slug}")] HttpRequestData req, string slug, FunctionContext executionContext)
   {
     _appLogger.LogInformation("GetAuthor function triggered for slug: {Slug}", slug);
+
+    // Validate the API key
+    try
+    {
+      await _apiKeyValidator.ValidateOrThrowAsync(req);
+      _appLogger.LogInformation("API key validation successful for slug: {Slug}", slug);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+      _appLogger.LogError("API key validation failed: {Message}: {ex.Message}", ex);
+      return CreateErrorResponse(req, "Unauthorized access due to invalid API key.", HttpStatusCode.Unauthorized);
+    }
+
+    _appLogger.LogInformation("Getting author by slug: {Slug}", slug);
 
     try
     {
