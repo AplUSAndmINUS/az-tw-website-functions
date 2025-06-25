@@ -17,26 +17,34 @@ public class GetAuthorFunction
   private readonly IAppInsightsLogger<GetAuthorFunction> _appLogger;
   private readonly IAuthorService _authorService;
 
-  public GetAuthorFunction(IAppInsightsLogger<GetAuthorFunction> logger, IAuthorService authorService, string? query)
+  public GetAuthorFunction(IAppInsightsLogger<GetAuthorFunction> logger, IAuthorService authorService)
   {
     _appLogger = logger;
     _authorService = authorService;
-    _appLogger.LogInformation("GetAuthorFunction initialized with query: {Query}", query ?? "null");
+    _appLogger.LogInformation("GetAuthorFunction initialized");
   }
 
   private static HttpResponseData CreateErrorResponse(HttpRequestData req, string message, HttpStatusCode statusCode)
   {
     var errorResponse = req.CreateResponse(statusCode);
     errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
-    errorResponse.WriteString(JsonSerializer.Serialize(new { error = message }));
+
+    var errorObject = new { error = message };
+    var jsonOptions = new JsonSerializerOptions
+    {
+      PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+      WriteIndented = true
+    };
+
+    errorResponse.WriteString(JsonSerializer.Serialize(errorObject, jsonOptions));
     return errorResponse;
   }
 
   [Function("GetAuthorAsync")]
-  public HttpResponseData Run(
+  public async Task<HttpResponseData> Run(
     [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "authors/{slug}")] HttpRequestData req, string slug, FunctionContext executionContext)
   {
-    _appLogger.LogInformation("GetAuthor function triggered with request: {Request}", req);
+    _appLogger.LogInformation("GetAuthor function triggered for slug: {Slug}", slug);
 
     try
     {
@@ -48,11 +56,6 @@ public class GetAuthorFunction
 
       _appLogger.LogInformation("Request validation successful.");
 
-
-      // Extract the author slug from the request URL
-      var authorSlug = req.Url.Segments.LastOrDefault()?.TrimEnd('/') ?? string.Empty;
-      _appLogger.LogInformation("Author slug extracted: {AuthorSlug}", authorSlug);
-
       // Create a response with headers
       var response = req.CreateResponse(HttpStatusCode.OK);
       response.Headers.Add("Location", $"/authors/{slug}");
@@ -60,7 +63,7 @@ public class GetAuthorFunction
       _appLogger.LogInformation("Response created with Location header: /authors/{Slug}", slug);
 
       // Perform a table lookup using the author slug
-      var author = _authorService.GetAuthorBySlugAsync(slug).GetAwaiter().GetResult();
+      var author = await _authorService.GetAuthorBySlugAsync(slug);
 
       if (author == null)
       {
@@ -69,15 +72,21 @@ public class GetAuthorFunction
       }
       else
       {
-        _appLogger.LogInformation("Author found: {Author}", author);
+        _appLogger.LogInformation("Author found for slug: {Slug} with display name: {DisplayName}", slug, author.DisplayName);
       }
 
-      // Serialize the author model to JSON
-      var authorJson = JsonSerializer.Serialize(author);
-      _appLogger.LogInformation("Author serialized to JSON: {AuthorJson}", authorJson);
+      // Serialize the author model to JSON with consistent formatting
+      var jsonOptions = new JsonSerializerOptions
+      {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+      };
+
+      var authorJson = JsonSerializer.Serialize(author, jsonOptions);
+      _appLogger.LogInformation("Author serialized to JSON successfully for slug: {Slug}", slug);
 
       // Write the author JSON to the response
-      response.WriteString(authorJson);
+      await response.WriteStringAsync(authorJson);
 
       return response;
     }

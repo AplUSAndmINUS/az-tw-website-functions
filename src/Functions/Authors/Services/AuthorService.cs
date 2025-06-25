@@ -38,34 +38,12 @@ public class AuthorService : IAuthorService
       // Calculate the slug once and use it consistently
       var authorSlug = model.AuthorSlug ?? model.Username;
 
-      // Pass the slug as the partitionKey
-      var entity = AuthorEntity.FromModel(model, authorSlug, "profile");
+      // Pass the slug as the partitionKey - use the proper mapper for consistency
+      var entity = AuthorModelToEntityMapper.Map(model, authorSlug, "profile");
       await _tableStorageService.UpsertEntityAsync(_tableName, entity);
 
-      return new AuthorDTO
-      {
-        AuthorSlug = entity.AuthorSlug, // This now correctly uses the computed property
-        DisplayName = entity.DisplayName,
-        FirstName = entity.FirstName,
-        LastName = entity.LastName,
-        Username = entity.Username,
-
-        // Email is not included in the DTO for privacy reasons
-        // Email = entity.Email,
-        Location = entity.Location,
-        Bio = entity.Bio,
-        Website = entity.Website,
-        TwitterHandle = entity.TwitterHandle,
-        InstagramHandle = entity.InstagramHandle,
-        LinkedInHandle = entity.LinkedInHandle,
-        BlueskyHandle = entity.BlueskyHandle,
-
-        // Profile image properties
-        HasValidProfileImage = entity.HasValidProfileImage,
-        ProfileImageFileName = entity.ProfileImageFileName,
-        ProfileImageCdnUrl = entity.ProfileImageCdnUrl,
-        ThumbnailCdnUrl = entity.ThumbnailCdnUrl
-      };
+      // Use the consistent mapper to create DTO
+      return AuthorDTOMapper.ToDTO(entity, null);
     }
     catch (Exception ex)
     {
