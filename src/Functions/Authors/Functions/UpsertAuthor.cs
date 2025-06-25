@@ -12,6 +12,8 @@ using System.Text.Json;
 
 namespace Functions.Authors.Functions;
 
+// TODO: Create a scaffolding PATCH function to update an author's properties
+
 public class UpsertAuthorAsync
 {
   private readonly IAppInsightsLogger<UpsertAuthorAsync> _appLogger;
