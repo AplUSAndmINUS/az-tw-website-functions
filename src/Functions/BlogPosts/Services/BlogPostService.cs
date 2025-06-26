@@ -56,10 +56,34 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
 
   protected override BlogPostEntity ModelToEntity(BlogPostModel model)
   {
-    var entity = BlogPostEntity.FromModel(model);
-    entity.PartitionKey = model.Slug;
-    entity.RowKey = "post";
+    var entity = new BlogPostEntity
+    {
+      Id = model.Id ?? Guid.NewGuid().ToString(),
+      Title = model.Title,
+      Content = model.Content,
+      AuthorSlug = model.AuthorSlug,
+      Category = model.Category,
+      Status = model.Status,
+      PublishDate = model.PublishDate,
+      LastModified = DateTime.UtcNow,
+      TagsJson = System.Text.Json.JsonSerializer.Serialize(model.TagsList),
+      FeaturedImageId = model.FeaturedImageId,
+      FeaturedMediaId = model.FeaturedMediaId,
+      MediaReferencesJson = model.MediaReferencesJson,
+      Description = model.Description,
+      Slug = model.Slug
+    };
+
+    // Use consistent slug-based partitioning
+    entity.PartitionKey = GetPartitionKey(model.Slug);
+    entity.RowKey = GetRowKey(model.Slug);
+
     return entity;
+  }
+
+  protected override BlogPostEntity? ConvertTableEntityToTEntity(Azure.Data.Tables.TableEntity tableEntity)
+  {
+    return ConvertToEntity(tableEntity);
   }
 
   protected override void UpdateEntityFromModel(BlogPostEntity entity, BlogPostModel model)

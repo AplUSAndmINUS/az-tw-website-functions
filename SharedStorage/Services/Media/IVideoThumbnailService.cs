@@ -78,7 +78,7 @@ public class BasicVideoThumbnailService : IVideoThumbnailService
   public async Task<VideoMetadata> GetVideoMetadataAsync(Stream videoStream)
   {
     _logger.LogWarning("Using basic video metadata extraction - returning default values.");
-    
+
     // Return default metadata - in production, use FFmpeg to analyze the video
     return await Task.FromResult(new VideoMetadata(
       Duration: TimeSpan.FromMinutes(5), // Default 5 minutes
@@ -95,18 +95,18 @@ public class BasicVideoThumbnailService : IVideoThumbnailService
   public async Task<VideoThumbnailResult> CreatePlaceholderThumbnailAsync(int width = 400, int height = 300, int quality = 75)
   {
     _logger.LogInformation("Creating video placeholder thumbnail with dimensions {Width}x{Height}", width, height);
-    
+
     try
     {
       // Create a simple solid color placeholder
       using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(width, height);
-      
+
       // Set background to dark gray
       image.Mutate(ctx => ctx.BackgroundColor(SixLabors.ImageSharp.Color.FromRgb(64, 64, 64)));
 
       var stream = new MemoryStream();
-      await image.SaveAsWebpAsync(stream, new SixLabors.ImageSharp.Formats.Webp.WebpEncoder 
-      { 
+      await image.SaveAsWebpAsync(stream, new SixLabors.ImageSharp.Formats.Webp.WebpEncoder
+      {
         Quality = Math.Clamp(quality, 1, 100)
       });
 

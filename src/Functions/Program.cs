@@ -1,12 +1,16 @@
 using SharedStorage.Services;
+using SharedStorage.Services.BaseServices;
+using SharedStorage.Services.MediaServices;
+using SharedStorage.Services.ContentServices;
+using SharedStorage.Extensions;
 using Utils;
 using Utils.Validation;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Azure.Functions.Worker.Core; // Add this
-using Microsoft.Azure.Functions.Worker; // Add this for WorkerOptions
+using Microsoft.Azure.Functions.Worker.Core;
+using Microsoft.Azure.Functions.Worker;
 
 public class Program
 {
@@ -16,33 +20,15 @@ public class Program
             .ConfigureServices((context, services) =>
             {
                 var configuration = context.Configuration;
-                var storageAccountName = configuration["StorageAccountName"]
-                    ?? Environment.GetEnvironmentVariable("StorageAccountName")
-                    ?? "aztwwebsitestorage"; // Default value if not set
 
-                if (string.IsNullOrWhiteSpace(storageAccountName))
-                    throw new InvalidOperationException("Missing 'StorageAccountName' in environment or config.");
+                // Register Application Insights telemetry
+                services.AddApplicationInsightsTelemetryWorkerService();
 
-                // Register these services first so they can be injected into BlobStorageService
-                services.AddSingleton<IImageService, ImageConversionService>();
-                services.AddSingleton<IThumbnailService, ThumbnailService>();
+                // Register AppInsightsLogger
+                services.AddSingleton(typeof(IAppInsightsLogger<>), typeof(AppInsightsLogger<>));
 
-                // Register BlobStorageService
-                services.AddSingleton<IBlobStorageService>(sp =>
-                {
-                    var logger = sp.GetRequiredService<IAppInsightsLogger<BlobStorageService>>();
-                    var imageConversionService = sp.GetRequiredService<IImageService>();
-                    var thumbnailService = sp.GetRequiredService<IThumbnailService>();
-
-                    return new BlobStorageService(storageAccountName!, logger, imageConversionService, thumbnailService);
-                });
-
-                // Register TableStorageService
-                services.AddSingleton<ITableStorageService>(sp =>
-                {
-                    var logger = sp.GetRequiredService<IAppInsightsLogger<TableStorageService>>();
-                    return new TableStorageService(storageAccountName!, logger);
-                });
+                // Add media services (includes base storage services and media handlers)
+                services.AddMediaServices();
 
                 // Register APIKeyValidator
                 services.AddSingleton<IAPIKeyValidator>(sp =>
@@ -55,14 +41,13 @@ public class Program
 
                     var appLogger = sp.GetRequiredService<IAppInsightsLogger<ApiKeyValidator>>();
                     return new ApiKeyValidator(validApiKey, appLogger);
-                });                // Register Author Service
+                });
+
+                // Register Author Service
                 services.AddSingleton<Functions.Authors.Services.IAuthorService, Functions.Authors.Services.AuthorService>();
 
-                // Register Application Insights telemetry
-                services.AddApplicationInsightsTelemetryWorkerService();
-
-                // Register AppInsightsLogger
-                services.AddSingleton(typeof(IAppInsightsLogger<>), typeof(AppInsightsLogger<>));
+                // Register BlogPost Service
+                services.AddSingleton<Functions.BlogPosts.Services.IBlogPostService, Functions.BlogPosts.Services.BlogPostService>();
 
             })
             .ConfigureFunctionsWorkerDefaults()
