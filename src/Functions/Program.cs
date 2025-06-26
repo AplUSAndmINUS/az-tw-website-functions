@@ -1,14 +1,13 @@
 using SharedStorage.Services;
 using SharedStorage.Services.BaseServices;
 using SharedStorage.Services.MediaServices;
-using SharedStorage.Services.ContentServices;
 using SharedStorage.Extensions;
+using Functions.Extensions;
 using Utils;
 using Utils.Validation;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Functions.Worker.Core;
 using Microsoft.Azure.Functions.Worker;
 
@@ -27,9 +26,17 @@ public class Program
                 // Register AppInsightsLogger
                 services.AddSingleton(typeof(IAppInsightsLogger<>), typeof(AppInsightsLogger<>));
 
-                // Add media and storage services (includes base storage services and media handlers)
-                services.AddMediaServices();
+                // Add storage services (base infrastructure)
                 services.AddStorageServices();
+
+                // Add media services (includes handlers and processing)
+                services.AddMediaServices();
+
+                // Add shared content services (from SharedStorage)
+                services.AddContentServices();
+
+                // Add Function-specific services (BlogPost, Author, etc.)
+                services.AddFunctionServices();
 
                 // Register APIKeyValidator
                 services.AddSingleton<IAPIKeyValidator>(sp =>
@@ -43,13 +50,6 @@ public class Program
                     var appLogger = sp.GetRequiredService<IAppInsightsLogger<ApiKeyValidator>>();
                     return new ApiKeyValidator(validApiKey, appLogger);
                 });
-
-                // Register Author Service
-                services.AddSingleton<Functions.Authors.Services.IAuthorService, Functions.Authors.Services.AuthorService>();
-
-                // Register BlogPost Service
-                services.AddSingleton<Functions.BlogPosts.Services.IBlogPostService, Functions.BlogPosts.Services.BlogPostService>();
-
             })
             .ConfigureFunctionsWorkerDefaults()
             .Build();
