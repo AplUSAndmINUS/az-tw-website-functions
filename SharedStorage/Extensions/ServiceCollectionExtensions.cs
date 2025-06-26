@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharedStorage.Services.BaseServices;
-using SharedStorage.Services.MediaServices;
-using SharedStorage.Services.ContentServices;
+using SharedStorage.Services.Media;
 using SharedStorage.Services.Media.Handlers;
+using SharedStorage.Services.MediaServices;
 using Utils;
 
 namespace SharedStorage.Extensions;
@@ -14,7 +14,7 @@ public static class ServiceCollectionExtensions
   /// </summary>
   public static IServiceCollection AddMediaServices(this IServiceCollection services)
   {
-    // Register base services
+    // Register base storage services (if not already registered by AddStorageServices)
     services.AddSingleton<IBlobStorageService>(provider =>
     {
       var storageAccountName = System.Environment.GetEnvironmentVariable("AZURE_STORAGE_ACCOUNT_NAME")
@@ -41,10 +41,24 @@ public static class ServiceCollectionExtensions
     services.AddSingleton<IMediaTypeHandler, VideoHandler>();
 
     // Register main media service
-    services.AddSingleton<IMediaService, MediaService>();
+    services.AddSingleton<IMediaService>(provider =>
+    {
+      var handlers = provider.GetServices<IMediaTypeHandler>();
+      var tableStorage = provider.GetRequiredService<ITableStorageService>();
+      var logger = provider.GetRequiredService<IAppInsightsLogger<MediaService>>();
+      return new MediaService(handlers, tableStorage, logger);
+    });
 
-    // Register content service as generic for various types
-    services.AddScoped(typeof(IContentService<,,>), typeof(ContentService<,,>));
+    return services;
+  }
+
+  /// <summary>
+  /// Adds content services to the dependency injection container
+  /// </summary>
+  public static IServiceCollection AddContentServices(this IServiceCollection services)
+  {
+    // Register shared content services here if any
+    // Function-specific services should be registered in Functions.Extensions
 
     return services;
   }
