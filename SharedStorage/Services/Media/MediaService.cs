@@ -1,26 +1,313 @@
-using Azure.Storage.Blobs;
 using SharedStorage.Services.BaseServices;
+using SharedStorage.Services.Media.Handlers;
+using SharedStorage.Models;
 using Utils;
 
 namespace SharedStorage.Services.MediaServices;
 
 public interface IMediaService
 {
-  Task UploadImageAsync(string slug, string imageUrl, string? description = null);
-  Task UploadMediaAsync(string slug, string mediaUrl, string? description = null);
+  // Core media operations
+  Task<MediaEntity> UploadMediaAsync(string mediaType, Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = null);
+  Task<MediaEntity?> GetMediaAsync(string mediaId);
+  Task<IEnumerable<MediaEntity>> GetMediaByAuthorAsync(string authorId, string? mediaType = null, int? limit = null);
+  Task<IEnumerable<MediaEntity>> GetMediaByTypeAsync(string mediaType, int? limit = null);
+  Task<bool> DeleteMediaAsync(string mediaId);
+
+  // Bulk operations
+  Task<IEnumerable<MediaEntity>> GetMediaBatchAsync(string[] mediaIds);
+  Task<int> DeleteMediaBatchAsync(string[] mediaIds);
+
+  // Specialized operations
+  Task<MediaEntity> UploadImageAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = "coverImage");
+  Task<MediaEntity> UploadVideoAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? purpose = "introVideo");
 }
 
-public abstract class MediaService : IMediaService
+public class MediaService : IMediaService
 {
-  protected readonly IBlobStorageService _blobStorageService;
-  protected readonly IAppInsightsLogger<MediaService> _appLogger;
+  private readonly Dictionary<string, IMediaTypeHandler> _handlers;
+  private readonly ITableStorageService _tableStorageService;
+  private readonly IAppInsightsLogger<MediaService> _appLogger;
+  private readonly string _tableName;
 
-  protected MediaService(IBlobStorageService blobStorageService, IAppInsightsLogger<MediaService> appLogger)
+  public MediaService(
+    IEnumerable<IMediaTypeHandler> handlers,
+    ITableStorageService tableStorageService,
+    IAppInsightsLogger<MediaService> appLogger)
   {
-    _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
+    _handlers = handlers.ToDictionary(h => h.SupportedType.ToLowerInvariant());
+    _tableStorageService = tableStorageService ?? throw new ArgumentNullException(nameof(tableStorageService));
     _appLogger = appLogger ?? throw new ArgumentNullException(nameof(appLogger));
+
+    // Get table name from environment variable with fallback
+    var rawTableName = System.Environment.GetEnvironmentVariable("MEDIA_TABLE_NAME") ?? "media";
+    _tableName = SharedStorage.Validators.TableNameValidator.ValidateTableName(rawTableName);
+
+    _appLogger.LogInformation("MediaService initialized with {HandlerCount} handlers using table {TableName}",
+      _handlers.Count, _tableName);
   }
 
-  public abstract Task UploadImageAsync(string slug, string imageUrl, string? description = null);
-  public abstract Task UploadMediaAsync(string slug, string mediaUrl, string? description = null);
+  public async Task<MediaEntity> UploadMediaAsync(string mediaType, Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = null)
+  {
+    _appLogger.LogInformation("Uploading media of type {MediaType}, file: {FileName}", mediaType, fileName);
+
+    if (string.IsNullOrWhiteSpace(mediaType))
+      throw new ArgumentException("Media type is required", nameof(mediaType));
+
+    if (stream == null || !stream.CanRead)
+      throw new ArgumentException("Stream must be readable", nameof(stream));
+
+    if (string.IsNullOrWhiteSpace(fileName))
+      throw new ArgumentException("File name is required", nameof(fileName));
+
+    var normalizedType = mediaType.ToLowerInvariant();
+
+    if (!_handlers.TryGetValue(normalizedType, out var handler))
+    {
+      _appLogger.LogError("Unsupported media type: {MediaType}", new InvalidOperationException($"Unsupported media type: {mediaType}"), mediaType);
+      throw new InvalidOperationException($"Unsupported media type: {mediaType}");
+    }
+
+    try
+    {
+      // Use the appropriate handler to process and upload the media
+      var mediaEntity = await handler.UploadAsync(stream, fileName, GetContentType(fileName), authorId);
+
+      // Set additional metadata
+      if (!string.IsNullOrWhiteSpace(description))
+        mediaEntity.Description = description;
+
+      if (!string.IsNullOrWhiteSpace(altText))
+        mediaEntity.AltText = altText;
+
+      if (!string.IsNullOrWhiteSpace(purpose))
+        mediaEntity.Purpose = purpose;
+
+      // Save metadata to table storage
+      await _tableStorageService.UpsertEntityAsync(_tableName, mediaEntity);
+
+      _appLogger.LogInformation("Successfully uploaded media {MediaId} of type {MediaType}",
+        mediaEntity.Id, mediaType);
+
+      return mediaEntity;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to upload media of type {MediaType}: {Error}", ex, mediaType, ex.Message);
+      throw;
+    }
+  }
+
+  public async Task<MediaEntity?> GetMediaAsync(string mediaId)
+  {
+    if (string.IsNullOrWhiteSpace(mediaId))
+      throw new ArgumentException("Media ID is required", nameof(mediaId));
+
+    try
+    {
+      // For now, we'll search across all partitions since we don't know the author
+      // In a real implementation, you might want to index by media ID
+      var filter = $"Id eq '{mediaId}'";
+      var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, 1);
+
+      if (!result.Entities.Any())
+      {
+        _appLogger.LogInformation("Media not found: {MediaId}", mediaId);
+        return null;
+      }
+
+      var entityData = result.Entities.First();
+      var mediaEntity = ConvertToMediaEntity(entityData);
+
+      _appLogger.LogInformation("Retrieved media: {MediaId}", mediaId);
+      return mediaEntity;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to get media {MediaId}: {Error}", ex, mediaId, ex.Message);
+      throw;
+    }
+  }
+
+  public async Task<IEnumerable<MediaEntity>> GetMediaByAuthorAsync(string authorId, string? mediaType = null, int? limit = null)
+  {
+    if (string.IsNullOrWhiteSpace(authorId))
+      throw new ArgumentException("Author ID is required", nameof(authorId));
+
+    try
+    {
+      var filters = new List<string> { $"AuthorId eq '{authorId}'" };
+
+      if (!string.IsNullOrWhiteSpace(mediaType))
+        filters.Add($"MediaType eq '{mediaType.ToLowerInvariant()}'");
+
+      var filter = string.Join(" and ", filters);
+      var pageSize = Math.Min(limit ?? 50, 100); // Cap at 100 for performance
+
+      var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, pageSize);
+      var entities = result.Entities.Select(ConvertToMediaEntity).ToList();
+
+      _appLogger.LogInformation("Retrieved {Count} media items for author {AuthorId}",
+        entities.Count, authorId);
+
+      return entities;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to get media for author {AuthorId}: {Error}", ex, authorId, ex.Message);
+      throw;
+    }
+  }
+
+  public async Task<IEnumerable<MediaEntity>> GetMediaByTypeAsync(string mediaType, int? limit = null)
+  {
+    if (string.IsNullOrWhiteSpace(mediaType))
+      throw new ArgumentException("Media type is required", nameof(mediaType));
+
+    try
+    {
+      var filter = $"MediaType eq '{mediaType.ToLowerInvariant()}'";
+      var pageSize = Math.Min(limit ?? 50, 100);
+
+      var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, pageSize);
+      var entities = result.Entities.Select(ConvertToMediaEntity).ToList();
+
+      _appLogger.LogInformation("Retrieved {Count} media items of type {MediaType}",
+        entities.Count, mediaType);
+
+      return entities;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to get media of type {MediaType}: {Error}", ex, mediaType, ex.Message);
+      throw;
+    }
+  }
+
+  public async Task<bool> DeleteMediaAsync(string mediaId)
+  {
+    if (string.IsNullOrWhiteSpace(mediaId))
+      throw new ArgumentException("Media ID is required", nameof(mediaId));
+
+    try
+    {
+      // First get the media entity to determine the handler and get storage info
+      var mediaEntity = await GetMediaAsync(mediaId);
+      if (mediaEntity == null)
+      {
+        _appLogger.LogWarning("Media not found for deletion: {MediaId}", mediaId);
+        return false;
+      }
+
+      // Use the appropriate handler to delete the physical file
+      if (_handlers.TryGetValue(mediaEntity.MediaType.ToLowerInvariant(), out var handler))
+      {
+        await handler.DeleteAsync(mediaId);
+      }
+
+      // Delete metadata from table storage
+      await _tableStorageService.DeleteEntityAsync(_tableName, mediaEntity.PartitionKey, mediaEntity.RowKey);
+
+      _appLogger.LogInformation("Successfully deleted media: {MediaId}", mediaId);
+      return true;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to delete media {MediaId}: {Error}", ex, mediaId, ex.Message);
+      return false;
+    }
+  }
+
+  public async Task<IEnumerable<MediaEntity>> GetMediaBatchAsync(string[] mediaIds)
+  {
+    if (mediaIds == null || mediaIds.Length == 0)
+      return Enumerable.Empty<MediaEntity>();
+
+    var results = new List<MediaEntity>();
+
+    // Process in batches for better performance
+    foreach (var mediaId in mediaIds)
+    {
+      var media = await GetMediaAsync(mediaId);
+      if (media != null)
+        results.Add(media);
+    }
+
+    _appLogger.LogInformation("Retrieved {Count} of {Total} requested media items",
+      results.Count, mediaIds.Length);
+
+    return results;
+  }
+
+  public async Task<int> DeleteMediaBatchAsync(string[] mediaIds)
+  {
+    if (mediaIds == null || mediaIds.Length == 0)
+      return 0;
+
+    var deletedCount = 0;
+
+    foreach (var mediaId in mediaIds)
+    {
+      if (await DeleteMediaAsync(mediaId))
+        deletedCount++;
+    }
+
+    _appLogger.LogInformation("Deleted {Count} of {Total} requested media items",
+      deletedCount, mediaIds.Length);
+
+    return deletedCount;
+  }
+
+  public async Task<MediaEntity> UploadImageAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = "coverImage")
+  {
+    return await UploadMediaAsync("image", stream, fileName, authorId, description, altText, purpose);
+  }
+
+  public async Task<MediaEntity> UploadVideoAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? purpose = "introVideo")
+  {
+    return await UploadMediaAsync("video", stream, fileName, authorId, description, purpose: purpose);
+  }
+
+  private MediaEntity ConvertToMediaEntity(Azure.Data.Tables.TableEntity tableEntity)
+  {
+    // Convert the generic TableEntity back to our MediaEntity
+    // This is a simplified conversion - you might want to use AutoMapper or similar
+    return new MediaEntity
+    {
+      Id = tableEntity.GetString("Id") ?? string.Empty,
+      PartitionKey = tableEntity.PartitionKey,
+      RowKey = tableEntity.RowKey,
+      Timestamp = tableEntity.Timestamp,
+      ETag = tableEntity.ETag,
+      AuthorId = tableEntity.GetString("AuthorId") ?? string.Empty,
+      Filename = tableEntity.GetString("Filename") ?? string.Empty,
+      MediaType = tableEntity.GetString("MediaType") ?? string.Empty,
+      Purpose = tableEntity.GetString("Purpose") ?? string.Empty,
+      Url = tableEntity.GetString("Url") ?? string.Empty,
+      Description = tableEntity.GetString("Description") ?? string.Empty,
+      AltText = tableEntity.GetString("AltText") ?? string.Empty,
+      ThumbnailUrl = tableEntity.GetString("ThumbnailUrl") ?? string.Empty,
+      ContentType = tableEntity.GetString("ContentType") ?? string.Empty,
+      Width = tableEntity.GetInt32("Width") ?? 0,
+      Height = tableEntity.GetInt32("Height") ?? 0,
+      UploadedAt = tableEntity.GetDateTime("UploadedAt") ?? DateTime.UtcNow
+    };
+  }
+
+  private static string GetContentType(string fileName)
+  {
+    var extension = Path.GetExtension(fileName).ToLowerInvariant();
+    return extension switch
+    {
+      ".jpg" or ".jpeg" => "image/jpeg",
+      ".png" => "image/png",
+      ".gif" => "image/gif",
+      ".webp" => "image/webp",
+      ".mp4" => "video/mp4",
+      ".mov" => "video/quicktime",
+      ".avi" => "video/x-msvideo",
+      ".wmv" => "video/x-ms-wmv",
+      _ => "application/octet-stream"
+    };
+  }
 }

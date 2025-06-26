@@ -214,13 +214,31 @@ public class BlobStorageService : IBlobStorageService
                 _appLogger.LogError("Content stream is not readable for blob {BlobName} in container {ContainerName}", new Exception("Stream not readable"), blobName, containerName);
                 throw new InvalidOperationException("Content stream must be readable.");
             }
-            if (content.Length == 0)    
+            if (content.Length == 0)
             {
                 _appLogger.LogError("Converted content is null or empty for blob {BlobName} in container {ContainerName}", new Exception("Null value"), blobName, containerName);
                 throw new InvalidOperationException("Converted content is null or empty.");
             }
-            // Since blob storage is not used yet, throw a NotImplementedException to satisfy non-null return type
-            throw new NotImplementedException("Blob upload is not implemented yet.");
+
+            // Reset stream position to ensure we read from the beginning
+            if (content.CanSeek)
+            {
+                content.Position = 0;
+            }
+
+            // Upload the blob
+            var uploadResponse = await blobClient.UploadAsync(content, overwrite: true);
+            _appLogger.LogInformation("Successfully uploaded blob {BlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
+
+            // Get the CDN URL for the uploaded blob
+            var (section, assetType) = ParseContainerName(containerName);
+            var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName);
+
+            // Create thumbnail blob name (simplified approach - assumes thumbnail will be uploaded separately)
+            var thumbnailBlobName = blobName.Contains("/thumb_") ? blobName : $"thumb_{blobName}";
+            var thumbnailCdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, thumbnailBlobName);
+
+            return new MediaReference(blobName, thumbnailBlobName, cdnUrl, thumbnailCdnUrl);
         }
 
         catch (RequestFailedException ex)
