@@ -1,26 +1,20 @@
 using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
 using Azure.Identity;
 using Azure;
 using SharedStorage.Validators;
 using Utils;
 using Utils.Constants;
-using Utils.Validation;
 
-namespace SharedStorage.Services;
+namespace SharedStorage.Services.BaseServices;
 
 public class BlobStorageService : IBlobStorageService
 {
     private readonly BlobServiceClient _blobServiceClient;
     private readonly IAppInsightsLogger<BlobStorageService> _appLogger;
-    private readonly IImageService _imageConversionService;
-    private readonly IThumbnailService _thumbnailService;
 
     public BlobStorageService(
         string storageAccountName,
-        IAppInsightsLogger<BlobStorageService> logger,
-        IImageService imageConversionService,
-        IThumbnailService thumbnailService)
+        IAppInsightsLogger<BlobStorageService> logger)
     {
         _appLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         if (string.IsNullOrWhiteSpace(storageAccountName))
@@ -33,9 +27,6 @@ public class BlobStorageService : IBlobStorageService
         var endpoint = $"https://{storageAccountName}.blob.core.windows.net";
         _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential());
         _appLogger.LogInformation("Blob storage client created for {Endpoint}", endpoint);
-
-        _imageConversionService = imageConversionService ?? throw new ArgumentNullException(nameof(imageConversionService));
-        _thumbnailService = thumbnailService ?? throw new ArgumentNullException(nameof(thumbnailService));
     }
 
     private static string ResolveContainerName(string containerName)
@@ -218,60 +209,20 @@ public class BlobStorageService : IBlobStorageService
                 _appLogger.LogError("Content stream is null for blob {BlobName} in container {ContainerName}", new Exception("Null value"), blobName, containerName);
                 throw new ArgumentNullException(nameof(content), "Content stream cannot be null.");
             }
-
-            // Convert and reformat the image to WebP format
-            var convertedParams = await _imageConversionService.ConvertToWebPAsync(content);
-            if (convertedParams == null || convertedParams.Content == null)
+            if (!content.CanRead)
+            {
+                _appLogger.LogError("Content stream is not readable for blob {BlobName} in container {ContainerName}", new Exception("Stream not readable"), blobName, containerName);
+                throw new InvalidOperationException("Content stream must be readable.");
+            }
+            if (content.Length == 0)    
             {
                 _appLogger.LogError("Converted content is null or empty for blob {BlobName} in container {ContainerName}", new Exception("Null value"), blobName, containerName);
                 throw new InvalidOperationException("Converted content is null or empty.");
             }
-            convertedParams.Content.Position = 0; // Reset stream position to the beginning before upload
-
-            // Create a thumnail from the converted content
-            var thumbnail = await _thumbnailService.GenerateWebPThumbnailAsync(convertedParams.Content);
-            if (thumbnail == null || thumbnail.Content == null)
-            {
-                _appLogger.LogError("Thumbnail content is null or empty for blob {BlobName} in container {ContainerName}", new Exception("Null value"), blobName, containerName);
-                throw new InvalidOperationException("Thumbnail content is null or empty.");
-            }
-            thumbnail.Content.Position = 0; // Reset stream position to the beginning before upload
-
-            // Upload the WebP image to the blob storage
-            _appLogger.LogInformation("Uploading main blob {BlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
-            await blobClient.UploadAsync(convertedParams.Content, overwrite: true);
-
-            // Upload the thumbnail image to the blob storage
-            var thumbnailBlobName = $"thumbnails/{Path.GetFileNameWithoutExtension(blobName)}.webp";
-            _appLogger.LogInformation("Uploading thumbnail blob {ThumbnailBlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", thumbnailBlobName, containerName, resolvedContainerName);
-            _appLogger.LogBlobUpload(
-                containerName,
-                nameof(UploadBlobAsync),
-                thumbnailBlobName,
-                thumbnail.Content.Length
-            );
-
-            var thumbnailBlobClient = containerClient.GetBlobClient(thumbnailBlobName);
-            await thumbnailBlobClient.UploadAsync(
-                thumbnail.Content,
-                new BlobHttpHeaders { ContentType = "image/webp" });
-            _appLogger.LogInformation("Thumbnail blob {ThumbnailBlobName} uploaded successfully to container {ContainerName} (resolved: {ResolvedContainerName})", thumbnailBlobName, containerName, resolvedContainerName);
-
-            _appLogger.LogInformation("Blob {BlobName} uploaded successfully to container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
-            var (section, assetType) = ParseContainerName(containerName);
-
-            // For upload operations, use direct Azure Blob URLs
-            var mainBlobUrl = blobClient.Uri.ToString();
-            var thumbnailBlobUrl = thumbnailBlobClient.Uri.ToString();
-
-            // Return Media Reference with direct URLs
-            return new MediaReference(
-                blobName,
-                thumbnailBlobName,
-                mainBlobUrl,
-                thumbnailBlobUrl
-            );
+            // Since blob storage is not used yet, throw a NotImplementedException to satisfy non-null return type
+            throw new NotImplementedException("Blob upload is not implemented yet.");
         }
+
         catch (RequestFailedException ex)
         {
             _appLogger.LogError("Failed to upload blob {BlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", ex, blobName, containerName, resolvedContainerName);

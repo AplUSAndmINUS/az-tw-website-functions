@@ -1,6 +1,6 @@
 using Azure.Data.Tables;
 
-namespace SharedStorage.Services;
+namespace SharedStorage.Services.BaseServices;
 
 public record TablePageResult(
     IEnumerable<TableEntity> Entities,

@@ -1,13 +1,14 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using System.Net;
+using System.Text.Json;
+
 using Functions.Authors.Models;
 using Functions.Authors.Validators;
 using Functions.Authors.Helpers;
 using Functions.Authors.Services;
-using System.Net;
 using Utils;
 using Utils.Validation;
-using System.Text.Json;
 
 namespace Functions.Authors.Functions;
 

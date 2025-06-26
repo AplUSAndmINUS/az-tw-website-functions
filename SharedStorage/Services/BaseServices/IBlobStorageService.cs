@@ -1,6 +1,6 @@
 using Azure.Storage.Blobs;
 
-namespace SharedStorage.Services;
+namespace SharedStorage.Services.BaseServices;
 
 public record BlobPageResult(
     IEnumerable<BlobClient> Blobs,
