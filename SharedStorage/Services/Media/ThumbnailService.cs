@@ -25,8 +25,8 @@ public class ThumbnailService : IThumbnailService
   public async Task<ThumbnailResult> GenerateWebPThumbnailAsync(Stream input, int maxSize = 400, int minSize = 200, int quality = 75)
   {
     ValidateInput(input);
-    
-    _appLogger.LogInformation("Starting WebP thumbnail generation for input stream of size {Size} bytes with max size {MaxSize}px and quality {Quality}.", 
+
+    _appLogger.LogInformation("Starting WebP thumbnail generation for input stream of size {Size} bytes with max size {MaxSize}px and quality {Quality}.",
       input.Length, maxSize, quality);
 
     try
@@ -34,15 +34,15 @@ public class ThumbnailService : IThumbnailService
       // Load the image from the input stream
       input.Position = 0; // Reset stream position to the beginning
       using var image = await Image.LoadAsync(input);
-      
+
       // Auto-orient to handle EXIF rotation
       image.Mutate(x => x.AutoOrient());
 
       _appLogger.LogInformation("Image loaded successfully. Original dimensions: {Width}x{Height}", image.Width, image.Height);
-      
+
       // Calculate optimal thumbnail dimensions
       var (thumbnailWidth, thumbnailHeight) = CalculateThumbnailDimensions(image.Width, image.Height, maxSize, minSize);
-      
+
       _appLogger.LogInformation("Resizing image to {Width}x{Height} for WebP thumbnail.", thumbnailWidth, thumbnailHeight);
 
       // Resize the image
@@ -66,9 +66,9 @@ public class ThumbnailService : IThumbnailService
         FileFormat = WebpFileFormatType.Lossy
       });
 
-      _appLogger.LogInformation("WebP thumbnail generated successfully. Final size: {Width}x{Height}, File size: {Size} bytes", 
+      _appLogger.LogInformation("WebP thumbnail generated successfully. Final size: {Width}x{Height}, File size: {Size} bytes",
         thumbnailWidth, thumbnailHeight, output.Length);
-      
+
       output.Position = 0; // Reset stream position to the beginning for reading
       return new ThumbnailResult(output, thumbnailWidth, thumbnailHeight, "webp");
     }
@@ -86,13 +86,13 @@ public class ThumbnailService : IThumbnailService
       _appLogger.LogError("Input stream is null. Cannot generate thumbnail.", new ArgumentNullException(nameof(input)));
       throw new ArgumentNullException(nameof(input), "Input stream cannot be null.");
     }
-    
+
     if (!input.CanRead)
     {
       _appLogger.LogError("Input stream is not readable. Cannot generate thumbnail.", new InvalidOperationException("Input stream must be readable."));
       throw new InvalidOperationException("Input stream must be readable.");
     }
-    
+
     if (input.Length == 0)
     {
       _appLogger.LogError("Input stream is empty. Cannot generate thumbnail.", new InvalidOperationException("Input stream cannot be empty."));
@@ -112,10 +112,10 @@ public class ThumbnailService : IThumbnailService
   {
     // Calculate scale factor to fit within maxSize while maintaining aspect ratio
     var scaleFactor = Math.Min((double)maxSize / originalWidth, (double)maxSize / originalHeight);
-    
+
     var newWidth = (int)Math.Round(originalWidth * scaleFactor);
     var newHeight = (int)Math.Round(originalHeight * scaleFactor);
-    
+
     // Ensure minimum size constraints
     if (newWidth < minSize || newHeight < minSize)
     {
@@ -123,7 +123,7 @@ public class ThumbnailService : IThumbnailService
       newWidth = (int)Math.Round(newWidth * minScaleFactor);
       newHeight = (int)Math.Round(newHeight * minScaleFactor);
     }
-    
+
     return (newWidth, newHeight);
   }
 }

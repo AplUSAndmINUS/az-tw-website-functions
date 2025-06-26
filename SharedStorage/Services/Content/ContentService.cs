@@ -70,9 +70,29 @@ public abstract class ContentService<TEntity, TModel, TDto>(
     try
     {
       var entitiesPageResult = await _tableStorageService.GetEntitiesAsync(_tableName);
-      var entities = entitiesPageResult.Entities; // Use the correct property that contains the entities
+      var entities = entitiesPageResult.Entities;
 
-      var query = entities.Where(e => IsPublished(e));
+      var typedEntities = new List<TEntity>();
+
+      // Convert TableEntity to TEntity and filter null results
+      foreach (var tableEntity in entities)
+      {
+        try
+        {
+          var typedEntity = ConvertTableEntityToTEntity(tableEntity);
+          if (typedEntity != null)
+          {
+            typedEntities.Add(typedEntity);
+          }
+        }
+        catch (Exception ex)
+        {
+          _appLogger.LogWarning("Failed to convert table entity to typed entity: {Error}", ex.Message);
+          // Continue processing other entities
+        }
+      }
+
+      var query = typedEntities.Where(e => IsPublished(e));
 
       if (!string.IsNullOrWhiteSpace(authorSlug))
         query = query.Where(e => GetAuthorSlug(e) == authorSlug);
@@ -173,4 +193,5 @@ public abstract class ContentService<TEntity, TModel, TDto>(
   protected abstract TEntity ModelToEntity(TModel model);
   protected abstract void UpdateEntityFromModel(TEntity entity, TModel model);
   protected abstract void ValidateModel(TModel model);
+  protected abstract TEntity? ConvertTableEntityToTEntity(Azure.Data.Tables.TableEntity tableEntity);
 }

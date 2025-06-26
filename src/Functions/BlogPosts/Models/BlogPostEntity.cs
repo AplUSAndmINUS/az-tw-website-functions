@@ -43,7 +43,7 @@ public class BlogPostEntity : ITableEntity
     var now = DateTime.UtcNow;
     PublishDate = now;
     LastModified = now;
-    // Keys will be set when entity is saved or explicitly updated
+    // Keys will be set by the service layer for consistency
   }
 
   public BlogPostEntity(DateTime publishDate)
@@ -76,13 +76,6 @@ public class BlogPostEntity : ITableEntity
     ArgumentNullException.ThrowIfNull(model.Category);
     ArgumentNullException.ThrowIfNull(model.TagsList);
 
-    // Custom validation: At least one of FeaturedImageId or FeaturedMediaId should be provided for better UX
-    // Note: This is optional validation - blog posts can exist without media
-    // if (string.IsNullOrWhiteSpace(model.FeaturedImageId) && string.IsNullOrWhiteSpace(model.FeaturedMediaId))
-    // {
-    //   throw new ArgumentException("Consider providing at least one featured media item for better user experience.", nameof(model));
-    // }
-
     var entity = new BlogPostEntity
     {
       Id = model.Id ?? Guid.NewGuid().ToString(),
@@ -101,8 +94,8 @@ public class BlogPostEntity : ITableEntity
       TagsJson = JsonSerializer.Serialize(model.TagsList)
     };
 
-    // Set keys after all properties are set
-    entity.SetKeys(entity.PublishDate);
+    // NOTE: Keys should be set by the service layer for consistency
+    // Do not set PartitionKey/RowKey here to avoid conflicts
     return entity;
   }
 

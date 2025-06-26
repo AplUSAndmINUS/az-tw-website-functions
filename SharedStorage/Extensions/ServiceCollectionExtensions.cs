@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharedStorage.Services.BaseServices;
 using SharedStorage.Services.MediaServices;
+using SharedStorage.Services.ContentServices;
 using SharedStorage.Services.Media.Handlers;
 using Utils;
 
@@ -41,6 +42,9 @@ public static class ServiceCollectionExtensions
 
     // Register main media service
     services.AddSingleton<IMediaService, MediaService>();
+
+    // Register content service as generic for various types
+    services.AddScoped(typeof(IContentService<,,>), typeof(ContentService<,,>));
 
     return services;
   }
