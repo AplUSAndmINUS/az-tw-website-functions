@@ -56,19 +56,13 @@ public class UpsertAuthorAsync
     FunctionContext executionContext)
 
   {
-    // Log the function execution context
-    // You can use this logger to log information, warnings, errors, etc.
-    _appLogger.LogInformation("Validating API key for UpsertAuthorAsync function.");
-    // Validate the API key
-    try
+    _appLogger.LogInformation("UpsertAuthorAsync function triggered for slug: {Slug}", slug);
+    
+    // Validate API key using helper method
+    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "UpsertAuthorAsync");
+    if (apiValidationResult != null)
     {
-      await _apiKeyValidator.ValidateOrThrowAsync(req);
-      _appLogger.LogInformation("API key validation successful.");
-    }
-    catch (UnauthorizedAccessException ex)
-    {
-      _appLogger.LogError($"Unauthorized access attempt: {ex.Message}", ex);
-      return req.CreateResponse(HttpStatusCode.Unauthorized);
+      return apiValidationResult;
     }
 
     _appLogger.LogInformation("Creating a new author.");

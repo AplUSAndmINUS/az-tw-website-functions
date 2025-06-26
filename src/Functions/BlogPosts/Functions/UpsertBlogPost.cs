@@ -6,6 +6,7 @@ using Functions.BlogPosts.Models;
 using System.Net;
 using System.Text.Json;
 using Utils;
+using Utils.Validation;
 
 namespace Functions.BlogPosts.Functions;
 
@@ -13,13 +14,16 @@ public class UpsertBlogPost
 {
   private readonly IAppInsightsLogger<UpsertBlogPost> _appLogger;
   private readonly IBlogPostService _blogPostService;
+  private readonly IAPIKeyValidator _apiKeyValidator;
 
   public UpsertBlogPost(
     IAppInsightsLogger<UpsertBlogPost> logger,
-    IBlogPostService blogPostService)
+    IBlogPostService blogPostService,
+    IAPIKeyValidator apiKeyValidator)
   {
     _appLogger = logger ?? throw new ArgumentNullException(nameof(logger));
     _blogPostService = blogPostService ?? throw new ArgumentNullException(nameof(blogPostService));
+    _apiKeyValidator = apiKeyValidator ?? throw new ArgumentNullException(nameof(apiKeyValidator));
   }
 
   [Function("UpsertBlogPost")]
@@ -27,6 +31,13 @@ public class UpsertBlogPost
     [HttpTrigger(AuthorizationLevel.Function, "post", "put")] HttpRequestData req)
   {
     _appLogger.LogInformation("UpsertBlogPost function triggered");
+
+    // Validate API key using helper method
+    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "UpsertBlogPost");
+    if (apiValidationResult != null)
+    {
+      return apiValidationResult;
+    }
 
     try
     {

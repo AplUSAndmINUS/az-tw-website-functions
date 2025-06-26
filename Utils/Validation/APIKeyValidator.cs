@@ -2,6 +2,7 @@ using Utils;
 using System.Net;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Functions.Worker.Http;
+using System.Text.Json;
 
 namespace Utils.Validation;
 
@@ -74,6 +75,42 @@ public class ApiKeyValidator : IAPIKeyValidator
         }
 
         return true;
+    }
+
+    public async Task<HttpResponseData?> ValidateApiKeyAsync(HttpRequestData req, object logger, string functionName)
+    {
+        try
+        {
+            await ValidateOrThrowAsync(req);
+            
+            // Use reflection to log success if logger has LogInformation method
+            var loggerType = logger.GetType();
+            var logMethod = loggerType.GetMethod("LogInformation", new[] { typeof(string), typeof(object[]) });
+            logMethod?.Invoke(logger, new object[] { "API key validation successful for {FunctionName}", new object[] { functionName } });
+            
+            return null; // Validation successful
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            // Use reflection to log error if logger has LogError method
+            var loggerType = logger.GetType();
+            var logMethod = loggerType.GetMethod("LogError", new[] { typeof(string), typeof(Exception), typeof(object[]) });
+            logMethod?.Invoke(logger, new object[] { "Unauthorized access attempt in {FunctionName}: {Message}", ex, new object[] { functionName, ex.Message } });
+
+            // Create standardized error response matching GetAuthor pattern
+            var errorResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
+            errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+
+            var errorObject = new { error = "Unauthorized access due to invalid API key." };
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            };
+
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(errorObject, jsonOptions));
+            return errorResponse;
+        }
     }
 
     public string? GetErrorMessage()

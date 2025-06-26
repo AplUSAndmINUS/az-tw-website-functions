@@ -5,6 +5,7 @@ using SharedStorage.Services.MediaServices;
 using System.Net;
 using System.Text.Json;
 using Utils;
+using Utils.Validation;
 
 namespace Functions.BlogPosts.Functions;
 
@@ -12,13 +13,16 @@ public class MediaFunctions
 {
   private readonly IAppInsightsLogger<MediaFunctions> _appLogger;
   private readonly IMediaService _mediaService;
+  private readonly IAPIKeyValidator _apiKeyValidator;
 
   public MediaFunctions(
     IAppInsightsLogger<MediaFunctions> logger,
-    IMediaService mediaService)
+    IMediaService mediaService,
+    IAPIKeyValidator apiKeyValidator)
   {
     _appLogger = logger ?? throw new ArgumentNullException(nameof(logger));
     _mediaService = mediaService ?? throw new ArgumentNullException(nameof(mediaService));
+    _apiKeyValidator = apiKeyValidator ?? throw new ArgumentNullException(nameof(apiKeyValidator));
   }
 
   [Function("UploadImage")]
@@ -26,6 +30,13 @@ public class MediaFunctions
     [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
   {
     _appLogger.LogInformation("UploadImage function triggered");
+
+    // Validate API key using helper method
+    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "UploadImage");
+    if (apiValidationResult != null)
+    {
+      return apiValidationResult;
+    }
 
     try
     {
@@ -82,6 +93,13 @@ public class MediaFunctions
   {
     _appLogger.LogInformation("UploadVideo function triggered");
 
+    // Validate API key using helper method
+    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "UploadVideo");
+    if (apiValidationResult != null)
+    {
+      return apiValidationResult;
+    }
+
     try
     {
       // Check if request has a body
@@ -135,6 +153,13 @@ public class MediaFunctions
   {
     _appLogger.LogInformation("GetMedia function triggered");
 
+    // Validate API key using helper method
+    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "GetMedia");
+    if (apiValidationResult != null)
+    {
+      return apiValidationResult;
+    }
+
     try
     {
       // Extract media ID from route
@@ -185,6 +210,13 @@ public class MediaFunctions
     [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "media/{mediaId}")] HttpRequestData req)
   {
     _appLogger.LogInformation("DeleteMedia function triggered");
+
+    // Validate API key using helper method
+    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "DeleteMedia");
+    if (apiValidationResult != null)
+    {
+      return apiValidationResult;
+    }
 
     try
     {
