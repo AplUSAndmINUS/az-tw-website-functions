@@ -27,8 +27,9 @@ public class Program
                 // Register AppInsightsLogger
                 services.AddSingleton(typeof(IAppInsightsLogger<>), typeof(AppInsightsLogger<>));
 
-                // Add media services (includes base storage services and media handlers)
+                // Add media and storage services (includes base storage services and media handlers)
                 services.AddMediaServices();
+                services.AddStorageServices();
 
                 // Register APIKeyValidator
                 services.AddSingleton<IAPIKeyValidator>(sp =>
