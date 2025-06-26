@@ -49,16 +49,11 @@ public class GetAuthorFunction
   {
     _appLogger.LogInformation("GetAuthor function triggered for slug: {Slug}", slug);
 
-    // Validate the API key
-    try
+    // Validate API key using helper method
+    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "GetAuthor");
+    if (apiValidationResult != null)
     {
-      await _apiKeyValidator.ValidateOrThrowAsync(req);
-      _appLogger.LogInformation("API key validation successful for slug: {Slug}", slug);
-    }
-    catch (UnauthorizedAccessException ex)
-    {
-      _appLogger.LogError("API key validation failed: {Message}: {ex.Message}", ex);
-      return CreateErrorResponse(req, "Unauthorized access due to invalid API key.", HttpStatusCode.Unauthorized);
+      return apiValidationResult;
     }
 
     _appLogger.LogInformation("Getting author by slug: {Slug}", slug);
