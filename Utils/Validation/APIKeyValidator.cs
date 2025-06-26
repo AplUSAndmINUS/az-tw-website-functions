@@ -82,12 +82,12 @@ public class ApiKeyValidator : IAPIKeyValidator
         try
         {
             await ValidateOrThrowAsync(req);
-            
+
             // Use reflection to log success if logger has LogInformation method
             var loggerType = logger.GetType();
             var logMethod = loggerType.GetMethod("LogInformation", new[] { typeof(string), typeof(object[]) });
             logMethod?.Invoke(logger, new object[] { "API key validation successful for {FunctionName}", new object[] { functionName } });
-            
+
             return null; // Validation successful
         }
         catch (UnauthorizedAccessException ex)
