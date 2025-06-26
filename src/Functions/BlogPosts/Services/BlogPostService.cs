@@ -1,5 +1,6 @@
 using Functions.BlogPosts.Models;
-using SharedStorage.Services;
+using SharedStorage.Services.ContentServices;
+using SharedStorage.Services.MediaServices;
 using SharedStorage.Validators;
 using Utils;
 
@@ -21,8 +22,8 @@ public interface IBlogPostService
 
 public class BlogPostService : IBlogPostService
 {
-  private readonly IBlobStorageService _blobStorageService;
-  private readonly ITableStorageService _tableStorageService;
+  private readonly IContentService _contentService;
+  private readonly IMediaService _mediaService;
   private readonly IAppInsightsLogger<BlogPostService> _appLogger;
   private readonly string _tableName;
 

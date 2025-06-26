@@ -1,5 +1,5 @@
 using Functions.Authors.Models;
-using SharedStorage.Services;
+using SharedStorage.Services.BaseServices;
 using SharedStorage.Validators;
 using Utils;
 

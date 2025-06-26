@@ -39,6 +39,7 @@ public static class BlogPostMapper
       Status = DataValidation.SafeTrim(model.Status, 20) ?? "Draft",
       FeaturedImageId = model.FeaturedImageId,
       FeaturedMediaId = model.FeaturedMediaId,
+      FeaturedVideoId = model.FeaturedVideoId,
       MediaReferencesJson = model.MediaReferencesJson ?? "[]",
       PublishDate = model.PublishDate,
       LastModified = DateTime.UtcNow, // Always update LastModified on conversion
@@ -84,6 +85,7 @@ public static class BlogPostMapper
       Status = entity.Status,
       FeaturedImageId = entity.FeaturedImageId,
       FeaturedMediaId = entity.FeaturedMediaId,
+      FeaturedVideoId = entity.FeaturedVideoId,
       MediaReferencesJson = entity.MediaReferencesJson,
       PublishDate = entity.PublishDate,
       LastModified = entity.LastModified,
@@ -116,6 +118,7 @@ public static class BlogPostMapper
       Status = model.Status,
       FeaturedImageId = model.FeaturedImageId,
       FeaturedMediaId = model.FeaturedMediaId,
+      FeaturedVideoId = model.FeaturedVideoId,
       MediaReferencesJson = model.MediaReferencesJson,
       PublishDate = model.PublishDate,
       LastModified = model.LastModified,
@@ -148,6 +151,7 @@ public static class BlogPostMapper
       Status = entity.Status,
       FeaturedImageId = entity.FeaturedImageId,
       FeaturedMediaId = entity.FeaturedMediaId,
+      FeaturedVideoId = entity.FeaturedVideoId,
       MediaReferencesJson = entity.MediaReferencesJson,
       PublishDate = entity.PublishDate,
       LastModified = entity.LastModified,
@@ -181,6 +185,7 @@ public static class BlogPostMapper
       Status = dto.Status,
       FeaturedImageId = dto.FeaturedImageId,
       FeaturedMediaId = dto.FeaturedMediaId,
+      FeaturedVideoId = dto.FeaturedVideoId,
       MediaReferencesJson = dto.MediaReferencesJson,
       PublishDate = dto.PublishDate,
       LastModified = dto.LastModified,
@@ -229,6 +234,7 @@ public static class BlogPostMapper
     entity.Status = DataValidation.SafeTrim(model.Status, 20) ?? "Draft";
     entity.FeaturedImageId = model.FeaturedImageId;
     entity.FeaturedMediaId = model.FeaturedMediaId;
+    entity.FeaturedVideoId = model.FeaturedVideoId;
     entity.MediaReferencesJson = model.MediaReferencesJson ?? "[]";
     entity.PublishDate = model.PublishDate;
     entity.LastModified = DateTime.UtcNow;

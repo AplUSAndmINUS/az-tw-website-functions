@@ -1,6 +1,7 @@
 ﻿using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using SharedStorage.Services.ContentServices;
 using System.Net;
 using Utils;
 
@@ -9,7 +10,7 @@ public class GetPostsFunction
 {
   private readonly IAppInsightsLogger<GetPostsFunction> _appLogger;
   private readonly IAPIKeyValidator _apiKeyValidator;
-  private readonly IBlogPostService _blogPostService;
+  private readonly IContentService _contentService;
 
   public GetPostsFunction(IAppInsightsLogger<GetPostsFunction> logger)
   {

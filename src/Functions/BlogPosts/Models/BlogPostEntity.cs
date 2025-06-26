@@ -25,6 +25,7 @@ public class BlogPostEntity : ITableEntity
   // Media references (storing IDs that point to media services)
   public string? FeaturedImageId { get; set; }        // Reference to primary image in ImageService
   public string? FeaturedMediaId { get; set; }        // Reference to primary media in MediaService
+  public string? FeaturedVideoId { get; set; }        // Reference to primary video in VideoService
   public string MediaReferencesJson { get; set; } = "[]"; // Array of media IDs for additional attachments
 
   // Date properties
