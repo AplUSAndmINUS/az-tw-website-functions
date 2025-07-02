@@ -28,7 +28,7 @@ public class UpsertBlogPost
 
   [Function("UpsertBlogPost")]
   public async Task<HttpResponseData> Run(
-    [HttpTrigger(AuthorizationLevel.Function, "post", "put")] HttpRequestData req)
+    [HttpTrigger(AuthorizationLevel.Function, "post", "put", Route = "posts/{slug?}")] HttpRequestData req)
   {
     _appLogger.LogInformation("UpsertBlogPost function triggered");
 
@@ -76,8 +76,10 @@ public class UpsertBlogPost
         return badResponse;
       }
 
-      // Extract slug from query parameters or use model slug
-      var slug = req.Query["slug"] ?? model.Slug;
+      // Extract slug from route parameters, query parameters, or use model slug
+      var slug = req.FunctionContext.BindingContext.BindingData["slug"]?.ToString() 
+                 ?? req.Query["slug"] 
+                 ?? model.Slug;
       if (string.IsNullOrWhiteSpace(slug))
       {
         _appLogger.LogWarning("Slug is missing from request");

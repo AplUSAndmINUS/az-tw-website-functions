@@ -26,7 +26,7 @@ public class GetPostsFunction
   }
 
   [Function("GetBlogPosts")]
-  public async Task<HttpResponseData> GetPosts([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+  public async Task<HttpResponseData> GetPosts([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "posts")] HttpRequestData req)
   {
     _appLogger.LogInformation("GetBlogPosts function triggered");
 
