@@ -33,13 +33,7 @@ public class GetAuthorFunction
     errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
 
     var errorObject = new { error = message };
-    var jsonOptions = new JsonSerializerOptions
-    {
-      PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-      WriteIndented = true
-    };
-
-    errorResponse.WriteString(JsonSerializer.Serialize(errorObject, jsonOptions));
+    errorResponse.WriteString(JsonHelper.Serialize(errorObject));
     return errorResponse;
   }
 
@@ -88,13 +82,7 @@ public class GetAuthorFunction
       }
 
       // Serialize the author model to JSON with consistent formatting
-      var jsonOptions = new JsonSerializerOptions
-      {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
-      };
-
-      var authorJson = JsonSerializer.Serialize(author, jsonOptions);
+      var authorJson = JsonHelper.Serialize(author);
       _appLogger.LogInformation("Author serialized to JSON successfully for slug: {Slug}", slug);
 
       // Write the author JSON to the response

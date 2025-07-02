@@ -33,29 +33,24 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
         _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
     }
 
-    private string SafeFormat(string message, object[] args)
+    private string SafeFormat(string message, params object[] args)
     {
-        if (string.IsNullOrWhiteSpace(message)) return string.Empty;
         try
         {
-            return (args != null && args.Length > 0) ? string.Format(message, args) : message;
-        }
-        catch (FormatException ex)
-        {
-            _appLogger.LogWarning(ex, "Failed to format message. Original message: {Message}, Args: {@Args}", message, args);
-            _telemetryClient.TrackTrace("Format failure", SeverityLevel.Warning, new Dictionary<string, string>
+            // Convert structured logging placeholders to indexed placeholders
+            if (args != null && args.Length > 0)
             {
-                { "OriginalMessage", message },
-                { "ArgsJson", System.Text.Json.JsonSerializer.Serialize(args)
+                // For structured logging, we need to use the original message format
+                // Let's just return the original message with args appended for safety
+                return $"{message} [Args: {string.Join(", ", args)}]";
             }
-    });
-
-            return message; // Use unformatted message as fallback
+            return message;
         }
         catch (Exception ex)
         {
-            _appLogger.LogError(ex, "Unexpected error formatting message: {Message} with args: {Args}", message, args);
-            return message;
+            _appLogger.LogWarning("Failed to format message. Original message: {Message}, Args: {Args}", message, args != null ? string.Join(", ", args) : "null");
+            _appLogger.LogWarning("Exception: {Exception}", ex.ToString());
+            return $"Failed to format message. Original message: {message}, Args: {(args != null ? string.Join(", ", args) : "null")}";
         }
     }
 

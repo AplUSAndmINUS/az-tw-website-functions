@@ -43,6 +43,8 @@ public class UpsertBlogPost
     {
       // Read the request body
       var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+      _appLogger.LogInformation("Request body received: {RequestBody}", requestBody);
+
       if (string.IsNullOrWhiteSpace(requestBody))
       {
         _appLogger.LogWarning("Request body is empty");
@@ -51,48 +53,39 @@ public class UpsertBlogPost
         return badResponse;
       }
 
-      // Deserialize the blog post model
-      BlogPostModel? model;
-      try
-      {
-        model = JsonSerializer.Deserialize<BlogPostModel>(requestBody, new JsonSerializerOptions
-        {
-          PropertyNameCaseInsensitive = true
-        });
+      // Use the simplified JsonHelper that always returns a valid object
+      var blogPost = JsonHelper.Deserialize<BlogPostModel>(requestBody);
 
-        if (model == null)
-        {
-          _appLogger.LogWarning("Failed to deserialize blog post model");
-          var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-          await badResponse.WriteStringAsync("Invalid blog post data");
-          return badResponse;
-        }
-      }
-      catch (JsonException ex)
+      // Basic validation to ensure we got meaningful data
+      if (string.IsNullOrWhiteSpace(blogPost.Title) && string.IsNullOrWhiteSpace(blogPost.Content))
       {
-        _appLogger.LogError("JSON deserialization error", ex);
+        _appLogger.LogWarning("Failed to deserialize blog post model or received empty model");
         var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-        await badResponse.WriteStringAsync("Invalid JSON format");
+        await badResponse.WriteStringAsync("Invalid blog post data provided");
         return badResponse;
       }
 
-      // Extract slug from route parameters, query parameters, or use model slug
-      var slug = req.FunctionContext.BindingContext.BindingData["slug"]?.ToString() 
-                 ?? req.Query["slug"] 
-                 ?? model.Slug;
+      _appLogger.LogInformation("Deserialized blog post: Title={Title}, Slug={Slug}", blogPost.Title, blogPost.Slug);
+
+      // Extract slug from route or use the one from the model
+      var slug = req.FunctionContext.BindingContext.BindingData.ContainsKey("slug")
+          ? req.FunctionContext.BindingContext.BindingData["slug"]?.ToString()
+          : blogPost.Slug;
+
+      _appLogger.LogInformation("Using slug: {Slug}", slug ?? "null");
+
       if (string.IsNullOrWhiteSpace(slug))
       {
-        _appLogger.LogWarning("Slug is missing from request");
+        _appLogger.LogWarning("Slug is missing from both route and model");
         var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
         await badResponse.WriteStringAsync("Slug is required");
         return badResponse;
       }
 
-      // Ensure model slug matches the provided slug
-      model.Slug = slug;
+      blogPost.Slug = slug;
 
-      // Validate required fields
-      var validationErrors = ValidateModel(model);
+      // Validate the model
+      var validationErrors = ValidateModel(blogPost);
       if (validationErrors.Any())
       {
         _appLogger.LogWarning("Model validation failed: {Errors}", string.Join(", ", validationErrors));
@@ -101,35 +94,33 @@ public class UpsertBlogPost
         return badResponse;
       }
 
-      // Upsert the blog post
-      var result = await _blogPostService.UpsertPostAsync(slug, model);
+      _appLogger.LogInformation("About to call UpsertPostAsync for slug: {Slug}", blogPost.Slug);
+
+      // Call the service to upsert the blog post
+      var result = await _blogPostService.UpsertPostAsync(blogPost.Slug, blogPost);
+
+      _appLogger.LogInformation("UpsertPostAsync completed. Result: {Result}", result != null ? "Success" : "Failed");
+
       if (result == null)
       {
-        _appLogger.LogError("Failed to upsert blog post with slug: {Slug}", new InvalidOperationException("Upsert operation failed"), slug);
+        _appLogger.LogError("Failed to upsert blog post", new Exception("UpsertPostAsync returned null"));
         var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-        await errorResponse.WriteStringAsync("Failed to create or update blog post");
+        await errorResponse.WriteStringAsync("Failed to upsert blog post");
         return errorResponse;
       }
 
-      // Return success response
+      // Return success response using JsonHelper
       var response = req.CreateResponse(HttpStatusCode.OK);
       response.Headers.Add("Content-Type", "application/json");
-
-      var responseBody = JsonSerializer.Serialize(result, new JsonSerializerOptions
-      {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-      });
-
-      await response.WriteStringAsync(responseBody);
-
-      _appLogger.LogInformation("Successfully upserted blog post with slug: {Slug}", slug);
+      await response.WriteStringAsync(JsonHelper.Serialize(result));
       return response;
     }
     catch (Exception ex)
     {
-      _appLogger.LogError("Error processing upsert blog post request", ex);
+      _appLogger.LogError("Error in UpsertBlogPost: {Error}", ex);
+      _appLogger.LogError("Stack trace: {StackTrace}", ex);
       var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-      await errorResponse.WriteStringAsync("Internal server error");
+      await errorResponse.WriteStringAsync($"Internal server error: {ex.Message}");
       return errorResponse;
     }
   }
