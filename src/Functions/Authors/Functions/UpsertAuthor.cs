@@ -40,13 +40,7 @@ public class UpsertAuthorAsync
     errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
 
     var errorObject = new { errors = errors.ToArray() };
-    var jsonOptions = new JsonSerializerOptions
-    {
-      PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-      WriteIndented = true
-    };
-
-    errorResponse.WriteString(JsonSerializer.Serialize(errorObject, jsonOptions));
+    errorResponse.WriteString(JsonHelper.Serialize(errorObject));
     return errorResponse;
   }
 
@@ -57,7 +51,7 @@ public class UpsertAuthorAsync
 
   {
     _appLogger.LogInformation("UpsertAuthorAsync function triggered for slug: {Slug}", slug);
-    
+
     // Validate API key using helper method
     var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "UpsertAuthorAsync");
     if (apiValidationResult != null)
@@ -65,26 +59,28 @@ public class UpsertAuthorAsync
       return apiValidationResult;
     }
 
-    _appLogger.LogInformation("Creating a new author.");
-    AuthorModel? model;
+    _appLogger.LogInformation("Processing author data.");
+    AuthorModel model;
 
     try
     {
       var body = await new StreamReader(req.Body).ReadToEndAsync();
-      // Deserialize the data payload to create a new author
-      model = JsonSerializer.Deserialize<AuthorModel>(body, new JsonSerializerOptions
-      {
-        PropertyNameCaseInsensitive = true,
-        AllowTrailingCommas = true,
-        ReadCommentHandling = JsonCommentHandling.Skip
-      });
+      _appLogger.LogInformation("Request body received: {RequestBody}", body);
 
-      // Check if the model is null before validation
-      if (model == null)
+      // Use the simplified JsonHelper that always returns a valid object
+      model = JsonHelper.Deserialize<AuthorModel>(body);
+
+      // Basic validation to ensure we got meaningful data
+      if (string.IsNullOrWhiteSpace(model.FirstName) && string.IsNullOrWhiteSpace(model.LastName) && string.IsNullOrWhiteSpace(model.Username))
       {
-        var modelNullErrors = new[] { "Invalid or missing author data." };
-        _appLogger.LogError("Author model is null.", new ArgumentNullException(nameof(model)));
-        return CreateValidationErrorResponse(req, modelNullErrors);
+        _appLogger.LogWarning("Failed to deserialize author model or received empty model");
+        return CreateValidationErrorResponse(req, new[] { "Invalid author data provided" });
+      }
+
+      // Set the slug from route if available
+      if (!string.IsNullOrWhiteSpace(slug))
+      {
+        model.AuthorSlug = slug;
       }
 
       // Validate the model using the AuthorModelDataValidator
@@ -94,11 +90,6 @@ public class UpsertAuthorAsync
         _appLogger.LogError("Author model validation failed.", new Exception(string.Join(" | ", errors)));
         return CreateValidationErrorResponse(req, errors);
       }
-    }
-    catch (JsonException ex)
-    {
-      _appLogger.LogError("Failed to deserialize author data.", ex);
-      return CreateValidationErrorResponse(req, new[] { "Invalid JSON format." });
     }
     catch (Exception ex)
     {
@@ -139,13 +130,7 @@ public class UpsertAuthorAsync
       response.Headers.Add("Content-Type", "application/json; charset=utf-8");
 
       // Serialize the AuthorDTO response
-      var jsonOptions = new JsonSerializerOptions
-      {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
-      };
-
-      await response.WriteStringAsync(JsonSerializer.Serialize(result, jsonOptions));
+      await response.WriteStringAsync(JsonHelper.Serialize(result));
 
       // Log the successful creation/update of the author
       _appLogger.LogInformation("Author upserted successfully with slug: {AuthorSlug}", result.AuthorSlug);

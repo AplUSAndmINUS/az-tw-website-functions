@@ -17,16 +17,16 @@ public static class ServiceCollectionExtensions
     // Register base storage services (if not already registered by AddStorageServices)
     services.AddSingleton<IBlobStorageService>(provider =>
     {
-      var storageAccountName = System.Environment.GetEnvironmentVariable("AZURE_STORAGE_ACCOUNT_NAME")
-              ?? throw new InvalidOperationException("AZURE_STORAGE_ACCOUNT_NAME environment variable is required");
+      var storageAccountName = System.Environment.GetEnvironmentVariable("StorageAccountName")
+              ?? throw new InvalidOperationException("StorageAccountName environment variable is required");
       var logger = provider.GetRequiredService<IAppInsightsLogger<BlobStorageService>>();
       return new BlobStorageService(storageAccountName, logger);
     });
 
     services.AddSingleton<ITableStorageService>(provider =>
     {
-      var storageAccountName = System.Environment.GetEnvironmentVariable("AZURE_STORAGE_ACCOUNT_NAME")
-              ?? throw new InvalidOperationException("AZURE_STORAGE_ACCOUNT_NAME environment variable is required");
+      var storageAccountName = System.Environment.GetEnvironmentVariable("StorageAccountName")
+              ?? throw new InvalidOperationException("StorageAccountName environment variable is required");
       var logger = provider.GetRequiredService<IAppInsightsLogger<TableStorageService>>();
       return new TableStorageService(storageAccountName, logger);
     });

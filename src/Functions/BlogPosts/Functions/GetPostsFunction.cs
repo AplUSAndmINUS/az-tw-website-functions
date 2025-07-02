@@ -56,12 +56,7 @@ public class GetPostsFunction
       var response = req.CreateResponse(HttpStatusCode.OK);
       response.Headers.Add("Content-Type", "application/json");
 
-      var responseBody = JsonSerializer.Serialize(posts, new JsonSerializerOptions
-      {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-      });
-
-      await response.WriteStringAsync(responseBody);
+      await response.WriteStringAsync(JsonHelper.Serialize(posts));
 
       _appLogger.LogInformation("Successfully retrieved {Count} blog posts", posts.Count());
       return response;
@@ -119,12 +114,7 @@ public class GetPostsFunction
       var response = req.CreateResponse(HttpStatusCode.OK);
       response.Headers.Add("Content-Type", "application/json");
 
-      var responseBody = JsonSerializer.Serialize(post, new JsonSerializerOptions
-      {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-      });
-
-      await response.WriteStringAsync(responseBody);
+      await response.WriteStringAsync(JsonHelper.Serialize(post));
 
       _appLogger.LogInformation("Successfully retrieved blog post with slug: {Slug}", slug);
       return response;
