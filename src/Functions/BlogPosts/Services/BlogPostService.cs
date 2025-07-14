@@ -79,19 +79,40 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
     // Get featured image if available
     if (!string.IsNullOrEmpty(blogPost.FeaturedImageId))
     {
-      result.FeaturedImage = await _mediaService.GetMediaAsync(blogPost.FeaturedImageId);
+      var imageEntity = await _mediaService.GetMediaAsync(blogPost.FeaturedImageId);
+      if (imageEntity != null)
+      {
+        var imageModel = SharedStorage.Models.MediaItemMapper.ToModel(imageEntity);
+        result.FeaturedImage = imageModel;
+        result.MediaItems.Add(imageModel);
+        result.LegacyFeaturedImage = imageEntity; // Keep legacy reference for backward compatibility
+      }
     }
 
     // Get featured video if available
     if (!string.IsNullOrEmpty(blogPost.FeaturedVideoId))
     {
-      result.FeaturedVideo = await _mediaService.GetMediaAsync(blogPost.FeaturedVideoId);
+      var videoEntity = await _mediaService.GetMediaAsync(blogPost.FeaturedVideoId);
+      if (videoEntity != null)
+      {
+        var videoModel = SharedStorage.Models.MediaItemMapper.ToModel(videoEntity);
+        result.FeaturedVideo = videoModel;
+        result.MediaItems.Add(videoModel);
+        result.LegacyFeaturedVideo = videoEntity; // Keep legacy reference for backward compatibility
+      }
     }
 
     // Get featured media if available
     if (!string.IsNullOrEmpty(blogPost.FeaturedMediaId))
     {
-      result.FeaturedMedia = await _mediaService.GetMediaAsync(blogPost.FeaturedMediaId);
+      var mediaEntity = await _mediaService.GetMediaAsync(blogPost.FeaturedMediaId);
+      if (mediaEntity != null)
+      {
+        var mediaModel = SharedStorage.Models.MediaItemMapper.ToModel(mediaEntity);
+        result.FeaturedMedia = mediaModel;
+        result.MediaItems.Add(mediaModel);
+        result.LegacyFeaturedMedia = mediaEntity; // Keep legacy reference for backward compatibility
+      }
     }
 
     // Get all media references if available
@@ -103,7 +124,18 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
         if (mediaIds != null && mediaIds.Any())
         {
           var mediaEntities = await _mediaService.GetMediaBatchAsync(mediaIds.ToArray());
-          result.MediaReferences.AddRange(mediaEntities);
+
+          // Add to both the legacy references and the new MediaItems collection
+          result.LegacyMediaReferences.AddRange(mediaEntities);
+
+          // Convert and add to MediaItems
+          foreach (var entity in mediaEntities)
+          {
+            if (entity != null)
+            {
+              result.MediaItems.Add(SharedStorage.Models.MediaItemMapper.ToModel(entity));
+            }
+          }
         }
       }
       catch (Exception ex)

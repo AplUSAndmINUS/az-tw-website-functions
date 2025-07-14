@@ -25,6 +25,7 @@ public class BlogPostWithMediaDTO
   public MediaEntity? LegacyFeaturedImage { get; set; }
   public MediaEntity? LegacyFeaturedMedia { get; set; }
   public MediaEntity? LegacyFeaturedVideo { get; set; }
+  public MediaItemModel? FeaturedMedia { get; set; } // New property for featured media
   public List<MediaEntity> LegacyMediaReferences { get; set; } = new List<MediaEntity>();
 
   // Constructor with minimal setup
@@ -178,6 +179,10 @@ public class BlogPostWithMediaDTO
       {
         FeaturedVideo = media;
       }
+      else if (media.Purpose?.Contains("featured") == true)
+      {
+        FeaturedMedia = media;
+      }
     }
   }
 
@@ -200,6 +205,15 @@ public class BlogPostWithMediaDTO
       model.Purpose = "featured";
       MediaItems.Add(model);
       FeaturedVideo = model;
+    }
+
+    // Convert FeaturedMedia
+    if (LegacyFeaturedMedia != null)
+    {
+      var model = MediaItemMapper.ToModel(LegacyFeaturedMedia);
+      model.Purpose = "featured";
+      MediaItems.Add(model);
+      FeaturedMedia = model;
     }
 
     // Convert MediaReferences
