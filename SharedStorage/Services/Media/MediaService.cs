@@ -40,8 +40,22 @@ public class MediaService : IMediaService
     _appLogger = appLogger ?? throw new ArgumentNullException(nameof(appLogger));
 
     // Get table name from environment variable with fallback
-    var rawTableName = System.Environment.GetEnvironmentVariable("MEDIA_TABLE_NAME") ?? "media";
-    _tableName = SharedStorage.Validators.TableNameValidator.ValidateTableName(rawTableName);
+    var useMock = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+    var envTableName = System.Environment.GetEnvironmentVariable("MEDIA_TABLE_NAME");
+
+    string resolvedTableName;
+    if (!string.IsNullOrEmpty(envTableName))
+    {
+      // If an explicit table name is provided via environment variable, use that
+      resolvedTableName = useMock ? $"mock{envTableName}" : envTableName;
+    }
+    else
+    {
+      // Otherwise use ContentNameResolver for consistent naming
+      resolvedTableName = Utils.ContentNameResolver.GetTableName(Utils.Constants.ContentSections.Blog, Utils.Constants.AssetType.Media, useMock);
+    }
+
+    _tableName = SharedStorage.Validators.TableNameValidator.ValidateTableName(resolvedTableName);
 
     _appLogger.LogInformation("MediaService initialized with {HandlerCount} handlers using table {TableName}",
       _handlers.Count, _tableName);

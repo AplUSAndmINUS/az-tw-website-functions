@@ -44,21 +44,31 @@ public class GetPostsFunction
       var category = req.Query["category"];
       var isPublishedParam = req.Query["isPublished"];
       var limitParam = req.Query["limit"];
+      var includeMediaParam = req.Query["includeMedia"];
 
       // Parse boolean and integer parameters
       bool? isPublished = string.IsNullOrEmpty(isPublishedParam) ? true : bool.Parse(isPublishedParam);
       int? limit = string.IsNullOrEmpty(limitParam) ? null : int.Parse(limitParam);
+      bool includeMedia = !string.IsNullOrEmpty(includeMediaParam) && bool.Parse(includeMediaParam);
 
-      // Get blog posts
-      var posts = await _blogPostService.GetPostsAsync(authorSlug, category, isPublished, limit);
+      // Get blog posts with or without media
+      object result;
+      if (includeMedia)
+      {
+        result = await _blogPostService.GetPostsWithMediaAsync(authorSlug, category, isPublished, limit);
+      }
+      else
+      {
+        result = await _blogPostService.GetPostsAsync(authorSlug, category, isPublished, limit);
+      }
 
       // Create response
       var response = req.CreateResponse(HttpStatusCode.OK);
       response.Headers.Add("Content-Type", "application/json");
 
-      await response.WriteStringAsync(JsonHelper.Serialize(posts));
+      await response.WriteStringAsync(JsonHelper.Serialize(result));
 
-      _appLogger.LogInformation("Successfully retrieved {Count} blog posts", posts.Count());
+      _appLogger.LogInformation("Successfully retrieved blog posts");
       return response;
     }
     catch (Exception ex)
@@ -97,12 +107,22 @@ public class GetPostsFunction
 
       // Parse query parameters
       var isPublishedParam = req.Query["isPublished"];
+      var includeMediaParam = req.Query["includeMedia"];
       bool? isPublished = string.IsNullOrEmpty(isPublishedParam) ? true : bool.Parse(isPublishedParam);
+      bool includeMedia = !string.IsNullOrEmpty(includeMediaParam) && bool.Parse(includeMediaParam);
 
-      // Get the blog post
-      var post = await _blogPostService.GetPostAsync(slug, isPublished);
+      // Get the blog post with or without media
+      object? result = null;
+      if (includeMedia)
+      {
+        result = await _blogPostService.GetPostWithMediaAsync(slug, isPublished);
+      }
+      else
+      {
+        result = await _blogPostService.GetPostAsync(slug, isPublished);
+      }
 
-      if (post == null)
+      if (result == null)
       {
         _appLogger.LogInformation("Blog post with slug {Slug} not found", slug);
         var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
@@ -114,7 +134,7 @@ public class GetPostsFunction
       var response = req.CreateResponse(HttpStatusCode.OK);
       response.Headers.Add("Content-Type", "application/json");
 
-      await response.WriteStringAsync(JsonHelper.Serialize(post));
+      await response.WriteStringAsync(JsonHelper.Serialize(result));
 
       _appLogger.LogInformation("Successfully retrieved blog post with slug: {Slug}", slug);
       return response;
