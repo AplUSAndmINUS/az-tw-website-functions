@@ -4,7 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Webp;
 
-namespace SharedStorage.Services.MediaServices;
+namespace SharedStorage.Services.Media;
 
 /// <summary>
 /// Interface for video thumbnail generation services.

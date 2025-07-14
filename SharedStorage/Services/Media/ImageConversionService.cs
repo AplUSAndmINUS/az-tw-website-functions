@@ -5,7 +5,7 @@ using SixLabors.ImageSharp.Processing;
 using Microsoft.Extensions.Logging;
 using Utils;
 
-namespace SharedStorage.Services.MediaServices;
+namespace SharedStorage.Services.Media;
 
 public interface IImageService
 {

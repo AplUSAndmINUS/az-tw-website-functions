@@ -1,6 +1,6 @@
 using SharedStorage.Services;
 using SharedStorage.Services.BaseServices;
-using SharedStorage.Services.MediaServices;
+using SharedStorage.Services.Media;
 using SharedStorage.Extensions;
 using Functions.Extensions;
 using Utils;

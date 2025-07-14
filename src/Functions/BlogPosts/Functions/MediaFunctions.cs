@@ -1,7 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
-using SharedStorage.Services.MediaServices;
+using SharedStorage.Services.Media;
 using System.Net;
 using System.Text.Json;
 using Utils;

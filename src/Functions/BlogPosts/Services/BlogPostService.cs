@@ -1,7 +1,7 @@
 using Functions.BlogPosts.Models;
 using Functions.BlogPosts.Mappers;
 using SharedStorage.Services.ContentServices;
-using SharedStorage.Services.MediaServices;
+using SharedStorage.Services.Media;
 using SharedStorage.Services.BaseServices;
 using SharedStorage.Validators;
 using Utils;

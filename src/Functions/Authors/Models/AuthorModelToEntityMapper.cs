@@ -8,10 +8,14 @@ public static class AuthorModelToEntityMapper
   public static AuthorEntity Map(AuthorModel model, string partitionKey, string rowKey = "profile")
   {
     ArgumentNullException.ThrowIfNull(model);
+    
+    // Validate all required fields are present
+    ArgumentNullException.ThrowIfNull(model.AuthorSlug);
     ArgumentNullException.ThrowIfNull(model.FirstName);
     ArgumentNullException.ThrowIfNull(model.LastName);
     ArgumentNullException.ThrowIfNull(model.Email);
     ArgumentNullException.ThrowIfNull(model.Username);
+    ArgumentNullException.ThrowIfNull(model.DisplayName);
 
     return new AuthorEntity
     {
@@ -24,7 +28,9 @@ public static class AuthorModelToEntityMapper
         DataValidation.RequireMinLength(DataValidation.SafeTrim(model.Username), 5, nameof(model.Username)),
         nameof(model.Username)
       ),
-      DisplayName = string.IsNullOrWhiteSpace(model.DisplayName) ? model.Username : model.DisplayName,
+      DisplayName = DataValidation.Required(DataValidation.SafeTrim(model.DisplayName), nameof(model.DisplayName)),
+      
+      // Rest of the properties remain the same
       Location = string.IsNullOrWhiteSpace(model.Location) ? null : DataValidation.RequireMinLength(DataValidation.SafeTrim(model.Location), 2, nameof(model.Location)),
       Bio = string.IsNullOrWhiteSpace(model.Bio) ? null : DataValidation.RequireMinLength(DataValidation.SafeTrim(model.Bio), 10, nameof(model.Bio)),
       Website = DataValidation.NormalizeUrl(DataValidation.SafeTrim(model.Website)) ?? null,

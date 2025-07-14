@@ -46,12 +46,14 @@ public class AuthorEntity : ITableEntity
   /// <exception cref="ArgumentException">Thrown when validation fails for any field.</exception>
   public static AuthorEntity FromModel(AuthorModel model, string partitionKey, string rowKey = "profile")
   {
-    // Match the same validation as Map method
+    // Validate all required fields are present
     ArgumentNullException.ThrowIfNull(model);
+    ArgumentNullException.ThrowIfNull(model.AuthorSlug);
     ArgumentNullException.ThrowIfNull(model.FirstName);
     ArgumentNullException.ThrowIfNull(model.LastName);
     ArgumentNullException.ThrowIfNull(model.Email);
     ArgumentNullException.ThrowIfNull(model.Username);
+    ArgumentNullException.ThrowIfNull(model.DisplayName);
 
     return new AuthorEntity
     {
@@ -64,7 +66,7 @@ public class AuthorEntity : ITableEntity
         DataValidation.RequireMinLength(DataValidation.SafeTrim(model.Username), 5, nameof(model.Username)),
         nameof(model.Username)
       ),
-      DisplayName = string.IsNullOrWhiteSpace(model.DisplayName) ? model.Username : model.DisplayName,
+      DisplayName = DataValidation.Required(DataValidation.SafeTrim(model.DisplayName), nameof(model.DisplayName)),
       Location = DataValidation.RequireMinLength(DataValidation.SafeTrim(model.Location), 2, nameof(model.Location)) ?? null,
       Bio = DataValidation.RequireMinLength(DataValidation.SafeTrim(model.Bio), 10, nameof(model.Bio)) ?? null,
       Website = DataValidation.NormalizeUrl(DataValidation.SafeTrim(model.Website)) ?? null,
@@ -82,7 +84,7 @@ public class AuthorEntity : ITableEntity
                              !string.IsNullOrWhiteSpace(model.ProfileImageCdnUrl) &&
                              !string.IsNullOrWhiteSpace(model.ThumbnailCdnUrl),
 
-      ImageContentType = DataValidation.SafeTrim(model.ImageContentType) ?? "image/jpeg", // default to JPEG if not specified
+      ImageContentType = DataValidation.SafeTrim(model.ImageContentType) ?? "image/jpeg",
       ImageSizeBytes = DataValidation.RequirePositiveLong(model.ImageSizeBytes, nameof(model.ImageSizeBytes)) ?? 0,
       ImageWidth = DataValidation.RequirePositiveInt(model.ImageWidth, nameof(model.ImageWidth)) ?? 0,
       ImageHeight = DataValidation.RequirePositiveInt(model.ImageHeight, nameof(model.ImageHeight)) ?? 0

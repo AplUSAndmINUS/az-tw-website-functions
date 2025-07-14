@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Functions.BlogPosts.Services;
 using Functions.BlogPosts.Models;
 using SharedStorage.Services.BaseServices;
-using SharedStorage.Services.MediaServices;
+using SharedStorage.Services.Media;
 using SharedStorage.Services.ContentServices;
 using SharedStorage.Models;
 using Utils;

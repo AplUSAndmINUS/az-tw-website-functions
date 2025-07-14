@@ -6,8 +6,10 @@ public class AuthorDTO
     public string DisplayName { get; set; } = default!; // e.g. "terencewaters"
     public string FirstName { get; set; } = default!; // e.g. "Terence"
     public string LastName { get; set; } = default!; // e.g. "Waters"
-    // public string Email { get; set; } = default!; // e.g. "terence.waters@example.com"
+    public string Email { get; set; } = default!; // e.g. "terence.waters@example.com" - Now included as required
     public string Username { get; set; } = default!; // e.g. "terencewaters"
+    
+    // Rest of the properties remain the same
     public string? Location { get; set; } = default!; // e.g. "San Francisco, CA"
     public string? Bio { get; set; } = default!; // e.g. "Software Engineer with a passion for open source."
     public string? Website { get; set; } = default!; // e.g. "https://terencewaters.com"
@@ -31,7 +33,7 @@ public static class AuthorDTOMapper
             DisplayName = author.DisplayName,
             FirstName = author.FirstName,
             LastName = author.LastName,
-            // Email = author.Email,
+            Email = author.Email, // Now included in the mapping
             Username = author.Username,
             Location = author.Location,
             Bio = author.Bio,
