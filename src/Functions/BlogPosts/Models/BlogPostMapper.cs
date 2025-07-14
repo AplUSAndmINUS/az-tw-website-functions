@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Utils.Validation;
+using Utils.Extensions;
 using Functions.BlogPosts.Models;
 
 namespace Functions.BlogPosts.Mappers;
@@ -41,7 +42,7 @@ public static class BlogPostMapper
       FeaturedMediaId = model.FeaturedMediaId,
       FeaturedVideoId = model.FeaturedVideoId,
       MediaReferencesJson = model.MediaReferencesJson ?? "[]",
-      PublishDate = model.PublishDate,
+      PublishDate = model.PublishDate.EnsureUtc(),
       LastModified = DateTime.UtcNow, // Always update LastModified on conversion
       TagsJson = JsonSerializer.Serialize(model.TagsList),
       PartitionKey = model.PartitionKey,
@@ -236,7 +237,7 @@ public static class BlogPostMapper
     entity.FeaturedMediaId = model.FeaturedMediaId;
     entity.FeaturedVideoId = model.FeaturedVideoId;
     entity.MediaReferencesJson = model.MediaReferencesJson ?? "[]";
-    entity.PublishDate = model.PublishDate;
+    entity.PublishDate = model.PublishDate.EnsureUtc();
     entity.LastModified = DateTime.UtcNow;
     entity.TagsJson = JsonSerializer.Serialize(model.TagsList);
 
@@ -264,4 +265,6 @@ public static class BlogPostMapper
       return [];
     }
   }
+
+
 }

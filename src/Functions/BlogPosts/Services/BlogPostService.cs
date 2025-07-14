@@ -6,6 +6,7 @@ using SharedStorage.Services.BaseServices;
 using SharedStorage.Validators;
 using Utils;
 using Utils.Constants;
+using Utils.Extensions;
 
 namespace Functions.BlogPosts.Services;
 
@@ -154,7 +155,7 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
       AuthorSlug = model.AuthorSlug,
       Category = model.Category,
       Status = model.Status,
-      PublishDate = model.PublishDate,
+      PublishDate = model.PublishDate.EnsureUtc(),
       LastModified = DateTime.UtcNow,
       TagsJson = System.Text.Json.JsonSerializer.Serialize(model.TagsList),
       FeaturedImageId = model.FeaturedImageId,
@@ -184,7 +185,7 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
     entity.AuthorSlug = model.AuthorSlug;
     entity.Category = model.Category;
     entity.Status = model.Status;
-    entity.PublishDate = model.PublishDate;
+    entity.PublishDate = model.PublishDate.EnsureUtc();
     entity.LastModified = DateTime.UtcNow;
     entity.TagsJson = System.Text.Json.JsonSerializer.Serialize(model.TagsList);
     entity.FeaturedImageId = model.FeaturedImageId;
@@ -626,8 +627,8 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
         AuthorSlug = tableEntity.GetString("AuthorSlug") ?? string.Empty,
         Category = tableEntity.GetString("Category") ?? string.Empty,
         Status = tableEntity.GetString("Status") ?? "Draft",
-        PublishDate = tableEntity.GetDateTime("PublishDate") ?? DateTime.UtcNow,
-        LastModified = tableEntity.GetDateTime("LastModified") ?? DateTime.UtcNow,
+        PublishDate = (tableEntity.GetDateTime("PublishDate") ?? DateTime.UtcNow).EnsureUtc(),
+        LastModified = (tableEntity.GetDateTime("LastModified") ?? DateTime.UtcNow).EnsureUtc(),
         TagsJson = tableEntity.GetString("TagsJson") ?? "[]",
         FeaturedImageId = tableEntity.GetString("FeaturedImageId") ?? string.Empty,
         FeaturedMediaId = tableEntity.GetString("FeaturedMediaId") ?? string.Empty,
@@ -641,6 +642,8 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
       return null;
     }
   }
+
+
 
   /// <summary>
   /// Ensures that metadata linking a media item to a blog post is properly maintained.
