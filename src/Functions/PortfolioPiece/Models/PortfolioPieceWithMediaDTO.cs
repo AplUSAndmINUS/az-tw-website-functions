@@ -7,17 +7,17 @@ namespace Functions.PortfolioPiece.Models;
 /// <summary>
 /// DTO for combining a portfolio piece with its associated media items
 /// </summary>
-public class PortfolioPostWithMediaDTO : BaseContentWithMediaDTO<PortfolioPieceModel>
+public class PortfolioPieceWithMediaDTO : BaseContentWithMediaDTO<PortfolioPieceModel>
 {
   // Constructor with minimal setup
-  public PortfolioPostWithMediaDTO()
+  public PortfolioPieceWithMediaDTO()
   {
     Content = new PortfolioPieceModel();
     MediaItems = new List<MediaItemModel>();
   }
 
   // Constructor with post and media items
-  public PortfolioPostWithMediaDTO(PortfolioPieceModel post, IEnumerable<MediaItemModel> mediaItems)
+  public PortfolioPieceWithMediaDTO(PortfolioPieceModel post, IEnumerable<MediaItemModel> mediaItems)
   {
     Content = post;
     MediaItems = new List<MediaItemModel>(mediaItems);

@@ -28,6 +28,19 @@ public static class BlogPostMapper
     // Media validation is now optional since media references can be added later
     // Business logic can enforce media requirements at the service level if needed
 
+    // Ensure status and isPublished are in sync
+    string status = DataValidation.SafeTrim(model.Status, 20) ?? "Draft";
+
+    // If model.IsPublished is explicitly set (via computed property), ensure status matches
+    if (model.IsPublished && status != "Published")
+    {
+      status = "Published";
+    }
+    else if (!model.IsPublished && status == "Published")
+    {
+      status = "Draft";
+    }
+
     var entity = new BlogPostEntity
     {
       Id = model.Id ?? Guid.NewGuid().ToString(),
@@ -37,12 +50,12 @@ public static class BlogPostMapper
       Content = DataValidation.Required(DataValidation.SafeTrim(model.Content, 50000), nameof(model.Content)),
       Slug = DataValidation.Required(DataValidation.SafeTrim(model.Slug, 100), nameof(model.Slug)),
       Category = DataValidation.Required(DataValidation.SafeTrim(model.Category, 50), nameof(model.Category)),
-      Status = DataValidation.SafeTrim(model.Status, 20) ?? "Draft",
+      Status = status,
       FeaturedImageId = model.FeaturedImageId,
       FeaturedMediaId = model.FeaturedMediaId,
       FeaturedVideoId = model.FeaturedVideoId,
       MediaReferencesJson = model.MediaReferencesJson ?? "[]",
-      PublishDate = EnsureValidPublishDate(model.PublishDate, model.Status),
+      PublishDate = EnsureValidPublishDate(model.PublishDate, status),
       LastModified = DateTime.UtcNow, // Always update LastModified on conversion
       TagsJson = JsonSerializer.Serialize(model.TagsList),
       PartitionKey = model.PartitionKey,
@@ -232,12 +245,26 @@ public static class BlogPostMapper
     entity.Content = DataValidation.Required(DataValidation.SafeTrim(model.Content, 50000), nameof(model.Content));
     entity.Slug = DataValidation.Required(DataValidation.SafeTrim(model.Slug, 100), nameof(model.Slug));
     entity.Category = DataValidation.Required(DataValidation.SafeTrim(model.Category, 50), nameof(model.Category));
-    entity.Status = DataValidation.SafeTrim(model.Status, 20) ?? "Draft";
+
+    // Ensure status and isPublished are in sync
+    string status = DataValidation.SafeTrim(model.Status, 20) ?? "Draft";
+
+    // If model.IsPublished is explicitly set (via computed property), ensure status matches
+    if (model.IsPublished && status != "Published")
+    {
+      status = "Published";
+    }
+    else if (!model.IsPublished && status == "Published")
+    {
+      status = "Draft";
+    }
+
+    entity.Status = status;
     entity.FeaturedImageId = model.FeaturedImageId;
     entity.FeaturedMediaId = model.FeaturedMediaId;
     entity.FeaturedVideoId = model.FeaturedVideoId;
     entity.MediaReferencesJson = model.MediaReferencesJson ?? "[]";
-    entity.PublishDate = EnsureValidPublishDate(model.PublishDate, model.Status);
+    entity.PublishDate = EnsureValidPublishDate(model.PublishDate, status);
     entity.LastModified = DateTime.UtcNow;
     entity.TagsJson = JsonSerializer.Serialize(model.TagsList);
 

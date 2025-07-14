@@ -294,6 +294,18 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
   {
     try
     {
+      // Ensure status and isPublished are consistent before upserting
+      if (model.IsPublished && model.Status != "Published")
+      {
+        model.Status = "Published";
+        _appLogger.LogInformation("Updated status to 'Published' based on IsPublished=true for post with slug {Slug}", slug);
+      }
+      else if (!model.IsPublished && model.Status == "Published")
+      {
+        model.Status = "Draft";
+        _appLogger.LogInformation("Updated status to 'Draft' based on IsPublished=false for post with slug {Slug}", slug);
+      }
+
       // First perform the base upsert operation
       var blogPostDto = await UpsertAsync(slug, model);
 
