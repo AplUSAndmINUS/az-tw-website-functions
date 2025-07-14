@@ -120,18 +120,25 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
     var useMock = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
     var envTableName = System.Environment.GetEnvironmentVariable("BLOGPOSTS_TABLE_NAME");
 
+    Console.WriteLine($"DEBUG: USE_MOCK_STORAGE={useMock}, BLOGPOSTS_TABLE_NAME={envTableName}");
+
+    string tableName;
     if (!string.IsNullOrEmpty(envTableName))
     {
       // If an explicit table name is provided via environment variable, use that
       var resolvedTableName = useMock ? $"mock{envTableName}" : envTableName;
-      return TableNameValidator.ValidateTableName(resolvedTableName);
+      tableName = TableNameValidator.ValidateTableName(resolvedTableName);
+      Console.WriteLine($"DEBUG: Using environment variable table name. Raw={envTableName}, Resolved={resolvedTableName}, Validated={tableName}");
     }
     else
     {
       // Otherwise use ContentNameResolver for consistent naming
-      var tableName = ContentNameResolver.GetTableName(ContentSections.Blog, null, useMock);
-      return TableNameValidator.ValidateTableName(tableName);
+      var resolvedTableName = ContentNameResolver.GetTableName(ContentSections.Blog, null, useMock);
+      tableName = TableNameValidator.ValidateTableName(resolvedTableName);
+      Console.WriteLine($"DEBUG: Using ContentNameResolver. Resolved={resolvedTableName}, Validated={tableName}");
     }
+
+    return tableName;
   }
 
   #region ContentService Implementation
@@ -615,6 +622,15 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
   {
     try
     {
+      // Get status first since we need it for the PublishDate validation
+      string status = tableEntity.GetString("Status") ?? "Draft";
+
+      // Get the PublishDate and ensure it's valid
+      DateTime publishDate = tableEntity.GetDateTime("PublishDate") ?? DateTime.UtcNow;
+      publishDate = Mappers.BlogPostMapper.EnsureValidPublishDate(publishDate, status);
+
+      Console.WriteLine($"DEBUG: Converting TableEntity to BlogPostEntity - PublishDate after validation: {publishDate}");
+
       return new BlogPostEntity
       {
         PartitionKey = tableEntity.PartitionKey,
@@ -626,8 +642,8 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
         Content = tableEntity.GetString("Content") ?? string.Empty,
         AuthorSlug = tableEntity.GetString("AuthorSlug") ?? string.Empty,
         Category = tableEntity.GetString("Category") ?? string.Empty,
-        Status = tableEntity.GetString("Status") ?? "Draft",
-        PublishDate = (tableEntity.GetDateTime("PublishDate") ?? DateTime.UtcNow).EnsureUtc(),
+        Status = status,
+        PublishDate = publishDate,
         LastModified = (tableEntity.GetDateTime("LastModified") ?? DateTime.UtcNow).EnsureUtc(),
         TagsJson = tableEntity.GetString("TagsJson") ?? "[]",
         FeaturedImageId = tableEntity.GetString("FeaturedImageId") ?? string.Empty,
@@ -738,22 +754,41 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
   {
     var useMock = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
     string baseTableName;
+    string? envTableName = null;
 
     // Determine base table name based on media type
     switch (mediaType?.ToLowerInvariant())
     {
       case "image":
-        baseTableName = ContentNameResolver.GetTableName(ContentSections.Blog, AssetType.Images, useMock) + "metadata";
+        envTableName = System.Environment.GetEnvironmentVariable("BLOGPOSTS_IMAGES_METADATA_TABLE_NAME");
+        if (!string.IsNullOrEmpty(envTableName))
+        {
+          baseTableName = useMock ? $"mock{envTableName}" : envTableName;
+        }
+        else
+        {
+          baseTableName = ContentNameResolver.GetTableName(ContentSections.Blog, AssetType.Images, useMock) + "metadata";
+        }
         break;
       case "video":
-        baseTableName = ContentNameResolver.GetTableName(ContentSections.Blog, AssetType.Video, useMock) + "metadata";
+        envTableName = System.Environment.GetEnvironmentVariable("BLOGPOSTS_VIDEOS_METADATA_TABLE_NAME");
+        if (!string.IsNullOrEmpty(envTableName))
+        {
+          baseTableName = useMock ? $"mock{envTableName}" : envTableName;
+        }
+        else
+        {
+          baseTableName = ContentNameResolver.GetTableName(ContentSections.Blog, AssetType.Video, useMock) + "metadata";
+        }
         break;
       default:
         baseTableName = ContentNameResolver.GetTableName(ContentSections.Blog, AssetType.Media, useMock) + "metadata";
         break;
     }
 
-    return TableNameValidator.ValidateTableName(baseTableName);
+    var validatedName = TableNameValidator.ValidateTableName(baseTableName);
+    Console.WriteLine($"DEBUG: GetMediaMetadataTableName for mediaType={mediaType}, useMock={useMock}, envTableName={envTableName}, baseTableName={baseTableName}, validatedName={validatedName}");
+    return validatedName;
   }
 
   #endregion

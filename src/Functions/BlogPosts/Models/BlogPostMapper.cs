@@ -42,7 +42,7 @@ public static class BlogPostMapper
       FeaturedMediaId = model.FeaturedMediaId,
       FeaturedVideoId = model.FeaturedVideoId,
       MediaReferencesJson = model.MediaReferencesJson ?? "[]",
-      PublishDate = model.PublishDate.EnsureUtc(),
+      PublishDate = EnsureValidPublishDate(model.PublishDate, model.Status),
       LastModified = DateTime.UtcNow, // Always update LastModified on conversion
       TagsJson = JsonSerializer.Serialize(model.TagsList),
       PartitionKey = model.PartitionKey,
@@ -237,7 +237,7 @@ public static class BlogPostMapper
     entity.FeaturedMediaId = model.FeaturedMediaId;
     entity.FeaturedVideoId = model.FeaturedVideoId;
     entity.MediaReferencesJson = model.MediaReferencesJson ?? "[]";
-    entity.PublishDate = model.PublishDate.EnsureUtc();
+    entity.PublishDate = EnsureValidPublishDate(model.PublishDate, model.Status);
     entity.LastModified = DateTime.UtcNow;
     entity.TagsJson = JsonSerializer.Serialize(model.TagsList);
 
@@ -264,6 +264,35 @@ public static class BlogPostMapper
       // If deserialization fails, return empty array
       return [];
     }
+  }
+
+  /// <summary>
+  /// Ensures that the PublishDate is a valid date for Azure Table Storage
+  /// </summary>
+  /// <param name="publishDate">The original publish date</param>
+  /// <param name="status">The post status (Draft or Published)</param>
+  /// <returns>A valid DateTime value for Azure Table Storage</returns>
+  public static DateTime EnsureValidPublishDate(DateTime publishDate, string status)
+  {
+    // First ensure it's UTC
+    var utcDate = publishDate.EnsureUtc();
+
+    // Check if it's a valid date for Azure Table Storage
+    if (utcDate == default || utcDate.Year < 2000)
+    {
+      // Use current date for published posts, future date for drafts
+      if (status == "Published")
+      {
+        return DateTime.UtcNow;
+      }
+      else
+      {
+        // Use a future date for drafts
+        return new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+      }
+    }
+
+    return utcDate;
   }
 
 
