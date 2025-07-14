@@ -72,43 +72,38 @@ public class PortfolioPieceEntity : ITableEntity
   {
     // Validate required fields
     ArgumentNullException.ThrowIfNull(model);
-    ArgumentNullException.ThrowIfNull(model.Title);
-    ArgumentNullException.ThrowIfNull(model.AuthorSlug);
-    ArgumentNullException.ThrowIfNull(model.Content);
-    ArgumentNullException.ThrowIfNull(model.Slug);
-    ArgumentNullException.ThrowIfNull(model.Category);
+    DataValidation.ValidateContentRequiredFields(
+      model.Title,
+      model.AuthorSlug,
+      model.Content,
+      model.Slug,
+      model.Category
+    );
     ArgumentNullException.ThrowIfNull(model.TagsList);
 
     // Ensure status and isPublished are in sync
-    string status = DataValidation.SafeTrim(model.Status) ?? "Draft";
-
-    // If model.IsPublished is explicitly set (via computed property), ensure status matches
-    if (model.IsPublished && status != "Published")
-    {
-      status = "Published";
-    }
-    else if (!model.IsPublished && status == "Published")
-    {
-      status = "Draft";
-    }
+    string status = DataValidation.EnsureStatusConsistency(model.Status, model.IsPublished);
 
     var entity = new PortfolioPieceEntity
     {
       Id = model.Id ?? Guid.NewGuid().ToString(),
-      Title = DataValidation.Required(DataValidation.SafeTrim(model.Title), nameof(model.Title)),
-      Description = DataValidation.SafeTrim(model.Description) ?? string.Empty,
-      AuthorSlug = DataValidation.SafeTrim(model.AuthorSlug) ?? string.Empty,
-      Slug = DataValidation.Required(DataValidation.SafeTrim(model.Slug), nameof(model.Slug)),
-      Category = DataValidation.Required(DataValidation.SafeTrim(model.Category), nameof(model.Category)),
+      Title = DataValidation.Required(DataValidation.SafeTrim(model.Title, 200), nameof(model.Title)),
+      Description = DataValidation.SafeTrim(model.Description, 500) ?? string.Empty,
+      AuthorSlug = DataValidation.Required(DataValidation.SafeTrim(model.AuthorSlug, 100), nameof(model.AuthorSlug)),
+      Slug = DataValidation.Required(DataValidation.SafeTrim(model.Slug, 100), nameof(model.Slug)),
+      Category = DataValidation.Required(DataValidation.SafeTrim(model.Category, 50), nameof(model.Category)),
       Status = status,
       FeaturedImageId = model.FeaturedImageId,
       FeaturedMediaId = model.FeaturedMediaId,
       FeaturedVideoId = model.FeaturedVideoId,
       MediaReferencesJson = model.MediaReferencesJson ?? "[]",
-      PublishDate = model.PublishDate.EnsureUtc(),
-      LastModified = model.LastModified.EnsureUtc(),
+      PublishDate = PortfolioPieceMapper.EnsureValidPublishDate(model.PublishDate, status),
+      LastModified = DateTime.UtcNow, // Always set to current time on creation
       TagsJson = JsonSerializer.Serialize(model.TagsList)
     };
+
+    // Set keys for consistency
+    entity.UpdateKeys();
 
     return entity;
   }

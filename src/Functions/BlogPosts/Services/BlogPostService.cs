@@ -7,6 +7,7 @@ using SharedStorage.Validators;
 using Utils;
 using Utils.Constants;
 using Utils.Extensions;
+using Utils.Validation;
 
 namespace Functions.BlogPosts.Services;
 
@@ -295,15 +296,13 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
     try
     {
       // Ensure status and isPublished are consistent before upserting
-      if (model.IsPublished && model.Status != "Published")
+      string originalStatus = model.Status;
+      model.Status = DataValidation.EnsureStatusConsistency(model.Status, model.IsPublished);
+
+      if (originalStatus != model.Status)
       {
-        model.Status = "Published";
-        _appLogger.LogInformation("Updated status to 'Published' based on IsPublished=true for post with slug {Slug}", slug);
-      }
-      else if (!model.IsPublished && model.Status == "Published")
-      {
-        model.Status = "Draft";
-        _appLogger.LogInformation("Updated status to 'Draft' based on IsPublished=false for post with slug {Slug}", slug);
+        _appLogger.LogInformation("Updated status from '{OldStatus}' to '{NewStatus}' based on IsPublished={IsPublished} for post with slug {Slug}",
+          originalStatus, model.Status, model.IsPublished, slug);
       }
 
       // First perform the base upsert operation

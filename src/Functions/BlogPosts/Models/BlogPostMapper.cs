@@ -18,28 +18,20 @@ public static class BlogPostMapper
   {
     // Validate required fields
     ArgumentNullException.ThrowIfNull(model);
-    ArgumentNullException.ThrowIfNull(model.Title);
-    ArgumentNullException.ThrowIfNull(model.AuthorSlug);
-    ArgumentNullException.ThrowIfNull(model.Content);
-    ArgumentNullException.ThrowIfNull(model.Slug);
-    ArgumentNullException.ThrowIfNull(model.Category);
+    DataValidation.ValidateContentRequiredFields(
+      model.Title,
+      model.AuthorSlug,
+      model.Content,
+      model.Slug,
+      model.Category
+    );
     ArgumentNullException.ThrowIfNull(model.TagsList);
 
     // Media validation is now optional since media references can be added later
     // Business logic can enforce media requirements at the service level if needed
 
     // Ensure status and isPublished are in sync
-    string status = DataValidation.SafeTrim(model.Status, 20) ?? "Draft";
-
-    // If model.IsPublished is explicitly set (via computed property), ensure status matches
-    if (model.IsPublished && status != "Published")
-    {
-      status = "Published";
-    }
-    else if (!model.IsPublished && status == "Published")
-    {
-      status = "Draft";
-    }
+    string status = DataValidation.EnsureStatusConsistency(model.Status, model.IsPublished);
 
     var entity = new BlogPostEntity
     {
@@ -247,17 +239,7 @@ public static class BlogPostMapper
     entity.Category = DataValidation.Required(DataValidation.SafeTrim(model.Category, 50), nameof(model.Category));
 
     // Ensure status and isPublished are in sync
-    string status = DataValidation.SafeTrim(model.Status, 20) ?? "Draft";
-
-    // If model.IsPublished is explicitly set (via computed property), ensure status matches
-    if (model.IsPublished && status != "Published")
-    {
-      status = "Published";
-    }
-    else if (!model.IsPublished && status == "Published")
-    {
-      status = "Draft";
-    }
+    string status = DataValidation.EnsureStatusConsistency(model.Status, model.IsPublished);
 
     entity.Status = status;
     entity.FeaturedImageId = model.FeaturedImageId;
@@ -279,18 +261,7 @@ public static class BlogPostMapper
   /// <returns>An array of tag strings</returns>
   private static string[] DeserializeTags(string tagsJson)
   {
-    if (string.IsNullOrEmpty(tagsJson))
-      return [];
-
-    try
-    {
-      return JsonSerializer.Deserialize<string[]>(tagsJson) ?? [];
-    }
-    catch (JsonException)
-    {
-      // If deserialization fails, return empty array
-      return [];
-    }
+    return DataValidation.DeserializeTags(tagsJson);
   }
 
   /// <summary>
@@ -321,6 +292,4 @@ public static class BlogPostMapper
 
     return utcDate;
   }
-
-
 }
