@@ -79,6 +79,19 @@ public class PortfolioPieceEntity : ITableEntity
     ArgumentNullException.ThrowIfNull(model.Category);
     ArgumentNullException.ThrowIfNull(model.TagsList);
 
+    // Ensure status and isPublished are in sync
+    string status = DataValidation.SafeTrim(model.Status) ?? "Draft";
+
+    // If model.IsPublished is explicitly set (via computed property), ensure status matches
+    if (model.IsPublished && status != "Published")
+    {
+      status = "Published";
+    }
+    else if (!model.IsPublished && status == "Published")
+    {
+      status = "Draft";
+    }
+
     var entity = new PortfolioPieceEntity
     {
       Id = model.Id ?? Guid.NewGuid().ToString(),
@@ -87,7 +100,7 @@ public class PortfolioPieceEntity : ITableEntity
       AuthorSlug = DataValidation.SafeTrim(model.AuthorSlug) ?? string.Empty,
       Slug = DataValidation.Required(DataValidation.SafeTrim(model.Slug), nameof(model.Slug)),
       Category = DataValidation.Required(DataValidation.SafeTrim(model.Category), nameof(model.Category)),
-      Status = DataValidation.SafeTrim(model.Status) ?? "Draft",
+      Status = status,
       FeaturedImageId = model.FeaturedImageId,
       FeaturedMediaId = model.FeaturedMediaId,
       FeaturedVideoId = model.FeaturedVideoId,
