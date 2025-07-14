@@ -129,23 +129,42 @@ public class UpsertBlogPost
   {
     var errors = new List<string>();
 
-    if (string.IsNullOrWhiteSpace(model.Title))
-      errors.Add("Title is required");
+    try { Utils.Validation.DataValidation.Required(model.Title, "Title"); }
+    catch (ArgumentException) { errors.Add("Title is required"); }
 
-    if (string.IsNullOrWhiteSpace(model.Slug))
-      errors.Add("Slug is required");
+    try { Utils.Validation.DataValidation.Required(model.Slug, "Slug"); }
+    catch (ArgumentException) { errors.Add("Slug is required"); }
 
-    if (string.IsNullOrWhiteSpace(model.AuthorSlug))
-      errors.Add("Author slug is required");
+    try { Utils.Validation.DataValidation.Required(model.AuthorSlug, "AuthorSlug"); }
+    catch (ArgumentException) { errors.Add("Author slug is required"); }
 
-    if (string.IsNullOrWhiteSpace(model.Content))
-      errors.Add("Content is required");
+    try { Utils.Validation.DataValidation.Required(model.Content, "Content"); }
+    catch (ArgumentException) { errors.Add("Content is required"); }
 
-    if (string.IsNullOrWhiteSpace(model.Category))
-      errors.Add("Category is required");
+    try { Utils.Validation.DataValidation.Required(model.Category, "Category"); }
+    catch (ArgumentException) { errors.Add("Category is required"); }
 
     if (model.TagsList == null)
       errors.Add("Tags list is required (can be empty array)");
+
+    // Validate media IDs if provided
+    if (!string.IsNullOrEmpty(model.FeaturedImageId))
+    {
+      try { Utils.Validation.DataValidation.RequireMinLength(model.FeaturedImageId, 1, "FeaturedImageId"); }
+      catch (ArgumentException) { errors.Add("FeaturedImageId must be valid"); }
+    }
+
+    if (!string.IsNullOrEmpty(model.FeaturedVideoId))
+    {
+      try { Utils.Validation.DataValidation.RequireMinLength(model.FeaturedVideoId, 1, "FeaturedVideoId"); }
+      catch (ArgumentException) { errors.Add("FeaturedVideoId must be valid"); }
+    }
+
+    if (!string.IsNullOrEmpty(model.FeaturedMediaId))
+    {
+      try { Utils.Validation.DataValidation.RequireMinLength(model.FeaturedMediaId, 1, "FeaturedMediaId"); }
+      catch (ArgumentException) { errors.Add("FeaturedMediaId must be valid"); }
+    }
 
     return errors;
   }

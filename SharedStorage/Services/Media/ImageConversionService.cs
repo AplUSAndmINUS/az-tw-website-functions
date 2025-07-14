@@ -21,8 +21,11 @@ public class ImageConversionService : IImageService
   private readonly IAppInsightsLogger<ImageConversionService> _appLogger;
 
   // Configuration for image processing
-  private const int DEFAULT_MIN_DIMENSION = 600;
-  private const int DEFAULT_MAX_DIMENSION = 2048;
+  private const int DEFAULT_MIN_WIDTH_LANDSCAPE = 1440;
+  private const int DEFAULT_MIN_HEIGHT_LANDSCAPE = 900;
+  private const int DEFAULT_MIN_WIDTH_PORTRAIT = 900;
+  private const int DEFAULT_MIN_HEIGHT_PORTRAIT = 1440;
+  private const int DEFAULT_MAX_DIMENSION = 2500;
   private const int DEFAULT_DPI = 96;
 
   public ImageConversionService(IAppInsightsLogger<ImageConversionService> logger)
@@ -159,11 +162,32 @@ public class ImageConversionService : IImageService
   {
     var currentWidth = image.Width;
     var currentHeight = image.Height;
+    bool isLandscape = currentWidth >= currentHeight;
 
-    // Apply minimum size constraints
-    if (currentWidth < DEFAULT_MIN_DIMENSION || currentHeight < DEFAULT_MIN_DIMENSION)
+    // Apply minimum size constraints based on orientation
+    bool needsUpscaling = isLandscape
+      ? (currentWidth < DEFAULT_MIN_WIDTH_LANDSCAPE || currentHeight < DEFAULT_MIN_HEIGHT_LANDSCAPE)
+      : (currentWidth < DEFAULT_MIN_WIDTH_PORTRAIT || currentHeight < DEFAULT_MIN_HEIGHT_PORTRAIT);
+
+    if (needsUpscaling)
     {
-      var scaleFactor = (double)DEFAULT_MIN_DIMENSION / Math.Min(currentWidth, currentHeight);
+      // Calculate scale factor based on orientation
+      double scaleFactor;
+      if (isLandscape)
+      {
+        scaleFactor = Math.Max(
+          (double)DEFAULT_MIN_WIDTH_LANDSCAPE / currentWidth,
+          (double)DEFAULT_MIN_HEIGHT_LANDSCAPE / currentHeight
+        );
+      }
+      else
+      {
+        scaleFactor = Math.Max(
+          (double)DEFAULT_MIN_WIDTH_PORTRAIT / currentWidth,
+          (double)DEFAULT_MIN_HEIGHT_PORTRAIT / currentHeight
+        );
+      }
+
       var newWidth = (int)Math.Round(currentWidth * scaleFactor);
       var newHeight = (int)Math.Round(currentHeight * scaleFactor);
 
