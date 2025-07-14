@@ -4,6 +4,7 @@ using SharedStorage.Services.ContentServices;
 using SharedStorage.Services.Media;
 using SharedStorage.Services.BaseServices;
 using SharedStorage.Validators;
+using SharedStorage.Models;
 using Utils;
 using Utils.Constants;
 using Utils.Extensions;
@@ -183,7 +184,7 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
   protected override string GetAuthorSlug(BlogPostEntity entity) => entity.AuthorSlug;
   protected override string GetCategory(BlogPostEntity entity) => entity.Category;
 
-  protected override BlogPostDTO EntityToDto(BlogPostEntity entity) => BlogPostMapper.EntityToDTO(entity);
+  protected override BlogPostDTO EntityToDto(BlogPostEntity entity) => BlogPostMapper.EntityToDTOStatic(entity);
 
   protected override BlogPostEntity ModelToEntity(BlogPostModel model)
   {
@@ -670,7 +671,7 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
 
       // Get the PublishDate and ensure it's valid
       DateTime publishDate = tableEntity.GetDateTime("PublishDate") ?? DateTime.UtcNow;
-      publishDate = Mappers.BlogPostMapper.EnsureValidPublishDate(publishDate, status);
+      publishDate = BaseContentMapper<BlogPostModel, BlogPostEntity>.EnsureValidPublishDate(publishDate, status);
 
       Console.WriteLine($"DEBUG: Converting TableEntity to BlogPostEntity - PublishDate after validation: {publishDate}");
 

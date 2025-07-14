@@ -2,11 +2,15 @@ using System.Text.Json;
 using Utils.Validation;
 using Utils.Extensions;
 using Functions.BlogPosts.Models;
+using SharedStorage.Models;
 
 namespace Functions.BlogPosts.Mappers;
 
-public static class BlogPostMapper
+public class BlogPostMapper : BaseContentMapper<BlogPostModel, BlogPostEntity>
 {
+  private static BlogPostMapper? _instance;
+  public static BlogPostMapper Instance => _instance ??= new BlogPostMapper();
+
   /// <summary>
   /// Converts a BlogPostModel to BlogPostEntity for storage operations
   /// </summary>
@@ -14,47 +18,27 @@ public static class BlogPostMapper
   /// <returns>A BlogPostEntity ready for storage</returns>
   /// <exception cref="ArgumentNullException">Thrown when model or required fields are null</exception>
   /// <exception cref="ArgumentException">Thrown when validation fails</exception>
-  public static BlogPostEntity ToEntity(BlogPostModel model)
+  public override BlogPostEntity ToEntity(BlogPostModel model)
   {
-    // Validate required fields
-    ArgumentNullException.ThrowIfNull(model);
-    DataValidation.ValidateContentRequiredFields(
-      model.Title,
-      model.AuthorSlug,
-      model.Content,
-      model.Slug,
-      model.Category
-    );
-    ArgumentNullException.ThrowIfNull(model.TagsList);
+    // Validate and sanitize common fields
+    string status = ValidateAndSanitizeCommonFields(model);
 
-    // Media validation is now optional since media references can be added later
-    // Business logic can enforce media requirements at the service level if needed
-
-    // Ensure status and isPublished are in sync
-    string status = DataValidation.EnsureStatusConsistency(model.Status, model.IsPublished);
-
-    var entity = new BlogPostEntity
-    {
-      Id = model.Id ?? Guid.NewGuid().ToString(),
-      Title = DataValidation.Required(DataValidation.SafeTrim(model.Title, 200), nameof(model.Title)),
-      AuthorSlug = DataValidation.Required(DataValidation.SafeTrim(model.AuthorSlug, 100), nameof(model.AuthorSlug)),
-      Description = DataValidation.SafeTrim(model.Description, 500) ?? string.Empty,
-      Content = DataValidation.Required(DataValidation.SafeTrim(model.Content, 50000), nameof(model.Content)),
-      Slug = DataValidation.Required(DataValidation.SafeTrim(model.Slug, 100), nameof(model.Slug)),
-      Category = DataValidation.Required(DataValidation.SafeTrim(model.Category, 50), nameof(model.Category)),
-      Status = status,
-      FeaturedImageId = model.FeaturedImageId,
-      FeaturedMediaId = model.FeaturedMediaId,
-      FeaturedVideoId = model.FeaturedVideoId,
-      MediaReferencesJson = model.MediaReferencesJson ?? "[]",
-      PublishDate = EnsureValidPublishDate(model.PublishDate, status),
-      LastModified = DateTime.UtcNow, // Always update LastModified on conversion
-      TagsJson = JsonSerializer.Serialize(model.TagsList),
-      PartitionKey = model.PartitionKey,
-      RowKey = model.RowKey,
-      Timestamp = model.Timestamp,
-      ETag = model.ETag
-    };
+    // Create new entity instance
+    var entity = CreateEntityInstance();
+    
+    // Set ID if not provided
+    entity.Id = model.Id ?? Guid.NewGuid().ToString();
+    
+    // Update common fields from base mapper
+    UpdateCommonFields(entity, model, status);
+    
+    // Set specific fields for this entity type
+    entity.PublishDate = EnsureValidPublishDate(model.PublishDate, status);
+    entity.LastModified = DateTime.UtcNow; // Always update LastModified on conversion
+    entity.PartitionKey = model.PartitionKey;
+    entity.RowKey = model.RowKey;
+    entity.Timestamp = model.Timestamp;
+    entity.ETag = model.ETag;
 
     // Set keys if not already provided
     if (string.IsNullOrEmpty(entity.PartitionKey) || string.IsNullOrEmpty(entity.RowKey))
@@ -71,7 +55,7 @@ public static class BlogPostMapper
   /// <param name="entity">The BlogPostEntity to convert</param>
   /// <returns>A BlogPostModel for business operations</returns>
   /// <exception cref="ArgumentNullException">Thrown when entity is null</exception>
-  public static BlogPostModel ToModel(BlogPostEntity entity)
+  public override BlogPostModel ToModel(BlogPostEntity entity)
   {
     ArgumentNullException.ThrowIfNull(entity);
 
@@ -105,7 +89,7 @@ public static class BlogPostMapper
   /// <param name="model">The BlogPostModel to convert</param>
   /// <returns>A BlogPostDTO for API responses</returns>
   /// <exception cref="ArgumentNullException">Thrown when model is null</exception>
-  public static BlogPostDTO ToDTO(BlogPostModel model)
+  public BlogPostDTO ToDTO(BlogPostModel model)
   {
     ArgumentNullException.ThrowIfNull(model);
 
@@ -138,7 +122,7 @@ public static class BlogPostMapper
   /// <param name="entity">The BlogPostEntity to convert</param>
   /// <returns>A BlogPostDTO for API responses</returns>
   /// <exception cref="ArgumentNullException">Thrown when entity is null</exception>
-  public static BlogPostDTO EntityToDTO(BlogPostEntity entity)
+  public BlogPostDTO EntityToDTO(BlogPostEntity entity)
   {
     ArgumentNullException.ThrowIfNull(entity);
 
@@ -171,7 +155,7 @@ public static class BlogPostMapper
   /// <param name="dto">The BlogPostDTO to convert</param>
   /// <returns>A BlogPostModel for business operations</returns>
   /// <exception cref="ArgumentNullException">Thrown when dto is null</exception>
-  public static BlogPostModel FromDTO(BlogPostDTO dto)
+  public BlogPostModel FromDTO(BlogPostDTO dto)
   {
     ArgumentNullException.ThrowIfNull(dto);
 
@@ -204,7 +188,7 @@ public static class BlogPostMapper
   /// </summary>
   /// <param name="entities">The collection of entities to convert</param>
   /// <returns>A collection of DTOs</returns>
-  public static IEnumerable<BlogPostDTO> EntitiesToDTOs(IEnumerable<BlogPostEntity> entities)
+  public IEnumerable<BlogPostDTO> EntitiesToDTOs(IEnumerable<BlogPostEntity> entities)
   {
     return entities?.Select(EntityToDTO) ?? Enumerable.Empty<BlogPostDTO>();
   }
@@ -214,10 +198,20 @@ public static class BlogPostMapper
   /// </summary>
   /// <param name="models">The collection of models to convert</param>
   /// <returns>A collection of DTOs</returns>
-  public static IEnumerable<BlogPostDTO> ModelsToDTOs(IEnumerable<BlogPostModel> models)
+  public IEnumerable<BlogPostDTO> ModelsToDTOs(IEnumerable<BlogPostModel> models)
   {
     return models?.Select(ToDTO) ?? Enumerable.Empty<BlogPostDTO>();
   }
+  
+  // Static wrapper methods to maintain backward compatibility with existing code
+  public static BlogPostEntity ToEntityStatic(BlogPostModel model) => Instance.ToEntity(model);
+  public static BlogPostModel ToModelStatic(BlogPostEntity entity) => Instance.ToModel(entity);
+  public static BlogPostDTO ToDTOStatic(BlogPostModel model) => Instance.ToDTO(model);
+  public static BlogPostDTO EntityToDTOStatic(BlogPostEntity entity) => Instance.EntityToDTO(entity);
+  public static BlogPostModel FromDTOStatic(BlogPostDTO dto) => Instance.FromDTO(dto);
+  public static IEnumerable<BlogPostDTO> EntitiesToDTOsStatic(IEnumerable<BlogPostEntity> entities) => Instance.EntitiesToDTOs(entities);
+  public static IEnumerable<BlogPostDTO> ModelsToDTOsStatic(IEnumerable<BlogPostModel> models) => Instance.ModelsToDTOs(models);
+  public static void UpdateEntityFromModelStatic(BlogPostEntity entity, BlogPostModel model) => Instance.UpdateEntityFromModel(entity, model);
 
   /// <summary>
   /// Updates an existing BlogPostEntity with values from a BlogPostModel
@@ -225,71 +219,41 @@ public static class BlogPostMapper
   /// <param name="entity">The entity to update</param>
   /// <param name="model">The model containing new values</param>
   /// <exception cref="ArgumentNullException">Thrown when entity or model is null</exception>
-  public static void UpdateEntityFromModel(BlogPostEntity entity, BlogPostModel model)
+  public override void UpdateEntityFromModel(BlogPostEntity entity, BlogPostModel model)
   {
     ArgumentNullException.ThrowIfNull(entity);
     ArgumentNullException.ThrowIfNull(model);
 
-    // Update all non-key properties
-    entity.Title = DataValidation.Required(DataValidation.SafeTrim(model.Title, 200), nameof(model.Title));
-    entity.AuthorSlug = DataValidation.Required(DataValidation.SafeTrim(model.AuthorSlug, 100), nameof(model.AuthorSlug));
-    entity.Description = DataValidation.SafeTrim(model.Description, 500) ?? string.Empty;
-    entity.Content = DataValidation.Required(DataValidation.SafeTrim(model.Content, 50000), nameof(model.Content));
-    entity.Slug = DataValidation.Required(DataValidation.SafeTrim(model.Slug, 100), nameof(model.Slug));
-    entity.Category = DataValidation.Required(DataValidation.SafeTrim(model.Category, 50), nameof(model.Category));
-
     // Ensure status and isPublished are in sync
-    string status = DataValidation.EnsureStatusConsistency(model.Status, model.IsPublished);
+    string status = ValidateAndSanitizeCommonFields(model);
 
-    entity.Status = status;
-    entity.FeaturedImageId = model.FeaturedImageId;
-    entity.FeaturedMediaId = model.FeaturedMediaId;
-    entity.FeaturedVideoId = model.FeaturedVideoId;
-    entity.MediaReferencesJson = model.MediaReferencesJson ?? "[]";
+    // Update common fields from base mapper
+    UpdateCommonFields(entity, model, status);
+    
+    // Update specific fields for this entity type
     entity.PublishDate = EnsureValidPublishDate(model.PublishDate, status);
     entity.LastModified = DateTime.UtcNow;
-    entity.TagsJson = JsonSerializer.Serialize(model.TagsList);
 
     // Update keys if PublishDate changed
     entity.UpdateKeys();
   }
-
+  
   /// <summary>
-  /// Helper method to safely deserialize tags from JSON
+  /// Creates a new entity instance
   /// </summary>
-  /// <param name="tagsJson">The JSON string containing tags</param>
-  /// <returns>An array of tag strings</returns>
-  private static string[] DeserializeTags(string tagsJson)
+  /// <returns>A new entity instance</returns>
+  protected override BlogPostEntity CreateEntityInstance()
   {
-    return DataValidation.DeserializeTags(tagsJson);
+    return new BlogPostEntity();
   }
-
+  
   /// <summary>
-  /// Ensures that the PublishDate is a valid date for Azure Table Storage
+  /// Convert a collection of entities to models
   /// </summary>
-  /// <param name="publishDate">The original publish date</param>
-  /// <param name="status">The post status (Draft or Published)</param>
-  /// <returns>A valid DateTime value for Azure Table Storage</returns>
-  public static DateTime EnsureValidPublishDate(DateTime publishDate, string status)
+  /// <param name="entities">The entities to convert</param>
+  /// <returns>A collection of models</returns>
+  public override IEnumerable<BlogPostModel> EntitiesToModels(IEnumerable<BlogPostEntity> entities)
   {
-    // First ensure it's UTC
-    var utcDate = publishDate.EnsureUtc();
-
-    // Check if it's a valid date for Azure Table Storage
-    if (utcDate == default || utcDate.Year < 2000)
-    {
-      // Use current date for published posts, future date for drafts
-      if (status == "Published")
-      {
-        return DateTime.UtcNow;
-      }
-      else
-      {
-        // Use a future date for drafts
-        return new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-      }
-    }
-
-    return utcDate;
+    return entities?.Select(ToModel) ?? Enumerable.Empty<BlogPostModel>();
   }
 }

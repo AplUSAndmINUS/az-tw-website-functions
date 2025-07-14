@@ -46,7 +46,7 @@ public class BlogPostServiceTests
       MediaReferences = new List<string>()
     };
 
-    var expectedModel = BlogPostMapper.ToModel(blogPostDto);
+    var expectedModel = BlogPostMapper.ToModelStatic(blogPostDto);
 
     _mockContentService
         .Setup(x => x.UpsertAsync(It.IsAny<BlogPostDTO>()))
