@@ -1,71 +1,63 @@
-using Azure;
-using Azure.Data.Tables;
 using System.Text.Json;
-
-using Utils.Validation;
+using SharedStorage.Models;
 using Utils.Extensions;
+using Utils.Validation;
 using Functions.PortfolioPiece.Models;
 
 namespace Functions.PortfolioPieces.Models;
 
-public class PortfolioPieceEntity : ITableEntity
+/// <summary>
+/// Entity class for portfolio pieces stored in Azure Table Storage
+/// </summary>
+public class PortfolioPieceEntity : BaseContentEntity
 {
-  public string Id { get; set; } = Guid.NewGuid().ToString();
-  public string PartitionKey { get; set; } = string.Empty;
-  public string RowKey { get; set; } = string.Empty;
-  public DateTimeOffset? Timestamp { get; set; }
-  public ETag ETag { get; set; }
-
-  // Core portfolio piece properties
-  public string Title { get; set; } = string.Empty;
-  public string AuthorSlug { get; set; } = string.Empty;
-  public string Description { get; set; } = string.Empty;
-  public string Content { get; set; } = string.Empty;
-  public string Slug { get; set; } = string.Empty;
-  public string Category { get; set; } = string.Empty;
-  public string Status { get; set; } = "Draft";
-
-  // Media references (storing IDs that point to media services)
-  public string? FeaturedImageId { get; set; }        // Reference to primary image in ImageService
-  public string? FeaturedMediaId { get; set; }        // Reference to primary media in MediaService
-  public string? FeaturedVideoId { get; set; }        // Reference to primary video in VideoService
-  public string MediaReferencesJson { get; set; } = "[]"; // Array of media IDs for additional attachments
-
-  // Date properties
-  public DateTime PublishDate { get; set; }
-  public DateTime LastModified { get; set; }
-
-  // Tags (stored as JSON string in Table Storage)
-  public string TagsJson { get; set; } = "[]";
-
-  // Computed properties
-  public bool IsPublished => Status == "Published";
-
-  public PortfolioPieceEntity()
+  public PortfolioPieceEntity() : base()
   {
-    var now = DateTime.UtcNow;
-    PublishDate = now;
-    LastModified = now;
-    // Keys will be set by the service layer for consistency
   }
 
-  public PortfolioPieceEntity(DateTime publishDate)
+  public PortfolioPieceEntity(DateTime publishDate) : base(publishDate)
   {
-    PublishDate = publishDate.EnsureUtc();
-    LastModified = DateTime.UtcNow;
-    SetKeys(publishDate.EnsureUtc());
   }
 
-  private void SetKeys(DateTime publishDate)
+  /// <summary>
+  /// Converts the entity to a model
+  /// </summary>
+  /// <typeparam name="T">The type of model to convert to</typeparam>
+  /// <returns>The converted model</returns>
+  public override T ToModel<T>()
   {
-    PartitionKey = publishDate.ToString("yyyy-MM");
-    RowKey = $"{publishDate:yyyyMMddHHmmss}_{Id}";
-  }
+    if (typeof(T) != typeof(PortfolioPieceModel))
+      throw new ArgumentException($"Cannot convert PortfolioPieceEntity to {typeof(T).Name}");
 
-  // Method to update keys when PublishDate changes
-  public void UpdateKeys()
+    var model = new PortfolioPieceModel
+    {
+      Id = Id,
+      PartitionKey = PartitionKey,
+      RowKey = RowKey,
+      Timestamp = Timestamp,
+      ETag = ETag,
+      Title = Title,
+      AuthorSlug = AuthorSlug,
+      Description = Description,
+      Content = Content,
+      Slug = Slug,
+      Category = Category,
+      Status = Status,
+      FeaturedImageId = FeaturedImageId,
+      FeaturedMediaId = FeaturedMediaId,
+      FeaturedVideoId = FeaturedVideoId,
+      MediaReferencesJson = MediaReferencesJson ?? "[]",
+      PublishDate = PublishDate.EnsureUtc(),
+      LastModified = LastModified.EnsureUtc(),
+      TagsList = DeserializeTags(TagsJson)
+    };
+    
+    return (T)(object)model;
+  }
+  
+  private string[] DeserializeTags(string tagsJson)
   {
-    SetKeys(PublishDate);
+    return DataValidation.DeserializeTags(tagsJson);
   }
 
   public static PortfolioPieceEntity FromModel(PortfolioPieceModel model)
@@ -97,7 +89,7 @@ public class PortfolioPieceEntity : ITableEntity
       FeaturedMediaId = model.FeaturedMediaId,
       FeaturedVideoId = model.FeaturedVideoId,
       MediaReferencesJson = model.MediaReferencesJson ?? "[]",
-      PublishDate = PortfolioPieceMapper.EnsureValidPublishDate(model.PublishDate, status),
+      PublishDate = BaseContentMapper<PortfolioPieceModel, PortfolioPieceEntity>.EnsureValidPublishDate(model.PublishDate, status),
       LastModified = DateTime.UtcNow, // Always set to current time on creation
       TagsJson = JsonSerializer.Serialize(model.TagsList)
     };

@@ -1,71 +1,62 @@
-using Azure;
-using Azure.Data.Tables;
-using Utils.Validation;
-using Utils.Extensions;
 using System.Text.Json;
+using SharedStorage.Models;
+using Utils.Extensions;
+using Utils.Validation;
 
 namespace Functions.BlogPosts.Models;
 
-public class BlogPostEntity : ITableEntity
+/// <summary>
+/// Entity class for blog posts stored in Azure Table Storage
+/// </summary>
+public class BlogPostEntity : BaseContentEntity
 {
-  public string Id { get; set; } = Guid.NewGuid().ToString();
-  public string PartitionKey { get; set; } = string.Empty;
-  public string RowKey { get; set; } = string.Empty;
-  public DateTimeOffset? Timestamp { get; set; }
-  public ETag ETag { get; set; }
-
-  // Core blog properties
-  public string Title { get; set; } = string.Empty;
-  public string AuthorSlug { get; set; } = string.Empty;
-  public string Description { get; set; } = string.Empty;
-  public string Content { get; set; } = string.Empty;
-  public string Slug { get; set; } = string.Empty;
-  public string Category { get; set; } = string.Empty;
-  public string Status { get; set; } = "Draft";
-
-  // Media references (storing IDs that point to media services)
-  public string? FeaturedImageId { get; set; }        // Reference to primary image in ImageService
-  public string? FeaturedMediaId { get; set; }        // Reference to primary media in MediaService
-  public string? FeaturedVideoId { get; set; }        // Reference to primary video in VideoService
-  public string MediaReferencesJson { get; set; } = "[]"; // Array of media IDs for additional attachments
-
-  // Date properties
-  public DateTime PublishDate { get; set; }
-  public DateTime LastModified { get; set; }
-
-  // Tags (stored as JSON string in Table Storage)
-  public string TagsJson { get; set; } = "[]";
-
-  // Computed properties
-  public bool IsPublished => Status == "Published";
-
-  public BlogPostEntity()
+  public BlogPostEntity() : base()
   {
-    var now = DateTime.UtcNow;
-    PublishDate = now;
-    LastModified = now;
-    // Keys will be set by the service layer for consistency
   }
 
-
-
-  public BlogPostEntity(DateTime publishDate)
+  public BlogPostEntity(DateTime publishDate) : base(publishDate)
   {
-    PublishDate = publishDate.EnsureUtc();
-    LastModified = DateTime.UtcNow;
-    SetKeys(publishDate.EnsureUtc());
   }
-
-  private void SetKeys(DateTime publishDate)
+  
+  /// <summary>
+  /// Converts the entity to a model
+  /// </summary>
+  /// <typeparam name="T">The type of model to convert to</typeparam>
+  /// <returns>The converted model</returns>
+  public override T ToModel<T>()
   {
-    PartitionKey = publishDate.ToString("yyyy-MM");
-    RowKey = $"{publishDate:yyyyMMddHHmmss}_{Id}";
+    if (typeof(T) != typeof(BlogPostModel))
+      throw new ArgumentException($"Cannot convert BlogPostEntity to {typeof(T).Name}");
+
+    var model = new BlogPostModel
+    {
+      Id = Id,
+      PartitionKey = PartitionKey,
+      RowKey = RowKey,
+      Timestamp = Timestamp,
+      ETag = ETag,
+      Title = Title,
+      AuthorSlug = AuthorSlug,
+      Description = Description,
+      Content = Content,
+      Slug = Slug,
+      Category = Category,
+      Status = Status,
+      FeaturedImageId = FeaturedImageId,
+      FeaturedMediaId = FeaturedMediaId,
+      FeaturedVideoId = FeaturedVideoId,
+      MediaReferencesJson = MediaReferencesJson ?? "[]",
+      PublishDate = PublishDate.EnsureUtc(),
+      LastModified = LastModified.EnsureUtc(),
+      TagsList = DeserializeTags(TagsJson)
+    };
+    
+    return (T)(object)model;
   }
-
-  // Method to update keys when PublishDate changes
-  public void UpdateKeys()
+  
+  private string[] DeserializeTags(string tagsJson)
   {
-    SetKeys(PublishDate);
+    return DataValidation.DeserializeTags(tagsJson);
   }
 
   public static BlogPostEntity FromModel(BlogPostModel model)
