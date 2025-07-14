@@ -7,6 +7,7 @@ using System.Net;
 using System.Text.Json;
 using Utils;
 using Utils.Validation;
+using Utils.Extensions;
 
 namespace Functions.BlogPosts.Functions;
 
@@ -64,6 +65,9 @@ public class UpsertBlogPost
         await badResponse.WriteStringAsync("Invalid blog post data provided");
         return badResponse;
       }
+
+      // Ensure all DateTime fields are properly set to UTC
+      EnsureDateTimeFieldsAreUtc(blogPost);
 
       _appLogger.LogInformation("Deserialized blog post: Title={Title}, Slug={Slug}", blogPost.Title, blogPost.Slug);
 
@@ -167,5 +171,26 @@ public class UpsertBlogPost
     }
 
     return errors;
+  }
+
+  private static void EnsureDateTimeFieldsAreUtc(BlogPostModel blogPost)
+  {
+    // Convert PublishDate to UTC 
+    blogPost.PublishDate = blogPost.PublishDate.EnsureUtc();
+
+    // Convert LastModified to UTC
+    blogPost.LastModified = blogPost.LastModified.EnsureUtc();
+
+    // Set LastModified to current UTC time if it's the default value
+    if (blogPost.LastModified == default)
+    {
+      blogPost.LastModified = DateTime.UtcNow;
+    }
+
+    // Set PublishDate to current UTC time if it's the default value and status is Published
+    if (blogPost.PublishDate == default && blogPost.Status == "Published")
+    {
+      blogPost.PublishDate = DateTime.UtcNow;
+    }
   }
 }

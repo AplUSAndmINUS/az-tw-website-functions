@@ -1,6 +1,7 @@
 using Azure;
 using Azure.Data.Tables;
 using Utils.Validation;
+using Utils.Extensions;
 using System.Text.Json;
 
 namespace Functions.BlogPosts.Models;
@@ -46,11 +47,13 @@ public class BlogPostEntity : ITableEntity
     // Keys will be set by the service layer for consistency
   }
 
+
+
   public BlogPostEntity(DateTime publishDate)
   {
-    PublishDate = publishDate;
+    PublishDate = publishDate.EnsureUtc();
     LastModified = DateTime.UtcNow;
-    SetKeys(publishDate);
+    SetKeys(publishDate.EnsureUtc());
   }
 
   private void SetKeys(DateTime publishDate)
@@ -89,8 +92,8 @@ public class BlogPostEntity : ITableEntity
       FeaturedImageId = model.FeaturedImageId,
       FeaturedMediaId = model.FeaturedMediaId,
       MediaReferencesJson = model.MediaReferencesJson ?? "[]",
-      PublishDate = model.PublishDate,
-      LastModified = model.LastModified,
+      PublishDate = model.PublishDate.EnsureUtc(),
+      LastModified = model.LastModified.EnsureUtc(),
       TagsJson = JsonSerializer.Serialize(model.TagsList)
     };
 
