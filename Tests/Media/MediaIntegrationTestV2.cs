@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
-using SharedStorage.Services.MediaServices;
+using SharedStorage.Services.Media;
 using SharedStorage.Services.BaseServices;
 using SharedStorage.Services.Media.Handlers;
 using SharedStorage.Models;

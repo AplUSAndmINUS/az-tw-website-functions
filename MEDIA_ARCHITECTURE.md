@@ -16,7 +16,7 @@ Azure Functions → Service Layer → Storage Services
 
 ## Key Components
 
-### 1. MediaService (`SharedStorage.Services.MediaServices.MediaService`)
+### 1. MediaService (`SharedStorage.Services.Media.MediaService`)
 
 The central service for all media operations:
 

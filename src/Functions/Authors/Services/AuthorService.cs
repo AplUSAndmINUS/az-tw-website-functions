@@ -35,6 +35,20 @@ public class AuthorService : IAuthorService
 
     try
     {
+      // Validate required fields
+      if (string.IsNullOrWhiteSpace(model.AuthorSlug))
+        throw new ArgumentException("AuthorSlug is required", nameof(model.AuthorSlug));
+      if (string.IsNullOrWhiteSpace(model.FirstName))
+        throw new ArgumentException("FirstName is required", nameof(model.FirstName));
+      if (string.IsNullOrWhiteSpace(model.LastName))
+        throw new ArgumentException("LastName is required", nameof(model.LastName));
+      if (string.IsNullOrWhiteSpace(model.Email))
+        throw new ArgumentException("Email is required", nameof(model.Email));
+      if (string.IsNullOrWhiteSpace(model.Username))
+        throw new ArgumentException("Username is required", nameof(model.Username));
+      if (string.IsNullOrWhiteSpace(model.DisplayName))
+        throw new ArgumentException("DisplayName is required", nameof(model.DisplayName));
+            
       // Calculate the slug once and use it consistently
       var authorSlug = model.AuthorSlug ?? model.Username;
 

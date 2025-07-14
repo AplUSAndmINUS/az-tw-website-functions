@@ -6,7 +6,7 @@ using Moq;
 using Functions.BlogPosts.Services;
 using Functions.BlogPosts.Models;
 using SharedStorage.Services.ContentServices;
-using SharedStorage.Services.MediaServices;
+using SharedStorage.Services.Media;
 using SharedStorage.Models;
 using Utils;
 

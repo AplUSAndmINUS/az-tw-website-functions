@@ -4,7 +4,7 @@ using SharedStorage.Models;
 using Utils;
 using Utils.Extensions;
 
-namespace SharedStorage.Services.MediaServices;
+namespace SharedStorage.Services.Media;
 
 public interface IMediaService
 {
@@ -24,7 +24,7 @@ public interface IMediaService
   Task<MediaEntity> UploadVideoAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? purpose = "introVideo");
 }
 
-public class MediaService : IMediaService
+public partial class MediaService : IMediaService
 {
   private readonly Dictionary<string, IMediaTypeHandler> _handlers;
   private readonly ITableStorageService _tableStorageService;

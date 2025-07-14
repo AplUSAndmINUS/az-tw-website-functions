@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using SharedStorage.Services.BaseServices;
 using SharedStorage.Services.Media;
 using SharedStorage.Services.Media.Handlers;
-using SharedStorage.Services.MediaServices;
 using Utils;
 
 namespace SharedStorage.Extensions;

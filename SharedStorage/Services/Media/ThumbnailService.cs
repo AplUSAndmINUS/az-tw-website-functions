@@ -4,7 +4,7 @@ using SixLabors.ImageSharp.Formats.Webp;
 using Microsoft.Extensions.Logging;
 using Utils;
 
-namespace SharedStorage.Services.MediaServices;
+namespace SharedStorage.Services.Media;
 
 public interface IThumbnailService
 {
