@@ -26,7 +26,41 @@ public class TableStorageService : ITableStorageService
     private static string ResolveTableName(string tableName)
     {
         var useMock = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
-        return useMock ? $"mock{tableName}" : tableName;
+        string resolvedName;
+
+        if (useMock)
+        {
+            // Only add the mock prefix if it's not already there
+            if (!tableName.StartsWith("mock", StringComparison.OrdinalIgnoreCase))
+            {
+                resolvedName = $"mock{tableName}";
+            }
+            else
+            {
+                resolvedName = tableName;
+            }
+        }
+        else
+        {
+            // If we're not using mock storage, remove the mock prefix if it exists
+            if (tableName.StartsWith("mock", StringComparison.OrdinalIgnoreCase))
+            {
+                resolvedName = tableName.Substring(4); // Remove "mock" prefix
+
+                // Handle case where tableName might just be "mock" (unlikely but possible)
+                if (string.IsNullOrEmpty(resolvedName))
+                {
+                    resolvedName = "table"; // Default to "table" if the entire name was "mock"
+                }
+            }
+            else
+            {
+                resolvedName = tableName;
+            }
+        }
+
+        Console.WriteLine($"DEBUG: ResolveTableName - Original={tableName}, USE_MOCK_STORAGE={useMock}, Resolved={resolvedName}");
+        return resolvedName;
     }
 
     public async Task<TableEntity?> GetEntityAsync(string tableName, string partitionKey, string rowKey)
@@ -162,6 +196,7 @@ public class TableStorageService : ITableStorageService
     {
         var resolvedTableName = ResolveTableName(tableName);
         _appLogger.LogInformation("Resolving table name to {ResolvedTableName}", resolvedTableName);
+        Console.WriteLine($"DEBUG: TableStorageService.UpsertEntityAsync - Original tableName={tableName}, resolvedTableName={resolvedTableName}");
 
         var client = _tableServiceClient.GetTableClient(resolvedTableName);
 
@@ -171,6 +206,20 @@ public class TableStorageService : ITableStorageService
         if (entity == null)
         {
             throw new ArgumentNullException(nameof(entity), "Entity cannot be null.");
+        }
+
+        // Check if table exists, create if not
+        try
+        {
+            Console.WriteLine($"DEBUG: Checking if table {resolvedTableName} exists");
+            await client.CreateIfNotExistsAsync();
+            Console.WriteLine($"DEBUG: Table {resolvedTableName} created or confirmed to exist");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"DEBUG: Error creating table {resolvedTableName}: {ex.Message}");
+            _appLogger.LogError("Error creating table {TableName}", ex, resolvedTableName);
+            throw;
         }
 
         _appLogger.LogTableEntryUpsert(

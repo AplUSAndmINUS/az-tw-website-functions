@@ -32,7 +32,41 @@ public class BlobStorageService : IBlobStorageService
     private static string ResolveContainerName(string containerName)
     {
         var useMock = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
-        return useMock ? $"mock-{containerName}" : containerName;
+        string resolvedName;
+
+        if (useMock)
+        {
+            // Only add the mock prefix if it's not already there
+            if (!containerName.StartsWith("mock-", StringComparison.OrdinalIgnoreCase))
+            {
+                resolvedName = $"mock-{containerName}";
+            }
+            else
+            {
+                resolvedName = containerName;
+            }
+        }
+        else
+        {
+            // If we're not using mock storage, remove the mock- prefix if it exists
+            if (containerName.StartsWith("mock-", StringComparison.OrdinalIgnoreCase))
+            {
+                resolvedName = containerName.Substring(5); // Remove "mock-" prefix
+
+                // Handle case where containerName might just be "mock-" (unlikely but possible)
+                if (string.IsNullOrEmpty(resolvedName))
+                {
+                    resolvedName = "container"; // Default to "container" if the entire name was "mock-"
+                }
+            }
+            else
+            {
+                resolvedName = containerName;
+            }
+        }
+
+        Console.WriteLine($"DEBUG: ResolveContainerName - Original={containerName}, USE_MOCK_STORAGE={useMock}, Resolved={resolvedName}");
+        return resolvedName;
     }
 
     public async Task<BlobClient> GetBlobClientAsync(string containerName, string blobName)

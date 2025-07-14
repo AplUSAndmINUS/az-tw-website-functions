@@ -2,6 +2,7 @@ using SharedStorage.Services.BaseServices;
 using SharedStorage.Services.Media.Handlers;
 using SharedStorage.Models;
 using Utils;
+using Utils.Extensions;
 
 namespace SharedStorage.Services.MediaServices;
 
@@ -304,7 +305,7 @@ public class MediaService : IMediaService
       ContentType = tableEntity.GetString("ContentType") ?? string.Empty,
       Width = tableEntity.GetInt32("Width") ?? 0,
       Height = tableEntity.GetInt32("Height") ?? 0,
-      UploadedAt = tableEntity.GetDateTime("UploadedAt") ?? DateTime.UtcNow
+      UploadedAt = (tableEntity.GetDateTime("UploadedAt") ?? DateTime.UtcNow).EnsureUtc()
     };
   }
 

@@ -175,22 +175,45 @@ public class UpsertBlogPost
 
   private static void EnsureDateTimeFieldsAreUtc(BlogPostModel blogPost)
   {
-    // Convert PublishDate to UTC 
-    blogPost.PublishDate = blogPost.PublishDate.EnsureUtc();
-
-    // Convert LastModified to UTC
-    blogPost.LastModified = blogPost.LastModified.EnsureUtc();
-
     // Set LastModified to current UTC time if it's the default value
-    if (blogPost.LastModified == default)
+    if (blogPost.LastModified == default || blogPost.LastModified.Year < 2000)
     {
       blogPost.LastModified = DateTime.UtcNow;
     }
-
-    // Set PublishDate to current UTC time if it's the default value and status is Published
-    if (blogPost.PublishDate == default && blogPost.Status == "Published")
+    else
     {
-      blogPost.PublishDate = DateTime.UtcNow;
+      // Convert LastModified to UTC
+      blogPost.LastModified = blogPost.LastModified.EnsureUtc();
     }
+
+    // Set PublishDate based on status
+    if (blogPost.Status == "Published")
+    {
+      // For published posts, ensure we have a valid date
+      if (blogPost.PublishDate == default || blogPost.PublishDate.Year < 2000)
+      {
+        blogPost.PublishDate = DateTime.UtcNow;
+      }
+      else
+      {
+        blogPost.PublishDate = blogPost.PublishDate.EnsureUtc();
+      }
+    }
+    else
+    {
+      // For drafts, ensure we have a valid future date to avoid Azure Table Storage errors
+      if (blogPost.PublishDate == default || blogPost.PublishDate.Year < 2000)
+      {
+        // Set to a valid date in the future - Azure Table Storage doesn't accept DateTime.MinValue
+        blogPost.PublishDate = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+      }
+      else
+      {
+        blogPost.PublishDate = blogPost.PublishDate.EnsureUtc();
+      }
+    }
+
+    Console.WriteLine($"DEBUG: EnsureDateTimeFieldsAreUtc - Final PublishDate={blogPost.PublishDate} (Kind={blogPost.PublishDate.Kind})");
+    Console.WriteLine($"DEBUG: EnsureDateTimeFieldsAreUtc - Final LastModified={blogPost.LastModified} (Kind={blogPost.LastModified.Kind})");
   }
 }
