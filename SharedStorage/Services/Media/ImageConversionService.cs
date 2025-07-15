@@ -111,7 +111,7 @@ public class ImageConversionService : IImageService
       catch (Exception streamEx)
       {
         _appLogger.LogWarning("Failed to load from stream, trying byte array approach: {Error}", streamEx.Message);
-        
+
         // Fallback: try loading directly from byte array
         try
         {
@@ -120,14 +120,13 @@ public class ImageConversionService : IImageService
         }
         catch (Exception byteEx)
         {
-          _appLogger.LogError("Failed to load image from both stream and byte array. Stream error: {StreamError}, Byte error: {ByteError}", 
+          _appLogger.LogError("Failed to load image from both stream and byte array. Stream error: {StreamError}, Byte error: {ByteError}",
             byteEx, streamEx.Message, byteEx.Message);
           throw new InvalidOperationException($"Unable to load image. Stream error: {streamEx.Message}, Byte array error: {byteEx.Message}");
         }
       }
 
-      using (image)
-
+      // Don't use using statement here - we need to keep the image open until we finish saving
       // Auto-orient to handle EXIF rotation
       image.Mutate(x => x.AutoOrient());
 
