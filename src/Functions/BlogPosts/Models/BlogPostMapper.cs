@@ -25,13 +25,13 @@ public class BlogPostMapper : BaseContentMapper<BlogPostModel, BlogPostEntity>
 
     // Create new entity instance
     var entity = CreateEntityInstance();
-    
+
     // Set ID if not provided
     entity.Id = model.Id ?? Guid.NewGuid().ToString();
-    
+
     // Update common fields from base mapper
     UpdateCommonFields(entity, model, status);
-    
+
     // Set specific fields for this entity type
     entity.PublishDate = EnsureValidPublishDate(model.PublishDate, status);
     entity.LastModified = DateTime.UtcNow; // Always update LastModified on conversion
@@ -202,7 +202,7 @@ public class BlogPostMapper : BaseContentMapper<BlogPostModel, BlogPostEntity>
   {
     return models?.Select(ToDTO) ?? Enumerable.Empty<BlogPostDTO>();
   }
-  
+
   // Static wrapper methods to maintain backward compatibility with existing code
   public static BlogPostEntity ToEntityStatic(BlogPostModel model) => Instance.ToEntity(model);
   public static BlogPostModel ToModelStatic(BlogPostEntity entity) => Instance.ToModel(entity);
@@ -229,7 +229,7 @@ public class BlogPostMapper : BaseContentMapper<BlogPostModel, BlogPostEntity>
 
     // Update common fields from base mapper
     UpdateCommonFields(entity, model, status);
-    
+
     // Update specific fields for this entity type
     entity.PublishDate = EnsureValidPublishDate(model.PublishDate, status);
     entity.LastModified = DateTime.UtcNow;
@@ -237,7 +237,7 @@ public class BlogPostMapper : BaseContentMapper<BlogPostModel, BlogPostEntity>
     // Update keys if PublishDate changed
     entity.UpdateKeys();
   }
-  
+
   /// <summary>
   /// Creates a new entity instance
   /// </summary>
@@ -246,7 +246,7 @@ public class BlogPostMapper : BaseContentMapper<BlogPostModel, BlogPostEntity>
   {
     return new BlogPostEntity();
   }
-  
+
   /// <summary>
   /// Convert a collection of entities to models
   /// </summary>

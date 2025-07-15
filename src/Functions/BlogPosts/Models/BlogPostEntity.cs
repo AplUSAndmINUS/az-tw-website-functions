@@ -17,7 +17,7 @@ public class BlogPostEntity : BaseContentEntity
   public BlogPostEntity(DateTime publishDate) : base(publishDate)
   {
   }
-  
+
   /// <summary>
   /// Converts the entity to a model
   /// </summary>
@@ -50,10 +50,10 @@ public class BlogPostEntity : BaseContentEntity
       LastModified = LastModified.EnsureUtc(),
       TagsList = DeserializeTags(TagsJson)
     };
-    
+
     return (T)(object)model;
   }
-  
+
   private string[] DeserializeTags(string tagsJson)
   {
     return DataValidation.DeserializeTags(tagsJson);
