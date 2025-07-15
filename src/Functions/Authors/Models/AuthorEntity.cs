@@ -25,15 +25,19 @@ public class AuthorEntity : ITableEntity
   public string? InstagramHandle { get; set; } = default!; // e.g. "@terencewaters"
   public string? LinkedInHandle { get; set; } = default!;
   public string? BlueskyHandle { get; set; } = default!; // e.g. "@terencewaters.bsky.social"
-  public string? ProfileImageFileName { get; set; } = default!;
-  public string? ProfileImageCdnUrl { get; set; } = default!; // e.g. "https://example.com/images/terence-waters.jpg"
-  public string? ThumbnailCdnUrl { get; set; } = default!; // e.g. "https://example.com/images/terence-waters-thumbnail.jpg"
+
+  // Media properties
+  public string? ProfileImageId { get; set; } // The MediaId of the profile image
+  public string? ProfileImageFileName { get; set; }
+  public string? ProfileImageCdnUrl { get; set; } // e.g. "https://example.com/images/terence-waters.jpg"
+  public string? ThumbnailCdnUrl { get; set; } // e.g. "https://example.com/images/terence-waters-thumbnail.jpg"
   public bool HasValidProfileImage { get; set; } = false; // Indicates if the profile image is valid and available
-  public string? ImageContentType { get; set; } = default!; // e.g. "image/jpeg"
+  public string? ImageContentType { get; set; } // e.g. "image/jpeg"
   public long? ImageSizeBytes { get; set; } // e.g. 204800 (200 KB)
   public int? ImageWidth { get; set; } // e.g. 800
   public int? ImageHeight { get; set; } // e.g. 600
-  public string? ProfileImageBlobContainer { get; set; } = default!;
+  public string? ProfileImageBlobContainer { get; set; }
+  public string MediaReferencesJson { get; set; } = "[]"; // JSON array of MediaIds
 
   /// <summary>
   /// Creates an AuthorEntity from an AuthorModel.
@@ -75,10 +79,12 @@ public class AuthorEntity : ITableEntity
       LinkedInHandle = DataValidation.RequireMinLength(DataValidation.SafeTrim(model.LinkedInHandle), 3, nameof(model.LinkedInHandle)) ?? null,
       BlueskyHandle = DataValidation.RequireMinLength(DataValidation.SafeTrim(model.BlueskyHandle), 3, nameof(model.BlueskyHandle)) ?? null,
 
+      ProfileImageId = model.ProfileImageId,
       ProfileImageBlobContainer = DataValidation.SafeTrim(model.ProfileImageBlobContainer) ?? "authors-images",
       ProfileImageFileName = DataValidation.SafeTrim(model.ProfileImageFileName),
       ProfileImageCdnUrl = DataValidation.SafeTrim(model.ProfileImageCdnUrl) ?? "/images/default-profile.png",
       ThumbnailCdnUrl = DataValidation.SafeTrim(model.ThumbnailCdnUrl) ?? "/images/default-profile-thumbnail.png",
+      MediaReferencesJson = model.MediaReferencesJson ?? "[]",
 
       HasValidProfileImage = !string.IsNullOrWhiteSpace(model.ProfileImageFileName) &&
                              !string.IsNullOrWhiteSpace(model.ProfileImageCdnUrl) &&
