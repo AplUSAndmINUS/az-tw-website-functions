@@ -41,8 +41,12 @@ public class VideoHandler : MediaHandler, IMediaTypeHandler
       var videoBlobName = $"videos/{mediaId}/{fileName}";
       var thumbnailBlobName = $"videos/{mediaId}/thumb_{Path.GetFileNameWithoutExtension(fileName)}.webp";
 
-      // Create the container name based on content section
-      var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Video);
+      // Check if mock storage is enabled
+      var useMockStorage = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+      _logger.LogInformation("USE_MOCK_STORAGE environment variable is set to: {UseMockStorage}", useMockStorage ? "true" : "false");
+
+      // Create the container name based on content section, explicitly passing the mock storage flag
+      var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Video, useMockStorage);
 
       // Upload video to blob storage with content relationship if provided
       _logger.LogInformation("Uploading video to blob storage: {BlobName}", videoBlobName);
@@ -109,8 +113,12 @@ public class VideoHandler : MediaHandler, IMediaTypeHandler
     {
       _logger.LogInformation("Deleting video with ID: {MediaId}", id);
 
+      // Check if mock storage is enabled
+      var useMockStorage = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+      _logger.LogInformation("USE_MOCK_STORAGE environment variable is set to: {UseMockStorage}", useMockStorage ? "true" : "false");
+
       // Delete video blob from storage
-      var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Video);
+      var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Video, useMockStorage);
 
       // Delete all blobs associated with this video
       await DeleteVideoBlobsAsync(containerName, id);

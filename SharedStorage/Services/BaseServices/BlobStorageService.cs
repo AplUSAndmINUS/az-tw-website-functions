@@ -381,56 +381,120 @@ public class BlobStorageService : IBlobStorageService
             _appLogger.LogInformation("Container name {ContainerName} is invalid", containerName);
             throw new ArgumentException($"Invalid container name: {containerName}", nameof(containerName));
         }
+        
+        // Get mock storage setting
+        bool useMock = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+        _appLogger.LogInformation("ParseContainerName processing container: {ContainerName}, USE_MOCK_STORAGE={UseMock}", 
+            containerName, useMock ? "true" : "false");
+            
         // Try to match container name directly from ContentNameResolver first to ensure exact matching
         foreach (ContentSections contentSection in Enum.GetValues(typeof(ContentSections)))
         {
-            // Try non-hyphenated first (exact section match)
-            string sectionName = contentSection.ToString().ToLowerInvariant();
+            // Try non-hyphenated first (exact section match with current mock setting)
+            string sectionName = ContentNameResolver.GetBlobContainerName(contentSection, null, useMock);
             if (string.Equals(containerName, sectionName, StringComparison.OrdinalIgnoreCase))
             {
+                _appLogger.LogInformation("Matched section {Section} with no asset type", contentSection);
+                return (contentSection, null);
+            }
+            
+            // Also try with opposite mock setting for robustness
+            string sectionNameAltMock = ContentNameResolver.GetBlobContainerName(contentSection, null, !useMock);
+            if (string.Equals(containerName, sectionNameAltMock, StringComparison.OrdinalIgnoreCase))
+            {
+                _appLogger.LogInformation("Matched section {Section} with no asset type (alternate mock setting)", contentSection);
                 return (contentSection, null);
             }
 
-            // Try with asset types
+            // Try with asset types (both with and without mock storage)
             foreach (AssetType type in Enum.GetValues(typeof(AssetType)))
             {
-                string expectedName = ContentNameResolver.GetBlobContainerName(contentSection, type);
-                if (string.Equals(containerName, expectedName, StringComparison.OrdinalIgnoreCase))
+                // Skip Comments as it's not valid for blob containers (only for tables)
+                if (type == AssetType.Comments)
                 {
-                    return (contentSection, type);
+                    continue;
                 }
-            }
-        }
-
-        // Handle potential hyphenated names by checking the first part
-        if (parts.Length > 1)
-        {
-            foreach (ContentSections contentSection in Enum.GetValues(typeof(ContentSections)))
-            {
-                if (string.Equals(parts[0], contentSection.ToString(), StringComparison.OrdinalIgnoreCase))
+                
+                try
                 {
-                    // Determine asset type from the second part
-                    string assetPart = parts[1].ToLowerInvariant();
-
-                    switch (assetPart)
+                    // Check with current mock setting
+                    string expectedName = ContentNameResolver.GetBlobContainerName(contentSection, type, useMock);
+                    if (string.Equals(containerName, expectedName, StringComparison.OrdinalIgnoreCase))
                     {
-                        case "images":
-                            return (contentSection, AssetType.Images);
-                        case "video":
-                            return (contentSection, AssetType.Video);
-                        case "media":
-                            return (contentSection, AssetType.Media);
-                        case "data":
-                            return (contentSection, AssetType.Data);
-                        default:
-                            return (contentSection, null);
+                        _appLogger.LogInformation("Matched section {Section} with asset type {AssetType}", 
+                            contentSection, type);
+                        return (contentSection, type);
+                    }
+                    
+                    // Also try with opposite mock setting for robustness
+                    string expectedNameAltMock = ContentNameResolver.GetBlobContainerName(contentSection, type, !useMock);
+                    if (string.Equals(containerName, expectedNameAltMock, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _appLogger.LogInformation("Matched section {Section} with asset type {AssetType} (alternate mock setting)", 
+                            contentSection, type);
+                        return (contentSection, type);
                     }
                 }
+                catch (ArgumentOutOfRangeException ex)
+                {
+                    _appLogger.LogWarning("Skipping invalid asset type {AssetType} for section {Section}: {Error}",
+                        type, contentSection, ex.Message);
+                    // Continue with the next asset type
+                }
             }
         }
 
+        // If no direct match found, fallback to legacy parsing
+        _appLogger.LogInformation("No direct match found, attempting legacy parsing for {ContainerName}", containerName);
+        
+        // Handle mock prefix if present
+        int startIndex = 0;
+        if (parts[0].Equals("mock", StringComparison.OrdinalIgnoreCase) && parts.Length > 1)
+        {
+            // Skip the "mock-" prefix
+            startIndex = 1;
+            _appLogger.LogInformation("Detected mock prefix, adjusting parsing");
+        }
+        
+        // Handle potential hyphenated names by checking after the mock prefix if present
+        if (parts.Length > startIndex)
+        {
+            // Try to parse section from the part after any mock prefix
+            if (Enum.TryParse<ContentSections>(parts[startIndex], true, out var section))
+            {
+                _appLogger.LogInformation("Parsed section {Section} from container part: {Part}", 
+                    section, parts[startIndex]);
+                
+                // Check if there's a second content part that could be an AssetType
+                if (parts.Length > startIndex + 1)
+                {
+                    string assetPart = parts[startIndex + 1].ToLowerInvariant();
+                    
+                    AssetType? assetType = assetPart switch
+                    {
+                        "images" => AssetType.Images,
+                        "video" => AssetType.Video,
+                        "media" => AssetType.Media,
+                        "data" => AssetType.Data,
+                        _ => null
+                    };
+                    
+                    if (assetType.HasValue)
+                    {
+                        _appLogger.LogInformation("Legacy parse matched section {Section} with asset type {AssetType}", 
+                            section, assetType);
+                        return (section, assetType);
+                    }
+                }
+                
+                // No asset type found, just return the section
+                _appLogger.LogInformation("Legacy parse matched section {Section} with no asset type", section);
+                return (section, null);
+            }
+        }
+        
         // If we still can't determine, throw an exception
-        _appLogger.LogInformation("Unable to parse container name {ContainerName}", containerName);
+        _appLogger.LogWarning("Unable to parse container name {ContainerName}", containerName);
         throw new ArgumentException($"Unable to determine content section for container: {containerName}", nameof(containerName));
     }
 }

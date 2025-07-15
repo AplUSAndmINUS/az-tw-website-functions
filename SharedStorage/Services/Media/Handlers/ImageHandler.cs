@@ -47,8 +47,12 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
       var originalBlobName = $"images/{mediaId}/{webpFileName}";
       var thumbnailBlobName = $"images/{mediaId}/thumb_{webpFileName}";
 
-      // Create the container name based on content section
-      var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Images);
+      // Check if mock storage is enabled
+      var useMockStorage = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+      _logger.LogInformation("USE_MOCK_STORAGE environment variable is set to: {UseMockStorage}", useMockStorage ? "true" : "false");
+
+      // Create the container name based on content section, explicitly passing the mock storage flag
+      var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Images, useMockStorage);
 
       // Store original stream in memory so we can use it multiple times
       using var memoryStream = new MemoryStream();
@@ -85,7 +89,14 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
 
       // Upload optimized image to blob storage with content relationship if provided
       _logger.LogInformation("Uploading optimized image to blob storage: {BlobName}", originalBlobName);
-      var mediaReference = await _blobStorageService.UploadBlobAsync(containerName, originalBlobName, conversionResult.Content, contentId, relatedContentType);
+      _logger.LogInformation("Upload parameters - Container: {ContainerName}, ContentId: {ContentId}, RelatedContentType: {RelatedContentType}",
+          containerName, contentId ?? "null", relatedContentType ?? "null");
+
+      // Pass null for contentId and relatedContentType if they're empty strings to avoid issues
+      string? safeContentId = string.IsNullOrEmpty(contentId) ? null : contentId;
+      string? safeRelatedContentType = string.IsNullOrEmpty(relatedContentType) ? null : relatedContentType;
+
+      var mediaReference = await _blobStorageService.UploadBlobAsync(containerName, originalBlobName, conversionResult.Content, safeContentId, safeRelatedContentType);
 
       // Generate thumbnail from the original stream data
       using var thumbnailStream = new MemoryStream(originalStreamData);
@@ -93,7 +104,8 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
 
       // Upload thumbnail to blob storage
       _logger.LogInformation("Uploading thumbnail to blob storage: {ThumbnailBlobName}", thumbnailBlobName);
-      await _blobStorageService.UploadBlobAsync(containerName, thumbnailBlobName, thumbnailResult.Content);
+      // Pass null explicitly for content relationships for thumbnail
+      await _blobStorageService.UploadBlobAsync(containerName, thumbnailBlobName, thumbnailResult.Content, null, null);
 
       // Get image dimensions from conversion result
       var (width, height) = (conversionResult.Width, conversionResult.Height);
@@ -159,8 +171,12 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
     {
       _logger.LogInformation("Deleting image with ID: {MediaId}", id);
 
+      // Check if mock storage is enabled
+      var useMockStorage = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+      _logger.LogInformation("USE_MOCK_STORAGE environment variable is set to: {UseMockStorage}", useMockStorage ? "true" : "false");
+
       // Delete blobs from storage (both original and thumbnail)
-      var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Images);
+      var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Images, useMockStorage);
 
       // For now, we'll need to implement blob enumeration to find files to delete
       // This is a simplified approach - in production you'd store the blob names in metadata
