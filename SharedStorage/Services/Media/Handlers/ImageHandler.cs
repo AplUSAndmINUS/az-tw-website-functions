@@ -50,14 +50,37 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
       // Create the container name based on content section
       var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Images);
 
-      // Store original stream in memory so we can use it twice
+      // Store original stream in memory so we can use it multiple times
       using var memoryStream = new MemoryStream();
       await stream.CopyToAsync(memoryStream);
       var originalStreamData = memoryStream.ToArray();
 
-      // Convert and optimize the image using a fresh stream
+      _logger.LogInformation("Copied stream to memory: {Length} bytes", originalStreamData.Length);
+
+      // Validate we have actual image data
+      if (originalStreamData.Length == 0)
+      {
+        throw new ArgumentException("Stream contains no data", nameof(stream));
+      }
+
+      if (originalStreamData.Length < 4)
+      {
+        throw new ArgumentException($"Stream too small to be a valid image ({originalStreamData.Length} bytes)", nameof(stream));
+      }
+
+      // Convert and optimize the image using a fresh, clean stream
       _logger.LogInformation("Converting image to optimized WebP format");
       using var conversionStream = new MemoryStream(originalStreamData);
+
+      // Verify the stream is properly created and seekable
+      if (!conversionStream.CanRead || !conversionStream.CanSeek)
+      {
+        throw new InvalidOperationException("Created conversion stream is not readable or seekable");
+      }
+
+      _logger.LogInformation("Conversion stream created - Length: {Length}, Position: {Position}, CanRead: {CanRead}, CanSeek: {CanSeek}",
+        conversionStream.Length, conversionStream.Position, conversionStream.CanRead, conversionStream.CanSeek);
+
       var conversionResult = await _imageService.ConvertToWebPAsync(conversionStream, maxWidth: 2048, maxHeight: 2048, quality: 85);
 
       // Upload optimized image to blob storage with content relationship if provided
