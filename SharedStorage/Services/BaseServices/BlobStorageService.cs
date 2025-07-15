@@ -155,7 +155,10 @@ public class BlobStorageService : IBlobStorageService
         {
             var blobName = blob.Name;
             var (section, assetType) = ParseContainerName(containerName);
-            var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName);
+
+            // Check if mock storage is enabled for CDN URL generation
+            var useMockStorage = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+            var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName, null, useMockStorage);
 
             // Get blob client to access metadata
             var blobClient = containerClient.GetBlobClient(blobName);
@@ -203,7 +206,13 @@ public class BlobStorageService : IBlobStorageService
         }
 
         var (section, assetType) = ParseContainerName(containerName);
-        var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName);
+
+        // Check if mock storage is enabled for CDN URL generation
+        var useMockStorage = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+        var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName, null, useMockStorage);
+
+        _appLogger.LogInformation("Generated CDN URL with USE_MOCK_STORAGE={UseMock}: {CdnUrl}",
+            useMockStorage ? "true" : "false", cdnUrl);
 
         // Look for metadata that might contain ContentId and RelatedContentType
         var blobProperties = await blobClient.GetPropertiesAsync();
@@ -321,13 +330,19 @@ public class BlobStorageService : IBlobStorageService
 
             _appLogger.LogInformation("Successfully uploaded blob {BlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
 
+            // Check if mock storage is enabled for CDN URL generation
+            var useMockStorage = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+
             // Get the CDN URL for the uploaded blob
             var (section, assetType) = ParseContainerName(containerName);
-            var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName);
+            var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName, null, useMockStorage);
+
+            _appLogger.LogInformation("Generated CDN URL with USE_MOCK_STORAGE={UseMock}: {CdnUrl}",
+                useMockStorage ? "true" : "false", cdnUrl);
 
             // Create thumbnail blob name (simplified approach - assumes thumbnail will be uploaded separately)
             var thumbnailBlobName = blobName.Contains("/thumb_") ? blobName : $"thumb_{blobName}";
-            var thumbnailCdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, thumbnailBlobName);
+            var thumbnailCdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, thumbnailBlobName, null, useMockStorage);
 
             return new MediaReference(blobName, thumbnailBlobName, cdnUrl, thumbnailCdnUrl, contentId, relatedContentType);
         }
@@ -381,12 +396,12 @@ public class BlobStorageService : IBlobStorageService
             _appLogger.LogInformation("Container name {ContainerName} is invalid", containerName);
             throw new ArgumentException($"Invalid container name: {containerName}", nameof(containerName));
         }
-        
+
         // Get mock storage setting
         bool useMock = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
-        _appLogger.LogInformation("ParseContainerName processing container: {ContainerName}, USE_MOCK_STORAGE={UseMock}", 
+        _appLogger.LogInformation("ParseContainerName processing container: {ContainerName}, USE_MOCK_STORAGE={UseMock}",
             containerName, useMock ? "true" : "false");
-            
+
         // Try to match container name directly from ContentNameResolver first to ensure exact matching
         foreach (ContentSections contentSection in Enum.GetValues(typeof(ContentSections)))
         {
@@ -397,7 +412,7 @@ public class BlobStorageService : IBlobStorageService
                 _appLogger.LogInformation("Matched section {Section} with no asset type", contentSection);
                 return (contentSection, null);
             }
-            
+
             // Also try with opposite mock setting for robustness
             string sectionNameAltMock = ContentNameResolver.GetBlobContainerName(contentSection, null, !useMock);
             if (string.Equals(containerName, sectionNameAltMock, StringComparison.OrdinalIgnoreCase))
@@ -414,23 +429,23 @@ public class BlobStorageService : IBlobStorageService
                 {
                     continue;
                 }
-                
+
                 try
                 {
                     // Check with current mock setting
                     string expectedName = ContentNameResolver.GetBlobContainerName(contentSection, type, useMock);
                     if (string.Equals(containerName, expectedName, StringComparison.OrdinalIgnoreCase))
                     {
-                        _appLogger.LogInformation("Matched section {Section} with asset type {AssetType}", 
+                        _appLogger.LogInformation("Matched section {Section} with asset type {AssetType}",
                             contentSection, type);
                         return (contentSection, type);
                     }
-                    
+
                     // Also try with opposite mock setting for robustness
                     string expectedNameAltMock = ContentNameResolver.GetBlobContainerName(contentSection, type, !useMock);
                     if (string.Equals(containerName, expectedNameAltMock, StringComparison.OrdinalIgnoreCase))
                     {
-                        _appLogger.LogInformation("Matched section {Section} with asset type {AssetType} (alternate mock setting)", 
+                        _appLogger.LogInformation("Matched section {Section} with asset type {AssetType} (alternate mock setting)",
                             contentSection, type);
                         return (contentSection, type);
                     }
@@ -446,7 +461,7 @@ public class BlobStorageService : IBlobStorageService
 
         // If no direct match found, fallback to legacy parsing
         _appLogger.LogInformation("No direct match found, attempting legacy parsing for {ContainerName}", containerName);
-        
+
         // Handle mock prefix if present
         int startIndex = 0;
         if (parts[0].Equals("mock", StringComparison.OrdinalIgnoreCase) && parts.Length > 1)
@@ -455,21 +470,21 @@ public class BlobStorageService : IBlobStorageService
             startIndex = 1;
             _appLogger.LogInformation("Detected mock prefix, adjusting parsing");
         }
-        
+
         // Handle potential hyphenated names by checking after the mock prefix if present
         if (parts.Length > startIndex)
         {
             // Try to parse section from the part after any mock prefix
             if (Enum.TryParse<ContentSections>(parts[startIndex], true, out var section))
             {
-                _appLogger.LogInformation("Parsed section {Section} from container part: {Part}", 
+                _appLogger.LogInformation("Parsed section {Section} from container part: {Part}",
                     section, parts[startIndex]);
-                
+
                 // Check if there's a second content part that could be an AssetType
                 if (parts.Length > startIndex + 1)
                 {
                     string assetPart = parts[startIndex + 1].ToLowerInvariant();
-                    
+
                     AssetType? assetType = assetPart switch
                     {
                         "images" => AssetType.Images,
@@ -478,21 +493,21 @@ public class BlobStorageService : IBlobStorageService
                         "data" => AssetType.Data,
                         _ => null
                     };
-                    
+
                     if (assetType.HasValue)
                     {
-                        _appLogger.LogInformation("Legacy parse matched section {Section} with asset type {AssetType}", 
+                        _appLogger.LogInformation("Legacy parse matched section {Section} with asset type {AssetType}",
                             section, assetType);
                         return (section, assetType);
                     }
                 }
-                
+
                 // No asset type found, just return the section
                 _appLogger.LogInformation("Legacy parse matched section {Section} with no asset type", section);
                 return (section, null);
             }
         }
-        
+
         // If we still can't determine, throw an exception
         _appLogger.LogWarning("Unable to parse container name {ContainerName}", containerName);
         throw new ArgumentException($"Unable to determine content section for container: {containerName}", nameof(containerName));
