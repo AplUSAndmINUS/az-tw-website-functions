@@ -50,10 +50,24 @@ public abstract class ContentService<TEntity, TModel, TDto>(
         return null;
       }
 
-      if (isPublished.HasValue && isPublished.Value && !IsPublished(entity))
+      // Fix: Handle both isPublished true and false cases
+      if (isPublished.HasValue)
       {
-        _appLogger.LogInformation("Content with slug {Slug} is not published.", slug);
-        return null;
+        bool entityIsPublished = IsPublished(entity);
+        
+        // If we want published content but entity is not published, return null
+        if (isPublished.Value && !entityIsPublished)
+        {
+          _appLogger.LogInformation("Content with slug {Slug} is not published.", slug);
+          return null;
+        }
+        
+        // If we want unpublished content but entity is published, return null
+        if (!isPublished.Value && entityIsPublished)
+        {
+          _appLogger.LogInformation("Content with slug {Slug} is published (filtering for unpublished only).", slug);
+          return null;
+        }
       }
 
       return EntityToDto(entity);

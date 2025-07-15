@@ -263,6 +263,8 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
       return await GetPublishedContentAsync(authorSlug, category, limit);
     }
 
+    // Fix: If isPublished is false, get all content and filter for unpublished only
+    // If isPublished is null, get all content without filtering
     try
     {
       var filters = new List<string>();
@@ -272,6 +274,10 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
 
       if (!string.IsNullOrWhiteSpace(category))
         filters.Add($"Category eq '{category}'");
+
+      // Add published status filter when isPublished is explicitly false
+      if (isPublished == false)
+        filters.Add("IsPublished eq false");
 
       var filter = filters.Any() ? string.Join(" and ", filters) : null;
       var pageSize = Math.Min(limit ?? 50, 100);

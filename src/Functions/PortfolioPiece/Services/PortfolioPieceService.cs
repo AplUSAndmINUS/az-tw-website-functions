@@ -273,9 +273,39 @@ public class PortfolioPieceService : ContentService<PortfolioPieceEntity, Portfo
       return await GetPublishedContentAsync(authorSlug, category, limit);
     }
 
-    // If isPublished is false or null, get all content (this may need additional filtering logic)
-    var allContent = await GetPublishedContentAsync(authorSlug, category, limit);
-    return allContent;
+    // Fix: If isPublished is false, get all content and filter for unpublished only
+    // If isPublished is null, get all content without filtering
+    try
+    {
+      var filters = new List<string>();
+
+      if (!string.IsNullOrWhiteSpace(authorSlug))
+        filters.Add($"AuthorSlug eq '{authorSlug}'");
+
+      if (!string.IsNullOrWhiteSpace(category))
+        filters.Add($"Category eq '{category}'");
+
+      // Add published status filter when isPublished is explicitly false
+      if (isPublished == false)
+        filters.Add("IsPublished eq false");
+
+      var filter = filters.Any() ? string.Join(" and ", filters) : null;
+      var pageSize = Math.Min(limit ?? 50, 100);
+
+      var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, pageSize);
+      var entities = result.Entities.Select(e => ConvertTableEntityToTEntity(e))
+                          .Where(e => e != null)
+                          .Select(e => EntityToDto(e!))
+                          .ToList();
+
+      _appLogger.LogInformation("Retrieved {Count} portfolio pieces", entities.Count);
+      return entities;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to get portfolio pieces: {Error}", ex, ex.Message);
+      return Enumerable.Empty<PortfolioPieceDTO>();
+    }
   }
 
   public async Task<PortfolioPieceDTO?> UpsertPieceAsync(string slug, PortfolioPieceModel model)
