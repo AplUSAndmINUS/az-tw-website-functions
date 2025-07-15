@@ -60,8 +60,73 @@ public class ImageConversionService : IImageService
       _appLogger.LogInformation("Attempting to load image from stream - Position: {Position}, Length: {Length}, CanRead: {CanRead}, CanSeek: {CanSeek}",
         input.Position, input.Length, input.CanRead, input.CanSeek);
 
-      // Load the image directly - let ImageSharp handle validation
-      using var image = await Image.LoadAsync(input);
+      // Copy stream data to a completely fresh byte array and create new MemoryStream
+      // This ensures we have a completely clean, seekable stream for ImageSharp
+      var streamData = new byte[input.Length];
+      var totalBytesRead = 0;
+      var bytesRead = 0;
+
+      // Read all data from the input stream
+      while (totalBytesRead < input.Length)
+      {
+        bytesRead = await input.ReadAsync(streamData, totalBytesRead, (int)(input.Length - totalBytesRead));
+        if (bytesRead == 0) break;
+        totalBytesRead += bytesRead;
+      }
+
+      _appLogger.LogInformation("Read {TotalBytes} bytes from input stream", totalBytesRead);
+
+      // Log the first few bytes to debug what we actually received
+      var headerBytes = Math.Min(16, totalBytesRead);
+      var headerHex = Convert.ToHexString(streamData, 0, headerBytes);
+      _appLogger.LogInformation("Stream header (first {HeaderBytes} bytes): {Header}", headerBytes, headerHex);
+
+      // Validate we have a reasonable amount of data
+      if (totalBytesRead < 10)
+      {
+        throw new InvalidOperationException($"Insufficient image data: only {totalBytesRead} bytes received");
+      }
+
+      // Check for common image file signatures
+      var isValidImageFormat = IsValidImageHeader(streamData);
+      if (!isValidImageFormat)
+      {
+        _appLogger.LogWarning("Data does not appear to be a valid image format. Header: {Header}", headerHex);
+      }
+
+      // Create a completely fresh MemoryStream from the byte array
+      using var cleanStream = new MemoryStream(streamData, 0, totalBytesRead, false);
+
+      _appLogger.LogInformation("Created clean stream - Length: {Length}, Position: {Position}, CanRead: {CanRead}, CanSeek: {CanSeek}",
+        cleanStream.Length, cleanStream.Position, cleanStream.CanRead, cleanStream.CanSeek);
+
+      // Alternative approach: try loading from byte array directly
+      Image image;
+      try
+      {
+        _appLogger.LogInformation("Attempting to load image from clean stream...");
+        image = await Image.LoadAsync(cleanStream);
+        _appLogger.LogInformation("Successfully loaded image from stream");
+      }
+      catch (Exception streamEx)
+      {
+        _appLogger.LogWarning("Failed to load from stream, trying byte array approach: {Error}", streamEx.Message);
+        
+        // Fallback: try loading directly from byte array
+        try
+        {
+          image = Image.Load(streamData);
+          _appLogger.LogInformation("Successfully loaded image from byte array");
+        }
+        catch (Exception byteEx)
+        {
+          _appLogger.LogError("Failed to load image from both stream and byte array. Stream error: {StreamError}, Byte error: {ByteError}", 
+            byteEx, streamEx.Message, byteEx.Message);
+          throw new InvalidOperationException($"Unable to load image. Stream error: {streamEx.Message}, Byte array error: {byteEx.Message}");
+        }
+      }
+
+      using (image)
 
       // Auto-orient to handle EXIF rotation
       image.Mutate(x => x.AutoOrient());

@@ -76,6 +76,16 @@ public class SharedMediaFunctions
         return badResponse;
       }
 
+      _appLogger.LogInformation("Received image upload request - FileName: {FileName}, ContentLength: {ContentLength} bytes",
+        fileName, memoryStream.Length);
+
+      // Log first few bytes for debugging
+      var buffer = new byte[Math.Min(16, (int)memoryStream.Length)];
+      var bytesRead = await memoryStream.ReadAsync(buffer, 0, buffer.Length);
+      memoryStream.Position = 0; // Reset position
+      var headerHex = Convert.ToHexString(buffer, 0, bytesRead);
+      _appLogger.LogInformation("Request body header (first {BytesRead} bytes): {Header}", bytesRead, headerHex);
+
       // Upload the image
       var mediaEntity = await _mediaService.UploadImageAsync(
         memoryStream,
