@@ -36,6 +36,12 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
       if (stream == null || !stream.CanRead)
         throw new ArgumentException("Stream must be readable", nameof(stream));
 
+      if (!stream.CanSeek)
+        throw new ArgumentException("Stream must be seekable for image processing", nameof(stream));
+
+      _logger.LogInformation("Stream validation passed - Length: {Length}, Position: {Position}, CanRead: {CanRead}, CanSeek: {CanSeek}",
+        stream.Length, stream.Position, stream.CanRead, stream.CanSeek);
+
       var mediaId = Guid.NewGuid().ToString();
       var webpFileName = Path.GetFileNameWithoutExtension(fileName) + ".webp"; // Convert to WebP
       var originalBlobName = $"images/{mediaId}/{webpFileName}";
@@ -44,17 +50,23 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
       // Create the container name based on content section
       var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Images);
 
-      // Convert and optimize the image
+      // Store original stream in memory so we can use it twice
+      var memoryStream = new MemoryStream();
+      await stream.CopyToAsync(memoryStream);
+      var originalStreamData = memoryStream.ToArray();
+
+      // Convert and optimize the image using a fresh stream
       _logger.LogInformation("Converting image to optimized WebP format");
-      var conversionResult = await _imageService.ConvertToWebPAsync(stream, maxWidth: 2048, maxHeight: 2048, quality: 85);
+      using var conversionStream = new MemoryStream(originalStreamData);
+      var conversionResult = await _imageService.ConvertToWebPAsync(conversionStream, maxWidth: 2048, maxHeight: 2048, quality: 85);
 
       // Upload optimized image to blob storage with content relationship if provided
       _logger.LogInformation("Uploading optimized image to blob storage: {BlobName}", originalBlobName);
       var mediaReference = await _blobStorageService.UploadBlobAsync(containerName, originalBlobName, conversionResult.Content, contentId, relatedContentType);
 
-      // Generate thumbnail from the original stream
-      stream.Position = 0; // Reset stream position
-      var thumbnailResult = await _thumbnailService.GenerateWebPThumbnailAsync(stream);
+      // Generate thumbnail from the original stream data
+      using var thumbnailStream = new MemoryStream(originalStreamData);
+      var thumbnailResult = await _thumbnailService.GenerateWebPThumbnailAsync(thumbnailStream);
 
       // Upload thumbnail to blob storage
       _logger.LogInformation("Uploading thumbnail to blob storage: {ThumbnailBlobName}", thumbnailBlobName);
@@ -86,6 +98,16 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
           mediaId, width, height);
 
       return imageEntity;
+    }
+    catch (ArgumentException ex)
+    {
+      _logger.LogError("Invalid argument in image upload for {FileName}: {Error}", ex, fileName, ex.Message);
+      throw;
+    }
+    catch (InvalidOperationException ex)
+    {
+      _logger.LogError("Invalid operation in image upload for {FileName}: {Error}", ex, fileName, ex.Message);
+      throw;
     }
     catch (Exception ex)
     {
