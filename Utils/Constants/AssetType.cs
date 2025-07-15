@@ -6,5 +6,6 @@ public enum AssetType
     Media,
     Video,
     Data,
-    Comments
+    Comments,
+    Document
 }
