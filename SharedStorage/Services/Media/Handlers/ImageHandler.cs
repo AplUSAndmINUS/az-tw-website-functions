@@ -27,7 +27,7 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
     _logger = logger ?? throw new ArgumentNullException(nameof(logger));
   }
 
-  public override async Task<MediaEntity> UploadAsync(Stream stream, string fileName, string contentType, string? authorId = null)
+  public override async Task<MediaEntity> UploadAsync(Stream stream, string fileName, string contentType, string? authorId = null, string? contentId = null, string? relatedContentType = null)
   {
     try
     {
@@ -48,9 +48,9 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
       _logger.LogInformation("Converting image to optimized WebP format");
       var conversionResult = await _imageService.ConvertToWebPAsync(stream, maxWidth: 2048, maxHeight: 2048, quality: 85);
 
-      // Upload optimized image to blob storage
+      // Upload optimized image to blob storage with content relationship if provided
       _logger.LogInformation("Uploading optimized image to blob storage: {BlobName}", originalBlobName);
-      var mediaReference = await _blobStorageService.UploadBlobAsync(containerName, originalBlobName, conversionResult.Content);
+      var mediaReference = await _blobStorageService.UploadBlobAsync(containerName, originalBlobName, conversionResult.Content, contentId, relatedContentType);
 
       // Generate thumbnail from the original stream
       stream.Position = 0; // Reset stream position
@@ -77,7 +77,9 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
         ContentType = "image/webp", // Always WebP after conversion
         Width = width,
         Height = height,
-        UploadedAt = DateTime.UtcNow
+        UploadedAt = DateTime.UtcNow,
+        ContentId = contentId ?? string.Empty, // Set ContentId if provided
+        RelatedContentType = relatedContentType ?? string.Empty // Set RelatedContentType if provided
       };
 
       _logger.LogInformation("Successfully uploaded image {MediaId} with dimensions {Width}x{Height}",

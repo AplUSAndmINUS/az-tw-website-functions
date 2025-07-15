@@ -23,6 +23,9 @@ public class MediaEntity : ITableEntity
   public string ThumbnailUrl { get; set; } = string.Empty; // URL for a smaller version of the media
   public string ContentType { get; set; } = string.Empty; // MIME type of the media (e.g., "image/jpeg", "video/mp4")
 
+  public string ContentId { get; set; } = string.Empty; // ID of the content this media is associated with (blog post, portfolio piece, etc.)
+  public string RelatedContentType { get; set; } = string.Empty; // Type of the related content (blog, portfolio, etc.)
+
   public int Width { get; set; }
   public int Height { get; set; }
 
@@ -33,4 +36,4 @@ public class MediaEntity : ITableEntity
     PartitionKey = AuthorId;
     RowKey = Id;
   }
-} 
+}
