@@ -7,29 +7,35 @@ using System.Text.Json;
 using Utils;
 using Utils.Validation;
 
-namespace Functions.BlogPosts.Functions;
+namespace Functions.Shared;
 
-public class MediaFunctions
+/// <summary>
+/// Shared media functions for handling global media operations across all content types.
+/// These functions provide centralized upload, retrieval, and deletion of media assets
+/// that can be used by blog posts, portfolio pieces, authors, and future content types.
+/// </summary>
+public class SharedMediaFunctions
 {
-  private readonly IAppInsightsLogger<MediaFunctions> _appLogger;
+  private readonly IAppInsightsLogger<SharedMediaFunctions> _appLogger;
   private readonly IMediaService _mediaService;
   private readonly IAPIKeyValidator _apiKeyValidator;
 
-  public MediaFunctions(
-    IAppInsightsLogger<MediaFunctions> logger,
+  public SharedMediaFunctions(
+    IAppInsightsLogger<SharedMediaFunctions> logger,
     IMediaService mediaService,
     IAPIKeyValidator apiKeyValidator)
   {
     _appLogger = logger ?? throw new ArgumentNullException(nameof(logger));
     _mediaService = mediaService ?? throw new ArgumentNullException(nameof(mediaService));
     _apiKeyValidator = apiKeyValidator ?? throw new ArgumentNullException(nameof(apiKeyValidator));
+    _appLogger.LogInformation("SharedMediaFunctions initialized");
   }
 
   [Function("UploadImage")]
   public async Task<HttpResponseData> UploadImage(
-    [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
+    [HttpTrigger(AuthorizationLevel.Function, "post", Route = "media/images")] HttpRequestData req)
   {
-    _appLogger.LogInformation("UploadImage function triggered");
+    _appLogger.LogInformation("SharedMediaFunctions.UploadImage function triggered");
 
     // Validate API key using helper method
     var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "UploadImage");
@@ -71,6 +77,7 @@ public class MediaFunctions
       // Return success response
       var response = req.CreateResponse(HttpStatusCode.Created);
       response.Headers.Add("Content-Type", "application/json");
+      response.Headers.Add("Location", $"/media/{mediaEntity.Id}");
 
       var responseBody = JsonSerializer.Serialize(mediaEntity, new JsonSerializerOptions
       {
@@ -93,9 +100,9 @@ public class MediaFunctions
 
   [Function("UploadVideo")]
   public async Task<HttpResponseData> UploadVideo(
-    [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
+    [HttpTrigger(AuthorizationLevel.Function, "post", Route = "media/videos")] HttpRequestData req)
   {
-    _appLogger.LogInformation("UploadVideo function triggered");
+    _appLogger.LogInformation("SharedMediaFunctions.UploadVideo function triggered");
 
     // Validate API key using helper method
     var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "UploadVideo");
@@ -135,6 +142,7 @@ public class MediaFunctions
       // Return success response
       var response = req.CreateResponse(HttpStatusCode.Created);
       response.Headers.Add("Content-Type", "application/json");
+      response.Headers.Add("Location", $"/media/{mediaEntity.Id}");
 
       var responseBody = JsonSerializer.Serialize(mediaEntity, new JsonSerializerOptions
       {
@@ -159,7 +167,7 @@ public class MediaFunctions
   public async Task<HttpResponseData> GetMedia(
     [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "media/{mediaId}")] HttpRequestData req)
   {
-    _appLogger.LogInformation("GetMedia function triggered");
+    _appLogger.LogInformation("SharedMediaFunctions.GetMedia function triggered");
 
     // Validate API key using helper method
     var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "GetMedia");
@@ -171,7 +179,7 @@ public class MediaFunctions
     try
     {
       // Extract media ID from route
-      var mediaId = req.Query["mediaId"] ?? req.FunctionContext.BindingContext.BindingData["mediaId"]?.ToString();
+      var mediaId = req.FunctionContext.BindingContext.BindingData["mediaId"]?.ToString();
 
       if (string.IsNullOrWhiteSpace(mediaId))
       {
@@ -213,11 +221,80 @@ public class MediaFunctions
     }
   }
 
+  [Function("GetAllMedia")]
+  public async Task<HttpResponseData> GetAllMedia(
+    [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "media")] HttpRequestData req)
+  {
+    _appLogger.LogInformation("SharedMediaFunctions.GetAllMedia function triggered");
+
+    // Validate API key using helper method
+    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "GetAllMedia");
+    if (apiValidationResult != null)
+    {
+      return apiValidationResult;
+    }
+
+    try
+    {
+      // Get optional query parameters
+      var mediaType = req.Query["mediaType"];
+      var authorId = req.Query["authorId"];
+      var limitStr = req.Query["limit"];
+      int? limit = null;
+
+      if (!string.IsNullOrWhiteSpace(limitStr) && int.TryParse(limitStr, out var parsedLimit))
+      {
+        limit = parsedLimit;
+      }
+
+      IEnumerable<SharedStorage.Models.MediaEntity> mediaItems;
+
+      // Get media based on provided filters
+      if (!string.IsNullOrWhiteSpace(authorId))
+      {
+        mediaItems = await _mediaService.GetMediaByAuthorAsync(authorId, mediaType, limit);
+      }
+      else if (!string.IsNullOrWhiteSpace(mediaType))
+      {
+        mediaItems = await _mediaService.GetMediaByTypeAsync(mediaType, limit);
+      }
+      else
+      {
+        // For now, return by type to avoid getting all media (performance)
+        // In a real implementation, you might want to implement pagination
+        mediaItems = await _mediaService.GetMediaByTypeAsync("image", limit ?? 50);
+        var videos = await _mediaService.GetMediaByTypeAsync("video", limit ?? 50);
+        mediaItems = mediaItems.Concat(videos);
+      }
+
+      // Return success response
+      var response = req.CreateResponse(HttpStatusCode.OK);
+      response.Headers.Add("Content-Type", "application/json");
+
+      var responseBody = JsonSerializer.Serialize(mediaItems, new JsonSerializerOptions
+      {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+      });
+
+      await response.WriteStringAsync(responseBody);
+
+      _appLogger.LogInformation("Successfully retrieved {Count} media items", mediaItems.Count());
+      return response;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Error retrieving media list", ex);
+      var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+      await errorResponse.WriteStringAsync("Internal server error");
+      return errorResponse;
+    }
+  }
+
   [Function("GetMediaByContentId")]
   public async Task<HttpResponseData> GetMediaByContentId(
     [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "media/content/{contentId}")] HttpRequestData req)
   {
-    _appLogger.LogInformation("GetMediaByContentId function triggered");
+    _appLogger.LogInformation("SharedMediaFunctions.GetMediaByContentId function triggered");
 
     // Validate API key using helper method
     var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "GetMediaByContentId");
@@ -229,7 +306,7 @@ public class MediaFunctions
     try
     {
       // Extract content ID from route
-      var contentId = req.Query["contentId"] ?? req.FunctionContext.BindingContext.BindingData["contentId"]?.ToString();
+      var contentId = req.FunctionContext.BindingContext.BindingData["contentId"]?.ToString();
 
       if (string.IsNullOrWhiteSpace(contentId))
       {
@@ -272,7 +349,7 @@ public class MediaFunctions
   public async Task<HttpResponseData> DeleteMedia(
     [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "media/{mediaId}")] HttpRequestData req)
   {
-    _appLogger.LogInformation("DeleteMedia function triggered");
+    _appLogger.LogInformation("SharedMediaFunctions.DeleteMedia function triggered");
 
     // Validate API key using helper method
     var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "DeleteMedia");
@@ -284,7 +361,7 @@ public class MediaFunctions
     try
     {
       // Extract media ID from route
-      var mediaId = req.Query["mediaId"] ?? req.FunctionContext.BindingContext.BindingData["mediaId"]?.ToString();
+      var mediaId = req.FunctionContext.BindingContext.BindingData["mediaId"]?.ToString();
 
       if (string.IsNullOrWhiteSpace(mediaId))
       {
@@ -315,5 +392,30 @@ public class MediaFunctions
       await errorResponse.WriteStringAsync("Internal server error");
       return errorResponse;
     }
+  }
+
+  [Function("Ping")]
+  public async Task<HttpResponseData> Ping(
+    [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "media/ping")] HttpRequestData req)
+  {
+    _appLogger.LogInformation("SharedMediaFunctions.Ping function triggered");
+
+    var response = req.CreateResponse(HttpStatusCode.OK);
+    response.Headers.Add("Content-Type", "application/json");
+
+    var pingResponse = new
+    {
+      status = "healthy",
+      timestamp = DateTime.UtcNow,
+      service = "SharedMediaFunctions",
+      version = "1.0.0"
+    };
+
+    await response.WriteStringAsync(JsonSerializer.Serialize(pingResponse, new JsonSerializerOptions
+    {
+      PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    }));
+
+    return response;
   }
 }
