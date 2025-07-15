@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Functions.BlogPosts.Services;
 using Functions.Authors.Services;
+using Functions.PortfolioPiece.Services;
 using SharedStorage.Extensions;
 
 namespace Functions.Extensions;
@@ -15,6 +16,7 @@ public static class FunctionServiceExtensions
     // Register Function-specific content services
     services.AddScoped<IBlogPostService, BlogPostService>();
     services.AddScoped<IAuthorService, AuthorService>();
+    services.AddScoped<IPortfolioPieceService, PortfolioPieceService>();
 
     // Add other Function-specific services here
 
