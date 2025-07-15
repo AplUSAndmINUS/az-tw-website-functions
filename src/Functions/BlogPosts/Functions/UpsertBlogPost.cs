@@ -1,152 +1,46 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
 using Functions.BlogPosts.Services;
 using Functions.BlogPosts.Models;
+using Functions.Shared;
 using System.Net;
-using System.Text.Json;
 using Utils;
 using Utils.Validation;
 using Utils.Extensions;
 
 namespace Functions.BlogPosts.Functions;
 
-public class UpsertBlogPost
+public class UpsertBlogPost : BaseContentFunctions<IBlogPostService, BlogPostModel, BlogPostDTO, BlogPostWithMediaDTO>
 {
-  private readonly IAppInsightsLogger<UpsertBlogPost> _appLogger;
   private readonly IBlogPostService _blogPostService;
-  private readonly IAPIKeyValidator _apiKeyValidator;
 
   public UpsertBlogPost(
-    IAppInsightsLogger<UpsertBlogPost> logger,
+    IAppInsightsLogger<BaseContentFunctions<IBlogPostService, BlogPostModel, BlogPostDTO, BlogPostWithMediaDTO>> logger,
     IBlogPostService blogPostService,
     IAPIKeyValidator apiKeyValidator)
+    : base(logger, blogPostService, apiKeyValidator)
   {
-    _appLogger = logger ?? throw new ArgumentNullException(nameof(logger));
-    _blogPostService = blogPostService ?? throw new ArgumentNullException(nameof(blogPostService));
-    _apiKeyValidator = apiKeyValidator ?? throw new ArgumentNullException(nameof(apiKeyValidator));
+    _blogPostService = blogPostService;
   }
 
-  [Function("UpsertBlogPost")]
-  public async Task<HttpResponseData> Run(
-    [HttpTrigger(AuthorizationLevel.Function, "post", "put", Route = "posts/{slug?}")] HttpRequestData req)
-  {
-    _appLogger.LogInformation("UpsertBlogPost function triggered");
-
-    // Validate API key using helper method
-    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "UpsertBlogPost");
-    if (apiValidationResult != null)
-    {
-      return apiValidationResult;
-    }
-
-    try
-    {
-      // Read the request body
-      var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-      _appLogger.LogInformation("Request body received: {RequestBody}", requestBody);
-
-      if (string.IsNullOrWhiteSpace(requestBody))
-      {
-        _appLogger.LogWarning("Request body is empty");
-        var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-        await badResponse.WriteStringAsync("Request body is required");
-        return badResponse;
-      }
-
-      // Use the simplified JsonHelper that always returns a valid object
-      var blogPost = JsonHelper.Deserialize<BlogPostModel>(requestBody);
-
-      // Basic validation to ensure we got meaningful data
-      if (string.IsNullOrWhiteSpace(blogPost.Title) && string.IsNullOrWhiteSpace(blogPost.Content))
-      {
-        _appLogger.LogWarning("Failed to deserialize blog post model or received empty model");
-        var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-        await badResponse.WriteStringAsync("Invalid blog post data provided");
-        return badResponse;
-      }
-
-      // Ensure all DateTime fields are properly set to UTC
-      EnsureDateTimeFieldsAreUtc(blogPost);
-
-      _appLogger.LogInformation("Deserialized blog post: Title={Title}, Slug={Slug}", blogPost.Title, blogPost.Slug);
-
-      // Extract slug from route or use the one from the model
-      var slug = req.FunctionContext.BindingContext.BindingData.ContainsKey("slug")
-          ? req.FunctionContext.BindingContext.BindingData["slug"]?.ToString()
-          : blogPost.Slug;
-
-      _appLogger.LogInformation("Using slug: {Slug}", slug ?? "null");
-
-      if (string.IsNullOrWhiteSpace(slug))
-      {
-        _appLogger.LogWarning("Slug is missing from both route and model");
-        var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-        await badResponse.WriteStringAsync("Slug is required");
-        return badResponse;
-      }
-
-      blogPost.Slug = slug;
-
-      // Validate the model
-      var validationErrors = ValidateModel(blogPost);
-      if (validationErrors.Any())
-      {
-        _appLogger.LogWarning("Model validation failed: {Errors}", string.Join(", ", validationErrors));
-        var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-        await badResponse.WriteStringAsync($"Validation errors: {string.Join(", ", validationErrors)}");
-        return badResponse;
-      }
-
-      _appLogger.LogInformation("About to call UpsertPostAsync for slug: {Slug}", blogPost.Slug);
-
-      // Call the service to upsert the blog post
-      var result = await _blogPostService.UpsertPostAsync(blogPost.Slug, blogPost);
-
-      _appLogger.LogInformation("UpsertPostAsync completed. Result: {Result}", result != null ? "Success" : "Failed");
-
-      if (result == null)
-      {
-        _appLogger.LogError("Failed to upsert blog post", new Exception("UpsertPostAsync returned null"));
-        var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-        await errorResponse.WriteStringAsync("Failed to upsert blog post");
-        return errorResponse;
-      }
-
-      // Return success response using JsonHelper
-      var response = req.CreateResponse(HttpStatusCode.OK);
-      response.Headers.Add("Content-Type", "application/json");
-      await response.WriteStringAsync(JsonHelper.Serialize(result));
-      return response;
-    }
-    catch (Exception ex)
-    {
-      _appLogger.LogError("Error in UpsertBlogPost: {Error}", ex);
-      _appLogger.LogError("Stack trace: {StackTrace}", ex);
-      var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-      await errorResponse.WriteStringAsync($"Internal server error: {ex.Message}");
-      return errorResponse;
-    }
-  }
-
-  private static List<string> ValidateModel(BlogPostModel model)
+  protected override HttpResponseData? ValidateContentModelFields(HttpRequestData req, BlogPostModel model)
   {
     var errors = new List<string>();
 
-    try { Utils.Validation.DataValidation.Required(model.Title, "Title"); }
-    catch (ArgumentException) { errors.Add("Title is required"); }
+    if (string.IsNullOrWhiteSpace(model.Title))
+      errors.Add("Title is required");
 
-    try { Utils.Validation.DataValidation.Required(model.Slug, "Slug"); }
-    catch (ArgumentException) { errors.Add("Slug is required"); }
+    if (string.IsNullOrWhiteSpace(model.Slug))
+      errors.Add("Slug is required");
 
-    try { Utils.Validation.DataValidation.Required(model.AuthorSlug, "AuthorSlug"); }
-    catch (ArgumentException) { errors.Add("Author slug is required"); }
+    if (string.IsNullOrWhiteSpace(model.AuthorSlug))
+      errors.Add("Author slug is required");
 
-    try { Utils.Validation.DataValidation.Required(model.Content, "Content"); }
-    catch (ArgumentException) { errors.Add("Content is required"); }
+    if (string.IsNullOrWhiteSpace(model.Content))
+      errors.Add("Content is required");
 
-    try { Utils.Validation.DataValidation.Required(model.Category, "Category"); }
-    catch (ArgumentException) { errors.Add("Category is required"); }
+    if (string.IsNullOrWhiteSpace(model.Category))
+      errors.Add("Category is required");
 
     if (model.TagsList == null)
       errors.Add("Tags list is required (can be empty array)");
@@ -170,7 +64,86 @@ public class UpsertBlogPost
       catch (ArgumentException) { errors.Add("FeaturedMediaId must be valid"); }
     }
 
-    return errors;
+    if (errors.Any())
+    {
+      _appLogger.LogWarning("Model validation failed: {Errors}", string.Join(", ", errors));
+      return CreateBadRequestResponse(req, $"Validation errors: {string.Join(", ", errors)}");
+    }
+
+    return null;
+  }
+
+  [Function("UpsertBlogPost")]
+  public async Task<HttpResponseData> Run(
+    [HttpTrigger(AuthorizationLevel.Function, "post", "put", Route = "posts/{slug?}")] HttpRequestData req)
+  {
+    _appLogger.LogInformation("UpsertBlogPost function triggered");
+
+    // Validate API key using base class helper method
+    var apiValidationResult = await ValidateApiKeyAsync(req, "UpsertBlogPost");
+    if (apiValidationResult != null)
+    {
+      return apiValidationResult;
+    }
+
+    try
+    {
+      // Read and deserialize the request body using base class method
+      var (blogPost, errorResponse) = await ReadAndDeserializeBodyAsync<BlogPostModel>(req);
+      if (errorResponse != null)
+      {
+        return errorResponse;
+      }
+
+      _appLogger.LogInformation("Deserialized blog post: Title={Title}, Slug={Slug}", blogPost!.Title, blogPost.Slug);
+
+      // Extract slug from route or use the one from the model
+      var slug = req.FunctionContext.BindingContext.BindingData.ContainsKey("slug")
+          ? req.FunctionContext.BindingContext.BindingData["slug"]?.ToString()
+          : blogPost.Slug;
+
+      _appLogger.LogInformation("Using slug: {Slug}", slug ?? "null");
+
+      if (string.IsNullOrWhiteSpace(slug))
+      {
+        _appLogger.LogWarning("Slug is missing from both route and model");
+        return CreateBadRequestResponse(req, "Slug is required");
+      }
+
+      blogPost.Slug = slug;
+
+      // Ensure all DateTime fields are properly set to UTC
+      EnsureDateTimeFieldsAreUtc(blogPost);
+
+      // Validate the model using base class method
+      var validationResult = ValidateContentModel(req, blogPost);
+      if (validationResult != null)
+      {
+        return validationResult;
+      }
+
+      _appLogger.LogInformation("About to call UpsertPostAsync for slug: {Slug}", blogPost.Slug);
+
+      // Call the service to upsert the blog post
+      var result = await _blogPostService.UpsertPostAsync(blogPost.Slug, blogPost);
+
+      _appLogger.LogInformation("UpsertPostAsync completed. Result: {Result}", result != null ? "Success" : "Failed");
+
+      if (result == null)
+      {
+        _appLogger.LogError("Failed to upsert blog post", new Exception("UpsertPostAsync returned null"));
+        return CreateServerErrorResponse(req, "Failed to upsert blog post");
+      }
+
+      // Return success response using base class method
+      return await CreateJsonResponseAsync(req, result);
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Error in UpsertBlogPost: {Error}", ex);
+      _appLogger.LogError("Stack trace: {StackTrace}", ex);
+      return CreateServerErrorResponse(req, $"Internal server error: {ex.Message}");
+    }
   }
 
   private static void EnsureDateTimeFieldsAreUtc(BlogPostModel blogPost)

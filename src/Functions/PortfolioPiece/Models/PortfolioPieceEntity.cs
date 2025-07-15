@@ -4,7 +4,7 @@ using Utils.Extensions;
 using Utils.Validation;
 using Functions.PortfolioPiece.Models;
 
-namespace Functions.PortfolioPieces.Models;
+namespace Functions.PortfolioPiece.Models;
 
 /// <summary>
 /// Entity class for portfolio pieces stored in Azure Table Storage

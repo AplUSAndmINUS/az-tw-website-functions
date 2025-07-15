@@ -1,11 +1,10 @@
 using System.Text.Json;
 using Utils.Validation;
 using Utils.Extensions;
-using Functions.PortfolioPieces.Models;
 using Functions.PortfolioPiece.Models;
 using SharedStorage.Models;
 
-namespace Functions.PortfolioPieces.Models;
+namespace Functions.PortfolioPiece.Models;
 
 public class PortfolioPieceMapper : BaseContentMapper<PortfolioPieceModel, PortfolioPieceEntity>
 {
