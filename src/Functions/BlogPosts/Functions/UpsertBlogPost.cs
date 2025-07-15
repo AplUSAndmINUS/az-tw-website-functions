@@ -67,7 +67,7 @@ public class UpsertBlogPost : BaseContentFunctions<IBlogPostService, BlogPostMod
     if (errors.Any())
     {
       _appLogger.LogWarning("Model validation failed: {Errors}", string.Join(", ", errors));
-      return CreateBadRequestResponse(req, $"Validation errors: {string.Join(", ", errors)}");
+      return CreateValidationErrorResponse(req, errors);
     }
 
     return null;

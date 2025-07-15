@@ -108,17 +108,4 @@ public class UpsertAuthorFunction : BaseContentFunctions<IAuthorService, AuthorM
 
     return null;
   }
-
-  /// <summary>
-  /// Create validation error response with proper formatting
-  /// </summary>
-  private HttpResponseData CreateValidationErrorResponse(HttpRequestData req, IEnumerable<string> errors)
-  {
-    var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-    errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
-
-    var errorObject = new { errors = errors.ToArray() };
-    errorResponse.WriteString(JsonHelper.Serialize(errorObject));
-    return errorResponse;
-  }
 }
