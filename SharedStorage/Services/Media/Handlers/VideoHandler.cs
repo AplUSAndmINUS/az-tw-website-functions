@@ -28,7 +28,7 @@ public class VideoHandler : MediaHandler, IMediaTypeHandler
     _logger = logger ?? throw new ArgumentNullException(nameof(logger));
   }
 
-  public override async Task<MediaEntity> UploadAsync(Stream stream, string fileName, string contentType, string? authorId = null)
+  public override async Task<MediaEntity> UploadAsync(Stream stream, string fileName, string contentType, string? authorId = null, string? contentId = null, string? relatedContentType = null)
   {
     try
     {
@@ -44,9 +44,9 @@ public class VideoHandler : MediaHandler, IMediaTypeHandler
       // Create the container name based on content section
       var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Video);
 
-      // Upload video to blob storage
+      // Upload video to blob storage with content relationship if provided
       _logger.LogInformation("Uploading video to blob storage: {BlobName}", videoBlobName);
-      var mediaReference = await _blobStorageService.UploadBlobAsync(containerName, videoBlobName, stream);
+      var mediaReference = await _blobStorageService.UploadBlobAsync(containerName, videoBlobName, stream, contentId, relatedContentType);
 
       // Generate video thumbnail (placeholder for now)
       // In production, this would extract an actual frame from the video
@@ -72,7 +72,9 @@ public class VideoHandler : MediaHandler, IMediaTypeHandler
         Height = videoMetadata.Height,
         UploadedAt = DateTime.UtcNow,
         Resolution = $"{videoMetadata.Width}x{videoMetadata.Height}",
-        VidPurpose = "introVideo" // Default purpose
+        VidPurpose = "introVideo", // Default purpose
+        ContentId = contentId ?? string.Empty, // Set ContentId if provided
+        RelatedContentType = relatedContentType ?? string.Empty // Set RelatedContentType if provided
       };
 
       _logger.LogInformation("Successfully uploaded video {MediaId} with file {FileName}",

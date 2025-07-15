@@ -708,6 +708,7 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
   /// <summary>
   /// Ensures that metadata linking a media item to a blog post is properly maintained.
   /// Creates entries in the appropriate metadata tables (e.g., mockblogimagesmetadata, mockblogvideometadata)
+  /// and updates the media entity with ContentId and RelatedContentType.
   /// </summary>
   private async Task EnsureMediaReferenceIntegrityAsync(string blogSlug, string mediaId, string? mediaType = null)
   {
@@ -748,6 +749,57 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
       await _tableStorageService.UpsertEntityAsync(metadataTableName, metadataEntity);
       _appLogger.LogInformation("Created metadata link between blog {BlogSlug} and {MediaType} {MediaId}",
         blogSlug, mediaType, mediaId);
+
+      // Update the MediaEntity with ContentId and RelatedContentType
+      if (media != null && (string.IsNullOrEmpty(media.ContentId) || media.ContentId != blogSlug))
+      {
+        // Shallow copy the entity to avoid modifying the cached object
+        var updatedMedia = new MediaEntity
+        {
+          Id = media.Id,
+          PartitionKey = media.PartitionKey,
+          RowKey = media.RowKey,
+          ETag = media.ETag,
+          Timestamp = media.Timestamp,
+          MediaType = media.MediaType,
+          Filename = media.Filename,
+          Url = media.Url,
+          ThumbnailUrl = media.ThumbnailUrl,
+          Description = media.Description,
+          AltText = media.AltText,
+          ContentType = media.ContentType,
+          AuthorId = media.AuthorId,
+          Width = media.Width,
+          Height = media.Height,
+          Purpose = media.Purpose,
+          UploadedAt = media.UploadedAt,
+          ContentId = blogSlug,
+          RelatedContentType = "BlogPost"
+        };
+
+        // Get table name for media entities
+        var useMock = System.Environment.GetEnvironmentVariable("USE_MOCK_STORAGE")?.ToLowerInvariant() == "true";
+        var envTableName = System.Environment.GetEnvironmentVariable("MEDIA_TABLE_NAME");
+
+        string mediaTableName;
+        if (!string.IsNullOrEmpty(envTableName))
+        {
+          // If an explicit table name is provided via environment variable, use that
+          mediaTableName = useMock ? $"mock{envTableName}" : envTableName;
+        }
+        else
+        {
+          // Otherwise use ContentNameResolver for consistent naming
+          mediaTableName = Utils.ContentNameResolver.GetTableName(Utils.Constants.ContentSections.Blog, Utils.Constants.AssetType.Media, useMock);
+        }
+
+        var validatedMediaTableName = SharedStorage.Validators.TableNameValidator.ValidateTableName(mediaTableName);
+
+        // Update the media entity with the blog post reference
+        await _tableStorageService.UpsertEntityAsync(validatedMediaTableName, updatedMedia);
+        _appLogger.LogInformation("Updated media {MediaId} with ContentId={BlogSlug} and RelatedContentType=BlogPost",
+          mediaId, blogSlug);
+      }
     }
     catch (Exception ex)
     {

@@ -35,7 +35,9 @@ public static class MediaReferenceExtensions
       Url = mediaReference.CdnUrl,
       ThumbnailUrl = mediaReference.ThumbnailCdnUrl,
       UploadedAt = DateTime.UtcNow,
-      LastModified = DateTime.UtcNow
+      LastModified = DateTime.UtcNow,
+      ContentId = mediaReference.ContentId ?? string.Empty,
+      RelatedContentType = mediaReference.RelatedContentType ?? string.Empty
     };
 
     return model.EnsureValidCdnUrls();

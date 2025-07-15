@@ -9,10 +9,11 @@ namespace SharedStorage.Services.Media;
 public interface IMediaService
 {
   // Core media operations
-  Task<MediaEntity> UploadMediaAsync(string mediaType, Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = null);
+  Task<MediaEntity> UploadMediaAsync(string mediaType, Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = null, string? contentId = null, string? relatedContentType = null);
   Task<MediaEntity?> GetMediaAsync(string mediaId);
   Task<IEnumerable<MediaEntity>> GetMediaByAuthorAsync(string authorId, string? mediaType = null, int? limit = null);
   Task<IEnumerable<MediaEntity>> GetMediaByTypeAsync(string mediaType, int? limit = null);
+  Task<IEnumerable<MediaEntity>> GetMediaByContentIdAsync(string contentId, string? relatedContentType = null, int? limit = null);
   Task<bool> DeleteMediaAsync(string mediaId);
 
   // Bulk operations
@@ -20,8 +21,8 @@ public interface IMediaService
   Task<int> DeleteMediaBatchAsync(string[] mediaIds);
 
   // Specialized operations
-  Task<MediaEntity> UploadImageAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = "coverImage");
-  Task<MediaEntity> UploadVideoAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? purpose = "introVideo");
+  Task<MediaEntity> UploadImageAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = "coverImage", string? contentId = null, string? relatedContentType = null);
+  Task<MediaEntity> UploadVideoAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? purpose = "introVideo", string? contentId = null, string? relatedContentType = null);
 }
 
 public partial class MediaService : IMediaService
@@ -62,7 +63,7 @@ public partial class MediaService : IMediaService
       _handlers.Count, _tableName);
   }
 
-  public async Task<MediaEntity> UploadMediaAsync(string mediaType, Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = null)
+  public async Task<MediaEntity> UploadMediaAsync(string mediaType, Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = null, string? contentId = null, string? relatedContentType = null)
   {
     _appLogger.LogInformation("Uploading media of type {MediaType}, file: {FileName}", mediaType, fileName);
 
@@ -86,7 +87,7 @@ public partial class MediaService : IMediaService
     try
     {
       // Use the appropriate handler to process and upload the media
-      var mediaEntity = await handler.UploadAsync(stream, fileName, GetContentType(fileName), authorId);
+      var mediaEntity = await handler.UploadAsync(stream, fileName, GetContentType(fileName), authorId, contentId, relatedContentType);
 
       // Set additional metadata
       if (!string.IsNullOrWhiteSpace(description))
@@ -199,6 +200,36 @@ public partial class MediaService : IMediaService
     }
   }
 
+  public async Task<IEnumerable<MediaEntity>> GetMediaByContentIdAsync(string contentId, string? relatedContentType = null, int? limit = null)
+  {
+    if (string.IsNullOrWhiteSpace(contentId))
+      throw new ArgumentException("Content ID is required", nameof(contentId));
+
+    try
+    {
+      var filters = new List<string> { $"ContentId eq '{contentId}'" };
+
+      if (!string.IsNullOrWhiteSpace(relatedContentType))
+        filters.Add($"RelatedContentType eq '{relatedContentType}'");
+
+      var filter = string.Join(" and ", filters);
+      var pageSize = Math.Min(limit ?? 50, 100);
+
+      var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, pageSize);
+      var entities = result.Entities.Select(ConvertToMediaEntity).ToList();
+
+      _appLogger.LogInformation("Retrieved {Count} media items for content ID {ContentId}",
+        entities.Count, contentId);
+
+      return entities;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to get media for content ID {ContentId}: {Error}", ex, contentId, ex.Message);
+      throw;
+    }
+  }
+
   public async Task<bool> DeleteMediaAsync(string mediaId)
   {
     if (string.IsNullOrWhiteSpace(mediaId))
@@ -273,14 +304,14 @@ public partial class MediaService : IMediaService
     return deletedCount;
   }
 
-  public async Task<MediaEntity> UploadImageAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = "coverImage")
+  public async Task<MediaEntity> UploadImageAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = "coverImage", string? contentId = null, string? relatedContentType = null)
   {
-    return await UploadMediaAsync("image", stream, fileName, authorId, description, altText, purpose);
+    return await UploadMediaAsync("image", stream, fileName, authorId, description, altText, purpose, contentId, relatedContentType);
   }
 
-  public async Task<MediaEntity> UploadVideoAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? purpose = "introVideo")
+  public async Task<MediaEntity> UploadVideoAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? purpose = "introVideo", string? contentId = null, string? relatedContentType = null)
   {
-    return await UploadMediaAsync("video", stream, fileName, authorId, description, purpose: purpose);
+    return await UploadMediaAsync("video", stream, fileName, authorId, description, null, purpose, contentId, relatedContentType);
   }
 
   private MediaEntity ConvertToMediaEntity(Azure.Data.Tables.TableEntity tableEntity)
@@ -303,6 +334,8 @@ public partial class MediaService : IMediaService
       AltText = tableEntity.GetString("AltText") ?? string.Empty,
       ThumbnailUrl = tableEntity.GetString("ThumbnailUrl") ?? string.Empty,
       ContentType = tableEntity.GetString("ContentType") ?? string.Empty,
+      ContentId = tableEntity.GetString("ContentId"),
+      RelatedContentType = tableEntity.GetString("RelatedContentType"),
       Width = tableEntity.GetInt32("Width") ?? 0,
       Height = tableEntity.GetInt32("Height") ?? 0,
       UploadedAt = (tableEntity.GetDateTime("UploadedAt") ?? DateTime.UtcNow).EnsureUtc()

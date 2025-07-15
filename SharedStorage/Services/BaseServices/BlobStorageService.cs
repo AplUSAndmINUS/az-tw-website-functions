@@ -156,7 +156,26 @@ public class BlobStorageService : IBlobStorageService
             var blobName = blob.Name;
             var (section, assetType) = ParseContainerName(containerName);
             var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName);
-            blobReferences.Add(new BlobReference(blobName, cdnUrl));
+
+            // Get blob client to access metadata
+            var blobClient = containerClient.GetBlobClient(blobName);
+            var blobProperties = await blobClient.GetPropertiesAsync();
+
+            // Look for metadata that might contain ContentId and RelatedContentType
+            string? contentId = null;
+            string? relatedContentType = null;
+
+            if (blobProperties.Value.Metadata.TryGetValue("ContentId", out var contentIdValue))
+            {
+                contentId = contentIdValue;
+            }
+
+            if (blobProperties.Value.Metadata.TryGetValue("RelatedContentType", out var relatedContentTypeValue))
+            {
+                relatedContentType = relatedContentTypeValue;
+            }
+
+            blobReferences.Add(new BlobReference(blobName, cdnUrl, contentId, relatedContentType));
         }
 
         return blobReferences;
@@ -185,7 +204,23 @@ public class BlobStorageService : IBlobStorageService
 
         var (section, assetType) = ParseContainerName(containerName);
         var cdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, blobName);
-        return new BlobReference(blobName, cdnUrl);
+
+        // Look for metadata that might contain ContentId and RelatedContentType
+        var blobProperties = await blobClient.GetPropertiesAsync();
+        string? contentId = null;
+        string? relatedContentType = null;
+
+        if (blobProperties.Value.Metadata.TryGetValue("ContentId", out var contentIdValue))
+        {
+            contentId = contentIdValue;
+        }
+
+        if (blobProperties.Value.Metadata.TryGetValue("RelatedContentType", out var relatedContentTypeValue))
+        {
+            relatedContentType = relatedContentTypeValue;
+        }
+
+        return new BlobReference(blobName, cdnUrl, contentId, relatedContentType);
     }
 
     public async Task<BlobDownloadResult> DownloadBlobAsync(string containerName, string blobName)
@@ -220,7 +255,7 @@ public class BlobStorageService : IBlobStorageService
         }
     }
 
-    public async Task<MediaReference> UploadBlobAsync(string containerName, string blobName, Stream content)
+    public async Task<MediaReference> UploadBlobAsync(string containerName, string blobName, Stream content, string? contentId = null, string? relatedContentType = null)
     {
         var resolvedContainerName = ResolveContainerName(containerName);
         _appLogger.LogInformation("Resolving container name to {ResolvedContainerName}", resolvedContainerName);
@@ -228,6 +263,10 @@ public class BlobStorageService : IBlobStorageService
         await AzureResourceValidator.ValidateAzureBlobContainerExistsAsync(_blobServiceClient, containerName);
         await containerClient.CreateIfNotExistsAsync();
         _appLogger.LogInformation("Uploading blob {BlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
+        if (!string.IsNullOrEmpty(contentId))
+        {
+            _appLogger.LogInformation("Uploading blob with content relationship: ContentId={ContentId}, RelatedContentType={RelatedContentType}", contentId, relatedContentType ?? "unknown");
+        }
         _appLogger.LogBlobUpload(
             containerName,
             nameof(UploadBlobAsync),
@@ -262,6 +301,24 @@ public class BlobStorageService : IBlobStorageService
 
             // Upload the blob
             var uploadResponse = await blobClient.UploadAsync(content, overwrite: true);
+
+            // Add metadata if ContentId is provided
+            if (!string.IsNullOrEmpty(contentId))
+            {
+                var metadata = new Dictionary<string, string>();
+                metadata["ContentId"] = contentId;
+
+                if (!string.IsNullOrEmpty(relatedContentType))
+                {
+                    metadata["RelatedContentType"] = relatedContentType;
+                }
+
+                // Set metadata on the blob
+                await blobClient.SetMetadataAsync(metadata);
+                _appLogger.LogInformation("Added content relationship metadata to blob {BlobName}: ContentId={ContentId}, RelatedContentType={RelatedContentType}",
+                    blobName, contentId, relatedContentType ?? "unknown");
+            }
+
             _appLogger.LogInformation("Successfully uploaded blob {BlobName} to container {ContainerName} (resolved: {ResolvedContainerName})", blobName, containerName, resolvedContainerName);
 
             // Get the CDN URL for the uploaded blob
@@ -272,7 +329,7 @@ public class BlobStorageService : IBlobStorageService
             var thumbnailBlobName = blobName.Contains("/thumb_") ? blobName : $"thumb_{blobName}";
             var thumbnailCdnUrl = CdnUrlBuilder.ResolveCdnUrl(section, assetType, thumbnailBlobName);
 
-            return new MediaReference(blobName, thumbnailBlobName, cdnUrl, thumbnailCdnUrl);
+            return new MediaReference(blobName, thumbnailBlobName, cdnUrl, thumbnailCdnUrl, contentId, relatedContentType);
         }
 
         catch (RequestFailedException ex)

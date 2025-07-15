@@ -54,6 +54,8 @@ public class MediaFunctions
       var description = req.Query["description"];
       var altText = req.Query["altText"];
       var purpose = req.Query["purpose"] ?? "coverImage";
+      var contentId = req.Query["contentId"];
+      var relatedContentType = req.Query["relatedContentType"];
 
       // Upload the image
       var mediaEntity = await _mediaService.UploadImageAsync(
@@ -62,7 +64,9 @@ public class MediaFunctions
         authorId,
         description,
         altText,
-        purpose);
+        purpose,
+        contentId,
+        relatedContentType);
 
       // Return success response
       var response = req.CreateResponse(HttpStatusCode.Created);
@@ -115,6 +119,8 @@ public class MediaFunctions
       var authorId = req.Query["authorId"];
       var description = req.Query["description"];
       var purpose = req.Query["purpose"] ?? "introVideo";
+      var contentId = req.Query["contentId"];
+      var relatedContentType = req.Query["relatedContentType"];
 
       // Upload the video
       var mediaEntity = await _mediaService.UploadVideoAsync(
@@ -122,7 +128,9 @@ public class MediaFunctions
         fileName,
         authorId,
         description,
-        purpose);
+        purpose,
+        contentId,
+        relatedContentType);
 
       // Return success response
       var response = req.CreateResponse(HttpStatusCode.Created);
@@ -199,6 +207,61 @@ public class MediaFunctions
     catch (Exception ex)
     {
       _appLogger.LogError("Error retrieving media", ex);
+      var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+      await errorResponse.WriteStringAsync("Internal server error");
+      return errorResponse;
+    }
+  }
+
+  [Function("GetMediaByContentId")]
+  public async Task<HttpResponseData> GetMediaByContentId(
+    [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "media/content/{contentId}")] HttpRequestData req)
+  {
+    _appLogger.LogInformation("GetMediaByContentId function triggered");
+
+    // Validate API key using helper method
+    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "GetMediaByContentId");
+    if (apiValidationResult != null)
+    {
+      return apiValidationResult;
+    }
+
+    try
+    {
+      // Extract content ID from route
+      var contentId = req.Query["contentId"] ?? req.FunctionContext.BindingContext.BindingData["contentId"]?.ToString();
+
+      if (string.IsNullOrWhiteSpace(contentId))
+      {
+        var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+        await badResponse.WriteStringAsync("Content ID parameter is required");
+        return badResponse;
+      }
+
+      // Get optional relatedContentType parameter
+      var relatedContentType = req.Query["relatedContentType"];
+
+      // Get media items associated with the content
+      var mediaItems = await _mediaService.GetMediaByContentIdAsync(contentId, relatedContentType);
+
+      // Return success response
+      var response = req.CreateResponse(HttpStatusCode.OK);
+      response.Headers.Add("Content-Type", "application/json");
+
+      var responseBody = JsonSerializer.Serialize(mediaItems, new JsonSerializerOptions
+      {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+      });
+
+      await response.WriteStringAsync(responseBody);
+
+      _appLogger.LogInformation("Successfully retrieved {Count} media items for content ID: {ContentId}",
+        mediaItems.Count(), contentId);
+      return response;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Error retrieving media by content ID", ex);
       var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
       await errorResponse.WriteStringAsync("Internal server error");
       return errorResponse;

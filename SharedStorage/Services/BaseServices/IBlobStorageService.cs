@@ -25,13 +25,16 @@ public record BlobDownloadResult
     }
 }
 
-public record BlobReference(string FileName, string CdnUrl, DateTimeOffset? LastModified = null, long? Size = null)
+public record BlobReference(string FileName, string CdnUrl, DateTimeOffset? LastModified = null, long? Size = null, string? ContentId = null, string? RelatedContentType = null)
 {
     public BlobReference(string fileName, string cdnUrl)
-        : this(fileName, cdnUrl, null, null) { }
+        : this(fileName, cdnUrl, null, null, null, null) { }
+
+    public BlobReference(string fileName, string cdnUrl, string? contentId, string? relatedContentType)
+        : this(fileName, cdnUrl, null, null, contentId, relatedContentType) { }
 }
 
-public record MediaReference(string OriginalBlobName, string ThumbnailBlobName, string CdnUrl, string ThumbnailCdnUrl);
+public record MediaReference(string OriginalBlobName, string ThumbnailBlobName, string CdnUrl, string ThumbnailCdnUrl, string? ContentId = null, string? RelatedContentType = null);
 
 public interface IBlobStorageService
 {
@@ -50,10 +53,10 @@ public interface IBlobStorageService
         int pageSize = 25,
         string? continuationToken = null
     );
-    
+
     Task<BlobReference> GetBlobReferenceAsync(string containerName, string blobName);
 
     Task<BlobDownloadResult> DownloadBlobAsync(string containerName, string blobName);
-    Task<MediaReference> UploadBlobAsync(string containerName, string blobName, Stream content);
+    Task<MediaReference> UploadBlobAsync(string containerName, string blobName, Stream content, string? contentId = null, string? relatedContentType = null);
     Task DeleteBlobAsync(string containerName, string blobName);
 }
