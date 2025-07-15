@@ -35,20 +35,32 @@ public class ImageConversionService : IImageService
 
   public async Task<ImageConversionResult> ConvertToWebPAsync(Stream input, int? maxWidth = null, int? maxHeight = null, int quality = 85)
   {
-    ValidateInputStream(input);
+    // Simple validation without complex stream manipulation
+    if (input == null)
+      throw new ArgumentNullException(nameof(input), "Input stream cannot be null.");
+
+    if (!input.CanRead)
+      throw new InvalidOperationException("Input stream must be readable.");
+
+    if (!input.CanSeek)
+      throw new InvalidOperationException("Input stream must be seekable for image processing.");
+
+    if (input.Length == 0)
+      throw new InvalidOperationException("Input stream cannot be empty.");
 
     _appLogger.LogInformation("Starting WebP conversion for input stream of size {Size} bytes with quality {Quality}",
       input.Length, quality);
 
     try
     {
-      // Load and process the image
+      // Ensure stream is at beginning
       input.Position = 0;
 
       // Log stream details for debugging
       _appLogger.LogInformation("Attempting to load image from stream - Position: {Position}, Length: {Length}, CanRead: {CanRead}, CanSeek: {CanSeek}",
         input.Position, input.Length, input.CanRead, input.CanSeek);
 
+      // Load the image directly - let ImageSharp handle validation
       using var image = await Image.LoadAsync(input);
 
       // Auto-orient to handle EXIF rotation
