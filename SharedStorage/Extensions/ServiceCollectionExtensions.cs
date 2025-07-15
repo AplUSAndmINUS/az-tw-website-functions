@@ -34,10 +34,12 @@ public static class ServiceCollectionExtensions
     services.AddSingleton<IThumbnailService, ThumbnailService>();
     services.AddSingleton<IImageService, ImageConversionService>();
     services.AddSingleton<IVideoThumbnailService, BasicVideoThumbnailService>();
+    services.AddSingleton<IDocumentConversionService, DocumentConversionService>();
 
     // Register media handlers
     services.AddSingleton<IMediaTypeHandler, ImageHandler>();
     services.AddSingleton<IMediaTypeHandler, VideoHandler>();
+    services.AddSingleton<IMediaTypeHandler, DocumentHandler>();
 
     // Register main media service
     services.AddSingleton<IMediaService>(provider =>
