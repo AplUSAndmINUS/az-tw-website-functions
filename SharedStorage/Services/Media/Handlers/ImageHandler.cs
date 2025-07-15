@@ -51,7 +51,7 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
       var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Images);
 
       // Store original stream in memory so we can use it twice
-      var memoryStream = new MemoryStream();
+      using var memoryStream = new MemoryStream();
       await stream.CopyToAsync(memoryStream);
       var originalStreamData = memoryStream.ToArray();
 

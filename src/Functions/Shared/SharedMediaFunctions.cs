@@ -47,7 +47,7 @@ public class SharedMediaFunctions
     try
     {
       // Check if request has a body
-      if (req.Body == null || req.Body.Length == 0)
+      if (req.Body == null)
       {
         var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
         await badResponse.WriteStringAsync("Image file is required");
@@ -63,9 +63,22 @@ public class SharedMediaFunctions
       var contentId = req.Query["contentId"];
       var relatedContentType = req.Query["relatedContentType"];
 
+      // Copy the request body to a memory stream to ensure it's seekable
+      using var memoryStream = new MemoryStream();
+      await req.Body.CopyToAsync(memoryStream);
+      memoryStream.Position = 0;
+
+      // Validate that we have actual content
+      if (memoryStream.Length == 0)
+      {
+        var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+        await badResponse.WriteStringAsync("Image file is required and cannot be empty");
+        return badResponse;
+      }
+
       // Upload the image
       var mediaEntity = await _mediaService.UploadImageAsync(
-        req.Body,
+        memoryStream,
         fileName,
         authorId,
         description,
@@ -114,7 +127,7 @@ public class SharedMediaFunctions
     try
     {
       // Check if request has a body
-      if (req.Body == null || req.Body.Length == 0)
+      if (req.Body == null)
       {
         var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
         await badResponse.WriteStringAsync("Video file is required");
@@ -129,9 +142,22 @@ public class SharedMediaFunctions
       var contentId = req.Query["contentId"];
       var relatedContentType = req.Query["relatedContentType"];
 
+      // Copy the request body to a memory stream to ensure it's seekable
+      using var memoryStream = new MemoryStream();
+      await req.Body.CopyToAsync(memoryStream);
+      memoryStream.Position = 0;
+
+      // Validate that we have actual content
+      if (memoryStream.Length == 0)
+      {
+        var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+        await badResponse.WriteStringAsync("Video file is required and cannot be empty");
+        return badResponse;
+      }
+
       // Upload the video
       var mediaEntity = await _mediaService.UploadVideoAsync(
-        req.Body,
+        memoryStream,
         fileName,
         authorId,
         description,
