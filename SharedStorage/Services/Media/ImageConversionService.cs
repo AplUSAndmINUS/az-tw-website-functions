@@ -44,11 +44,11 @@ public class ImageConversionService : IImageService
     {
       // Load and process the image
       input.Position = 0;
-      
+
       // Log stream details for debugging
       _appLogger.LogInformation("Attempting to load image from stream - Position: {Position}, Length: {Length}, CanRead: {CanRead}, CanSeek: {CanSeek}",
         input.Position, input.Length, input.CanRead, input.CanSeek);
-      
+
       using var image = await Image.LoadAsync(input);
 
       // Auto-orient to handle EXIF rotation
@@ -85,17 +85,20 @@ public class ImageConversionService : IImageService
     }
     catch (UnknownImageFormatException ex)
     {
-      _appLogger.LogError("Unsupported image format in WebP conversion: {Message}", ex, ex.Message);
+      _appLogger.LogError("Unsupported image format in WebP conversion: {Message}. Stream details - Position: {Position}, Length: {Length}, CanRead: {CanRead}, CanSeek: {CanSeek}",
+        ex, ex.Message, input.Position, input.Length, input.CanRead, input.CanSeek);
       throw new InvalidOperationException($"Unsupported image format. Supported formats: JPEG, PNG, GIF, BMP, TIFF. Error: {ex.Message}", ex);
     }
     catch (InvalidImageContentException ex)
     {
-      _appLogger.LogError("Invalid image content in WebP conversion: {Message}", ex, ex.Message);
+      _appLogger.LogError("Invalid image content in WebP conversion: {Message}. Stream details - Position: {Position}, Length: {Length}, CanRead: {CanRead}, CanSeek: {CanSeek}",
+        ex, ex.Message, input.Position, input.Length, input.CanRead, input.CanSeek);
       throw new InvalidOperationException($"Invalid or corrupted image file. Error: {ex.Message}", ex);
     }
     catch (Exception ex)
     {
-      _appLogger.LogError("Error converting image to WebP format: {Message}", ex, ex.Message);
+      _appLogger.LogError("Error converting image to WebP format: {Message}. Stream details - Position: {Position}, Length: {Length}, CanRead: {CanRead}, CanSeek: {CanSeek}",
+        ex, ex.Message, input.Position, input.Length, input.CanRead, input.CanSeek);
       throw new InvalidOperationException($"Failed to convert image to WebP format. Error: {ex.Message}", ex);
     }
   }
@@ -299,7 +302,7 @@ public class ImageConversionService : IImageService
       input.Position = 0;
       var buffer = new byte[16];
       var bytesRead = input.Read(buffer, 0, buffer.Length);
-      
+
       if (bytesRead == 0)
       {
         _appLogger.LogError("No data could be read from input stream", new InvalidOperationException("Input stream contains no readable data"));
@@ -326,22 +329,22 @@ public class ImageConversionService : IImageService
     // Check for common image file signatures
     // JPEG: FF D8 FF
     if (buffer[0] == 0xFF && buffer[1] == 0xD8 && buffer[2] == 0xFF) return true;
-    
+
     // PNG: 89 50 4E 47
     if (buffer[0] == 0x89 && buffer[1] == 0x50 && buffer[2] == 0x4E && buffer[3] == 0x47) return true;
-    
+
     // GIF: 47 49 46 38
     if (buffer[0] == 0x47 && buffer[1] == 0x49 && buffer[2] == 0x46 && buffer[3] == 0x38) return true;
-    
+
     // BMP: 42 4D
     if (buffer[0] == 0x42 && buffer[1] == 0x4D) return true;
-    
+
     // TIFF: 49 49 2A 00 or 4D 4D 00 2A
     if ((buffer[0] == 0x49 && buffer[1] == 0x49 && buffer[2] == 0x2A && buffer[3] == 0x00) ||
         (buffer[0] == 0x4D && buffer[1] == 0x4D && buffer[2] == 0x00 && buffer[3] == 0x2A)) return true;
-    
+
     // WebP: RIFF....WEBP (check positions 0-3 and 8-11)
-    if (buffer.Length >= 12 && 
+    if (buffer.Length >= 12 &&
         buffer[0] == 0x52 && buffer[1] == 0x49 && buffer[2] == 0x46 && buffer[3] == 0x46 &&
         buffer[8] == 0x57 && buffer[9] == 0x45 && buffer[10] == 0x42 && buffer[11] == 0x50) return true;
 
