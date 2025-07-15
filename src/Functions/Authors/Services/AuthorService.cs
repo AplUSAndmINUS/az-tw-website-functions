@@ -14,6 +14,7 @@ public interface IAuthorService
   Task<AuthorDTO> UpsertAuthorAsync(AuthorModel model);
   Task<AuthorDTO?> GetAuthorBySlugAsync(string slug);
   Task<AuthorWithMediaDTO?> GetAuthorWithMediaAsync(string slug);
+  Task<bool> DeleteAuthorAsync(string slug);
   // Media operations
   Task<AuthorDTO?> SetProfileImageAsync(string slug, string mediaId);
   Task<AuthorDTO?> SetBackgroundImageAsync(string slug, string mediaId);
@@ -188,6 +189,39 @@ public class AuthorService : IAuthorService
     catch (Exception ex)
     {
       _appLogger.LogError("Failed to retrieve author with media by slug: {Slug}", ex, slug);
+      throw;
+    }
+  }
+
+  public async Task<bool> DeleteAuthorAsync(string slug)
+  {
+    _appLogger.LogInformation("Deleting author by slug: {Slug}", slug);
+
+    if (string.IsNullOrWhiteSpace(slug))
+    {
+      _appLogger.LogWarning("Provided slug is null or empty.");
+      return false;
+    }
+
+    try
+    {
+      // Check if author exists
+      var entity = await _tableStorageService.GetEntityAsync<AuthorEntity>(_tableName, slug, "profile");
+      if (entity == null)
+      {
+        _appLogger.LogWarning("No author found for slug: {Slug}", slug);
+        return false;
+      }
+
+      // Delete the entity
+      await _tableStorageService.DeleteEntityAsync(_tableName, slug, "profile");
+
+      _appLogger.LogInformation("Successfully deleted author with slug: {Slug}", slug);
+      return true;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to delete author by slug: {Slug}", ex, slug);
       throw;
     }
   }

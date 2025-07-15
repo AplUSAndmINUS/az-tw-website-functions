@@ -1,11 +1,12 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using System.Net;
-using System.Text.Json;
 
 using Utils;
 using Utils.Validation;
 using Functions.Authors.Services;
+using Functions.Authors.Models;
+using Functions.Shared;
 
 namespace Functions.Authors.Functions;
 
@@ -13,92 +14,77 @@ namespace Functions.Authors.Functions;
 // Description: Retrieves an author by their slug. If the author exists, it returns the author's details.
 // If the author does not exist, it returns a 404 Not Found error.
 
-public class GetAuthorFunction
+public class GetAuthorFunction : BaseContentFunctions<IAuthorService, AuthorModel, AuthorDTO, AuthorWithMediaDTO>
 {
-  private readonly IAppInsightsLogger<GetAuthorFunction> _appLogger;
-  private readonly IAPIKeyValidator _apiKeyValidator;
-  private readonly IAuthorService _authorService;
-
-  public GetAuthorFunction(IAppInsightsLogger<GetAuthorFunction> logger, IAPIKeyValidator apiKeyValidator, IAuthorService authorService)
+  public GetAuthorFunction(
+    IAppInsightsLogger<BaseContentFunctions<IAuthorService, AuthorModel, AuthorDTO, AuthorWithMediaDTO>> logger,
+    IAPIKeyValidator apiKeyValidator,
+    IAuthorService authorService)
+    : base(logger, authorService, apiKeyValidator)
   {
-    _appLogger = logger;
-    _apiKeyValidator = apiKeyValidator;
-    _authorService = authorService;
     _appLogger.LogInformation("GetAuthorFunction initialized");
-  }
-
-  private static HttpResponseData CreateErrorResponse(HttpRequestData req, string message, HttpStatusCode statusCode)
-  {
-    var errorResponse = req.CreateResponse(statusCode);
-    errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
-
-    var errorObject = new { error = message };
-    errorResponse.WriteString(JsonHelper.Serialize(errorObject));
-    return errorResponse;
   }
 
   [Function("GetAuthorAsync")]
   public async Task<HttpResponseData> Run(
-    [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "authors/{slug}")] HttpRequestData req, string slug, FunctionContext executionContext)
+    [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "authors/{slug}")] HttpRequestData req,
+    string slug,
+    FunctionContext executionContext)
   {
     _appLogger.LogInformation("GetAuthor function triggered for slug: {Slug}", slug);
 
-    // Validate API key using helper method
-    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "GetAuthor");
+    // Validate API key using base class method
+    var apiValidationResult = await ValidateApiKeyAsync(req, "GetAuthor");
     if (apiValidationResult != null)
     {
       return apiValidationResult;
     }
 
-    _appLogger.LogInformation("Getting author by slug: {Slug}", slug);
-
     try
     {
-      // Validate the request
-      if (req == null)
+      // Validate the slug parameter
+      if (string.IsNullOrWhiteSpace(slug))
       {
-        throw new ArgumentNullException(nameof(req), "Request cannot be null.");
+        _appLogger.LogWarning("Invalid slug provided: {Slug}", slug);
+        return CreateBadRequestResponse(req, "Invalid author slug");
       }
 
-      _appLogger.LogInformation("Request validation successful.");
+      // Get author with or without media based on query parameter
+      var (_, includeMedia) = ParseGetSingleQueryParameters(req);
 
-      // Create a response with headers
-      var response = req.CreateResponse(HttpStatusCode.OK);
-      response.Headers.Add("Location", $"/authors/{slug}");
-      response.Headers.Add("Content-Type", "application/json; charset=utf-8");
-      _appLogger.LogInformation("Response created with Location header: /authors/{Slug}", slug);
-
-      // Perform a table lookup using the author slug
-      var author = await _authorService.GetAuthorBySlugAsync(slug);
-
-      if (author == null)
+      object? result = null;
+      if (includeMedia)
       {
-        _appLogger.LogWarning("Author not found for slug: {0}", slug);
-        return CreateErrorResponse(req, "Author not found", HttpStatusCode.NotFound);
+        result = await _contentService.GetAuthorWithMediaAsync(slug);
       }
       else
       {
-        _appLogger.LogInformation("Author found for slug: {Slug} with display name: {DisplayName}", slug, author.DisplayName);
+        result = await _contentService.GetAuthorBySlugAsync(slug);
       }
 
-      // Serialize the author model to JSON with consistent formatting
-      var authorJson = JsonHelper.Serialize(author);
-      _appLogger.LogInformation("Author serialized to JSON successfully for slug: {Slug}", slug);
+      if (result == null)
+      {
+        _appLogger.LogWarning("Author not found for slug: {Slug}", slug);
+        return CreateNotFoundResponse(req, "Author not found");
+      }
 
-      // Write the author JSON to the response
-      await response.WriteStringAsync(authorJson);
-
-      return response;
-    }
-    catch (ArgumentNullException ex)
-    {
-      _appLogger.LogError("Argument null exception occurred: {Message}", ex);
-      return CreateErrorResponse(req, "Invalid request parameters", HttpStatusCode.BadRequest);
+      _appLogger.LogInformation("Author found for slug: {Slug}", slug);
+      return await CreateJsonResponseAsync(req, result);
     }
     catch (Exception ex)
     {
-      _appLogger.LogError("An unexpected error occurred: {Message}", ex);
-      return CreateErrorResponse(req, "Internal server error", HttpStatusCode.InternalServerError);
+      _appLogger.LogError("An unexpected error occurred while getting author: {Message}", ex, ex.Message);
+      return CreateServerErrorResponse(req, "Internal server error");
     }
+  }
+
+  /// <summary>
+  /// Validate author-specific model fields (required by base class)
+  /// </summary>
+  protected override HttpResponseData? ValidateContentModelFields(HttpRequestData req, AuthorModel model)
+  {
+    // Authors don't use the generic upsert pattern, so this is not used
+    // But we need to implement it for the base class
+    return null;
   }
 }
