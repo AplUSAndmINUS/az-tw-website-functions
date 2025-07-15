@@ -58,12 +58,12 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
 
       // Upload thumbnail to blob storage
       _logger.LogInformation("Uploading thumbnail to blob storage: {ThumbnailBlobName}", thumbnailBlobName);
-      var thumbnailReference = await _blobStorageService.UploadBlobAsync(containerName, thumbnailBlobName, thumbnailResult.Content);
+      await _blobStorageService.UploadBlobAsync(containerName, thumbnailBlobName, thumbnailResult.Content);
 
       // Get image dimensions from conversion result
       var (width, height) = (conversionResult.Width, conversionResult.Height);
 
-      // Create media entity
+      // Create media entity using CDN URLs from mediaReference
       var imageEntity = new ImageEntity
       {
         Id = mediaId,
@@ -72,8 +72,8 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
         AuthorId = authorId ?? "system",
         Filename = webpFileName,
         MediaType = "image",
-        Url = mediaReference.CdnUrl,
-        ThumbnailUrl = thumbnailReference.CdnUrl,
+        Url = mediaReference.CdnUrl, // Use CDN URL from MediaReference
+        ThumbnailUrl = mediaReference.ThumbnailCdnUrl, // Use thumbnail CDN URL from MediaReference
         ContentType = "image/webp", // Always WebP after conversion
         Width = width,
         Height = height,

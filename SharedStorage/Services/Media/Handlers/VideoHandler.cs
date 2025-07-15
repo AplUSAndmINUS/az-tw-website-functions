@@ -51,12 +51,12 @@ public class VideoHandler : MediaHandler, IMediaTypeHandler
       // Generate video thumbnail (placeholder for now)
       // In production, this would extract an actual frame from the video
       var thumbnailResult = await _videoThumbnailService.CreatePlaceholderThumbnailAsync();
-      var thumbnailReference = await _blobStorageService.UploadBlobAsync(containerName, thumbnailBlobName, thumbnailResult.Content);
+      await _blobStorageService.UploadBlobAsync(containerName, thumbnailBlobName, thumbnailResult.Content);
 
       // Get video metadata
       var videoMetadata = await _videoThumbnailService.GetVideoMetadataAsync(stream);
 
-      // Create video entity
+      // Create video entity using CDN URLs from mediaReference
       var videoEntity = new VideoEntity
       {
         Id = mediaId,
@@ -65,8 +65,8 @@ public class VideoHandler : MediaHandler, IMediaTypeHandler
         AuthorId = authorId ?? "system",
         Filename = fileName,
         MediaType = "video",
-        Url = mediaReference.CdnUrl,
-        ThumbnailUrl = thumbnailReference.CdnUrl,
+        Url = mediaReference.CdnUrl, // Use CDN URL from MediaReference
+        ThumbnailUrl = mediaReference.ThumbnailCdnUrl, // Use thumbnail CDN URL from MediaReference
         ContentType = contentType,
         Width = videoMetadata.Width,
         Height = videoMetadata.Height,
