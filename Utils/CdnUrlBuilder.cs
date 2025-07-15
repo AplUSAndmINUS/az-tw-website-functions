@@ -8,13 +8,11 @@ public static class CdnUrlBuilder
   {
     if (string.IsNullOrWhiteSpace(blobName))
       throw new ArgumentException("Blob name cannot be null or empty.", nameof(blobName));
-    if (blobName.Contains("mock"))
-      throw new ArgumentException("Blob name cannot be a mock blob.", nameof(blobName));
 
-    if (isMockStorage)
-      return $"{ApiUrls.MockCdnBlobStorageUrl}/{ContentNameResolver.GetBlobContainerName(section, assetType, true)}/{blobName}";
+    // Remove check for "mock" in blob name as it can be part of legitimate paths
 
-    string containerName = ContentNameResolver.GetBlobContainerName(section, assetType);
+    // Always get the appropriate container name based on mock flag
+    string containerName = ContentNameResolver.GetBlobContainerName(section, assetType, isMockStorage);
 
     // Build the CDN URL
     var cdnUrl = BuildCdnUrl(section, assetType, containerName, blobName);
