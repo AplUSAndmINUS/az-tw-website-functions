@@ -60,4 +60,6 @@ artifacts/
 .LSOverride
 function-app.zip
 .vscode/settings.json
-src/Functions/BlogPosts/BlogAPI.postman_collection.json
+BlogPostAPI.postman_collection.json
+AuthorsAPI.postman_collection.json
+PortfolioPieceAPI.postman_collection.json
