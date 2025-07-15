@@ -18,7 +18,7 @@ public abstract class BaseContentEntity : ITableEntity
 
   // Unique identifier
   public string Id { get; set; } = Guid.NewGuid().ToString();
-  
+
   // Core content properties
   public string Title { get; set; } = string.Empty;
   public string AuthorSlug { get; set; } = string.Empty;
