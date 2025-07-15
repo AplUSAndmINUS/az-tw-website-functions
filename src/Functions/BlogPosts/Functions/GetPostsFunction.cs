@@ -146,16 +146,4 @@ public class GetPostsFunction : BaseContentFunctions<IBlogPostService, BlogPostM
       return CreateServerErrorResponse(req);
     }
   }
-
-  [Function("Ping")]
-  public HttpResponseData Ping([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
-  {
-    _appLogger.LogInformation("Ping function triggered.");
-
-    var response = req.CreateResponse(HttpStatusCode.OK);
-    response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-    response.WriteString("OK");
-
-    return response;
-  }
 }
