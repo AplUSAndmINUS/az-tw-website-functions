@@ -51,10 +51,10 @@ public class PortfolioPieceEntity : BaseContentEntity
       LastModified = LastModified.EnsureUtc(),
       TagsList = DeserializeTags(TagsJson)
     };
-    
+
     return (T)(object)model;
   }
-  
+
   private string[] DeserializeTags(string tagsJson)
   {
     return DataValidation.DeserializeTags(tagsJson);

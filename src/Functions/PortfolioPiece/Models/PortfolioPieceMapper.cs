@@ -25,13 +25,13 @@ public class PortfolioPieceMapper : BaseContentMapper<PortfolioPieceModel, Portf
 
     // Create new entity instance
     var entity = CreateEntityInstance();
-    
+
     // Set ID if not provided
     entity.Id = model.Id ?? Guid.NewGuid().ToString();
-    
+
     // Update common fields from base mapper
     UpdateCommonFields(entity, model, status);
-    
+
     // Set specific fields for this entity type
     entity.PublishDate = EnsureValidPublishDate(model.PublishDate, status);
     entity.LastModified = DateTime.UtcNow; // Always update LastModified on conversion
@@ -78,7 +78,7 @@ public class PortfolioPieceMapper : BaseContentMapper<PortfolioPieceModel, Portf
 
     return model;
   }
-  
+
   /// <summary>
   /// Creates a new entity instance
   /// </summary>
@@ -87,7 +87,7 @@ public class PortfolioPieceMapper : BaseContentMapper<PortfolioPieceModel, Portf
   {
     return new PortfolioPieceEntity();
   }
-  
+
   /// <summary>
   /// Convert a collection of entities to models
   /// </summary>
@@ -116,7 +116,7 @@ public class PortfolioPieceMapper : BaseContentMapper<PortfolioPieceModel, Portf
 
     // Update common fields from base mapper
     UpdateCommonFields(entity, model, status);
-    
+
     // Update specific fields for this entity type
     entity.PublishDate = EnsureValidPublishDate(model.PublishDate, status);
     entity.LastModified = DateTime.UtcNow; // Update last modified to now
@@ -124,7 +124,7 @@ public class PortfolioPieceMapper : BaseContentMapper<PortfolioPieceModel, Portf
     // Update keys if PublishDate changed
     entity.UpdateKeys();
   }
-  
+
   // DTO conversion methods
   public PortfolioPieceDTO ToDTO(PortfolioPieceModel model)
   {
@@ -207,7 +207,7 @@ public class PortfolioPieceMapper : BaseContentMapper<PortfolioPieceModel, Portf
   {
     return models?.Select(m => ToDTO(m)) ?? Enumerable.Empty<PortfolioPieceDTO>();
   }
-  
+
   // Static wrapper methods to maintain backward compatibility with existing code
   public static PortfolioPieceEntity ToEntityStatic(PortfolioPieceModel model) => Instance.ToEntity(model);
   public static PortfolioPieceModel ToModelStatic(PortfolioPieceEntity entity) => Instance.ToModel(entity);
