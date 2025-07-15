@@ -19,6 +19,9 @@ public class AuthorWithMediaDTO
   public MediaItemModel? ProfileImage { get; set; }
   public MediaItemModel? BackgroundImage { get; set; }
 
+  // JSON serialized list of media references
+  public string MediaReferencesJson => Author.MediaReferencesJson;
+
   // Constructor with minimal setup
   public AuthorWithMediaDTO()
   {
