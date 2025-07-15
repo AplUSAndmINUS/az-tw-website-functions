@@ -72,6 +72,7 @@ public abstract class BaseContentFunctions<TService, TModel, TDto, TWithMediaDto
     var limitParam = req.Query["limit"];
     var includeMediaParam = req.Query["includeMedia"];
 
+    // Fix: Only default to true when no parameter is provided, otherwise respect the explicit value
     bool? isPublished = string.IsNullOrEmpty(isPublishedParam) ? true : bool.Parse(isPublishedParam);
     int? limit = string.IsNullOrEmpty(limitParam) ? null : int.Parse(limitParam);
     bool includeMedia = !string.IsNullOrEmpty(includeMediaParam) && bool.Parse(includeMediaParam);
@@ -87,6 +88,7 @@ public abstract class BaseContentFunctions<TService, TModel, TDto, TWithMediaDto
     var isPublishedParam = req.Query["isPublished"];
     var includeMediaParam = req.Query["includeMedia"];
 
+    // Fix: Only default to true when no parameter is provided, otherwise respect the explicit value
     bool? isPublished = string.IsNullOrEmpty(isPublishedParam) ? true : bool.Parse(isPublishedParam);
     bool includeMedia = !string.IsNullOrEmpty(includeMediaParam) && bool.Parse(includeMediaParam);
 
