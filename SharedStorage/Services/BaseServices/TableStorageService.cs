@@ -19,21 +19,26 @@ public class TableStorageService : ITableStorageService
         _appLogger.LogInformation("Creating table client for {StorageAccount}", storageAccountName ?? "unknown");
 
         var endpoint = $"https://{storageAccountName}.table.core.windows.net";
-        
+
+        // Add token credential options with proper scope for write permissions
+        var tokenCredentialOptions = new TokenCredentialOptions();
+        var storageScope = "https://storage.azure.com/.default";
+
         // Check for user-assigned managed identity client ID
         var clientId = System.Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
         if (!string.IsNullOrEmpty(clientId))
         {
             _appLogger.LogInformation("Using user-assigned managed identity with client ID: {ClientId}", clientId);
             var options = new DefaultAzureCredentialOptions { ManagedIdentityClientId = clientId };
-            _tableServiceClient = new TableServiceClient(new Uri(endpoint), new DefaultAzureCredential(options));
+            var credential = new DefaultAzureCredential(options);
+            _tableServiceClient = new TableServiceClient(new Uri(endpoint), credential, new TableClientOptions());
         }
         else
         {
             _appLogger.LogInformation("Using default credentials (system-assigned managed identity or local credentials)");
-            _tableServiceClient = new TableServiceClient(new Uri(endpoint), new DefaultAzureCredential());
+            _tableServiceClient = new TableServiceClient(new Uri(endpoint), new DefaultAzureCredential(), new TableClientOptions());
         }
-        
+
         _appLogger.LogInformation("Table client created for {Endpoint}", endpoint);
     }
 

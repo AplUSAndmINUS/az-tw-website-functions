@@ -26,18 +26,22 @@ public class BlobStorageService : IBlobStorageService
 
         var endpoint = $"https://{storageAccountName}.blob.core.windows.net";
 
+        // Add token credential options with proper scope for write permissions
+        var storageScope = "https://storage.azure.com/.default";
+
         // Check for user-assigned managed identity client ID
         var clientId = System.Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
         if (!string.IsNullOrEmpty(clientId))
         {
             _appLogger.LogInformation("Using user-assigned managed identity with client ID: {ClientId}", clientId);
             var options = new DefaultAzureCredentialOptions { ManagedIdentityClientId = clientId };
-            _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential(options));
+            var credential = new DefaultAzureCredential(options);
+            _blobServiceClient = new BlobServiceClient(new Uri(endpoint), credential, new BlobClientOptions());
         }
         else
         {
             _appLogger.LogInformation("Using default credentials (system-assigned managed identity or local credentials)");
-            _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential());
+            _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential(), new BlobClientOptions());
         }
 
         _appLogger.LogInformation("Blob storage client created for {Endpoint}", endpoint);
