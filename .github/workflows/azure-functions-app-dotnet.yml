@@ -7,7 +7,7 @@ on:
 env:
     AZURE_FUNCTIONAPP_NAME: az-tw-website-${{ github.ref_name == 'master' && 'production' || github.ref_name }}
     AZURE_FUNCTIONAPP_PACKAGE_PATH: "./output"
-    StorageAccountName: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}
+    StorageAccountName: ${{ secrets.StorageAccountName }}
     X_API_ENVIRONMENT_KEY: ${{ secrets.X_API_ENVIRONMENT_KEY }}
     USE_MOCK_STORAGE: ${{ vars.USE_MOCK_STORAGE }}
     DOTNET_VERSION: "8.0.x"
