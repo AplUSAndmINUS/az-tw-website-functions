@@ -61,3 +61,6 @@ artifacts/
 function-app.zip
 .vscode/settings.json
 *.postman_collection.json
+assign-storage-roles.sh
+.gitignore
+STORAGE_AUTH_TROUBLESHOOTING.md
