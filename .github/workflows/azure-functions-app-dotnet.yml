@@ -30,11 +30,16 @@ jobs:
               with:
                   creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-            - name: "Inject Function App Settings"
+            - name: "Clean up and inject Function App Settings"
               env:
                   USE_MOCK_STORAGE: "${{ env.USE_MOCK_STORAGE != '' && env.USE_MOCK_STORAGE || 'false' }}"
               run: |
-                  echo "� Setting up app settings for Flex Consumption"
+                  echo "🧹 Removing unsupported app settings for Flex Consumption"
+                  az functionapp config appsettings delete --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --setting-names WEBSITE_RUN_FROM_PACKAGE FUNCTIONS_WORKER_RUNTIME FUNCTIONS_WORKER_PROCESS_COUNT || echo "No settings to delete or settings don't exist"
+
+                  echo "📝 Setting up app settings for Flex Consumption"
                   az functionapp config appsettings set \
                     --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
@@ -58,35 +63,22 @@ jobs:
                   echo "Generating robots.txt for mock environment"
                   echo -e "User-agent: *\nDisallow: /" > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/robots.txt
 
-            - name: "Update host.json for Flex Consumption"
+            # Using the original host.json from the project
+            - name: "Verify host.json for deployment"
               run: |
-                  # Create a simplified host.json that works well with Flex Consumption
-                  cat > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json << EOF
-                  {
-                      "version": "2.0",
-                      "logging": {
-                          "applicationInsights": {
-                              "samplingSettings": {
-                                  "isEnabled": true,
-                                  "excludedTypes": "Request"
-                              }
-                          },
-                          "logLevel": {
-                              "default": "Information"
-                          }
-                      },
-                      "extensions": {
-                          "http": {
-                              "routePrefix": ""
-                          }
-                      }
-                  }
-                  EOF
+                  echo "📄 Verifying host.json file from project"
+                  if [ -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json" ]; then
+                    echo "✅ Using original host.json from project"
+                    cat ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json
+                  else
+                    echo "❌ host.json not found in output, this is unexpected"
+                    exit 1
+                  fi
 
             - name: List and validate output package contents
               run: |
                   echo "Showing contents of output folder..."
-                  find ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+                  find ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }} -type f | grep -v -E '\.git|\.vs|obj'
 
                   echo "Checking for critical files..."
                   if [ ! -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json" ]; then
@@ -126,8 +118,6 @@ jobs:
               with:
                   app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
                   package: "deploy-package.zip"
-                  enable-oryx-build: false
-                  scm-do-build-during-deployment: false
 
             - name: "Sync Function Triggers"
               run: |
