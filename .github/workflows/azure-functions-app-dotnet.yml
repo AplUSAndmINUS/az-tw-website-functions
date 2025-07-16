@@ -78,28 +78,28 @@ jobs:
             - name: "Optimize package for consumption plan"
               if: github.ref_name != 'master'
               run: |
-                # Create a simplified host.json that works better with consumption plans
-                cat > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json << EOF
-                {
-                    "version": "2.0",
-                    "logging": {
-                        "applicationInsights": {
-                            "samplingSettings": {
-                                "isEnabled": true,
-                                "excludedTypes": "Request"
-                            }
-                        },
-                        "logLevel": {
-                            "default": "Information"
-                        }
-                    },
-                    "extensions": {
-                        "http": {
-                            "routePrefix": ""
-                        }
-                    }
-                }
-                EOF
+                  # Create a simplified host.json that works better with consumption plans
+                  cat > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json << EOF
+                  {
+                      "version": "2.0",
+                      "logging": {
+                          "applicationInsights": {
+                              "samplingSettings": {
+                                  "isEnabled": true,
+                                  "excludedTypes": "Request"
+                              }
+                          },
+                          "logLevel": {
+                              "default": "Information"
+                          }
+                      },
+                      "extensions": {
+                          "http": {
+                              "routePrefix": ""
+                          }
+                      }
+                  }
+                  EOF
 
             - name: List and validate output package contents
               run: |
@@ -148,7 +148,7 @@ jobs:
                   respect-funcignore: true
                   scm-do-build-during-deployment: false
                   remote-build: false
-                  
+
             - name: "Debug deployment status"
               if: always()
               run: |
