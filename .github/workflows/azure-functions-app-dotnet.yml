@@ -82,12 +82,27 @@ jobs:
                   az functionapp config appsettings set \
                     --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
-                    --settings WEBSITE_RUN_FROM_PACKAGE=1
+                    --settings WEBSITE_RUN_FROM_PACKAGE=1 \
+                                SCM_DO_BUILD_DURING_DEPLOYMENT=true
 
             - name: "Create deployment zip package"
               run: |
                   cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
                   zip -r ../deploy-package.zip .
+
+            - name: "Get Function App details for debugging"
+              run: |
+                  echo "📝 Getting Function App details for debugging..."
+                  az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
+
+                  echo "📝 Getting Function App settings..."
+                  az functionapp config appsettings list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
+
+                  echo "📝 Getting Function App host status..."
+                  az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query hostNameSslStates
+
+                  echo "📝 Getting Function App functions..."
+                  az functionapp function list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
 
             - name: "Run Azure Functions Action"
               uses: Azure/functions-action@v1
@@ -95,3 +110,33 @@ jobs:
               with:
                   app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
                   package: "deploy-package.zip"
+                  enable-oryx-build: false
+                  respect-funcignore: true
+
+            - name: "Debug deployment status"
+              if: always()
+              run: |
+                  echo "📝 Deployment result: ${{ steps.fa.outcome }}"
+
+                  echo "📝 Checking function app configuration..."
+                  az functionapp config show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
+
+                  echo "📝 Manually syncing triggers..."
+                  az functionapp function sync --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "Sync failed but continuing"
+
+                  echo "📝 Getting Function App logs (last 100 lines)..."
+                  az webapp log download --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --log-file app_logs.zip || echo "Log download failed but continuing"
+
+                  if [ -f app_logs.zip ]; then
+                    unzip -q app_logs.zip || echo "Unzip failed but continuing"
+                    find . -name "*.log" -type f | xargs tail -n 100 || echo "Log reading failed but continuing"
+                  fi
+
+                  echo "📝 Getting Kudu logs (deployment logs)..."
+                  az functionapp deployment list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "Deployment list failed but continuing"
+
+                  echo "📝 Getting Function status..."
+                  az functionapp function list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "Function list failed but continuing"
+
+                  echo "📝 Checking runtime version..."
+                  az functionapp config show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query 'properties.linuxFxVersion' -o tsv || echo "Runtime check failed but continuing"
