@@ -52,11 +52,9 @@ jobs:
                                   USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
                                   StorageAccountName="${{ env.StorageAccountName }}" \
                                   MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
-                                  FUNCTIONS_WORKER_RUNTIME=dotnet-isolated \
                                   FUNCTIONS_EXTENSION_VERSION=~4 \
                                   AzureWebJobsDisableHomepage=true \
                                   WEBSITE_MOUNT_ENABLED=1 \
-                                  FUNCTIONS_WORKER_PROCESS_COUNT=1 \
                                   WEBSITE_RUN_FROM_PACKAGE=1 \
                                   WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1
                   fi
