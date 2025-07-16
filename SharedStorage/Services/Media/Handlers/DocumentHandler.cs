@@ -185,7 +185,7 @@ public class DocumentHandler : MediaHandler, IMediaTypeHandler
   // Method to set conversion preference from upstream code
   public static void SetConvertToPdfPreference(bool convert)
   {
-      _convertToPdf.Value = convert;
+    _convertToPdf.Value = convert;
   }
 
   private bool IsConvertToPdfRequested()
@@ -193,9 +193,9 @@ public class DocumentHandler : MediaHandler, IMediaTypeHandler
     // First try to get from AsyncLocal context
     if (_convertToPdf != null)
     {
-        return _convertToPdf.Value;
+      return _convertToPdf.Value;
     }
-    
+
     // Fall back to environment variable if AsyncLocal isn't set
     return System.Environment.GetEnvironmentVariable("CONVERT_DOCUMENT_TO_PDF")?.ToLowerInvariant() == "true";
   }
