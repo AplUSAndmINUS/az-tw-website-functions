@@ -38,9 +38,10 @@ var options = new DefaultAzureCredentialOptions
 1. **Removal of Deprecated Code**: The `ExcludeVisualStudioCodeCredential` option has been deprecated because the VS Code Azure Account extension it relies on has been deprecated.
 
 2. **Modern Approach**: Instead of excluding specific credential types, we now explicitly include only the credential types we need:
-   - `ManagedIdentityCredential` - For Azure-hosted environments
-   - `EnvironmentCredential` - For environment variable-based authentication
-   - `AzureCliCredential` - For local development using Azure CLI
+
+    - `ManagedIdentityCredential` - For Azure-hosted environments
+    - `EnvironmentCredential` - For environment variable-based authentication
+    - `AzureCliCredential` - For local development using Azure CLI
 
 3. **Performance Optimization**: Added `DisableInstanceDiscovery = true` to improve performance by avoiding Azure AD instance discovery when not needed.
 
