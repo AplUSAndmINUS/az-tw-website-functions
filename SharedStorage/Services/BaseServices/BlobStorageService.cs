@@ -29,19 +29,72 @@ public class BlobStorageService : IBlobStorageService
         // Add token credential options with proper scope for write permissions
         var storageScope = "https://storage.azure.com/.default";
 
+        // First, attempt to use the connection string directly if available
+        var connectionString = System.Environment.GetEnvironmentVariable("AzureWebJobsStorage");
+        
+        if (!string.IsNullOrEmpty(connectionString))
+        {
+            try
+            {
+                _appLogger.LogInformation("Using connection string from AzureWebJobsStorage");
+                _blobServiceClient = new BlobServiceClient(connectionString);
+                _appLogger.LogInformation("Successfully created blob client using connection string");
+                return;
+            }
+            catch (Exception ex)
+            {
+                _appLogger.LogWarning("Failed to use connection string, falling back to managed identity: {Error}", ex.Message);
+                // Continue to managed identity approach
+            }
+        }
+
         // Check for user-assigned managed identity client ID
         var clientId = System.Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
         if (!string.IsNullOrEmpty(clientId))
         {
             _appLogger.LogInformation("Using user-assigned managed identity with client ID: {ClientId}", clientId);
-            var options = new DefaultAzureCredentialOptions { ManagedIdentityClientId = clientId };
+            
+            // Create options with explicit scope for storage
+            var options = new DefaultAzureCredentialOptions 
+            { 
+                ManagedIdentityClientId = clientId,
+                ExcludeSharedTokenCacheCredential = true,
+                ExcludeVisualStudioCredential = true,
+                ExcludeVisualStudioCodeCredential = true
+            };
+            
             var credential = new DefaultAzureCredential(options);
-            _blobServiceClient = new BlobServiceClient(new Uri(endpoint), credential, new BlobClientOptions());
+            
+            // Set client options with retry policy
+            var clientOptions = new BlobClientOptions
+            {
+                Retry = { MaxRetries = 3, Delay = TimeSpan.FromSeconds(2) }
+            };
+            
+            _appLogger.LogInformation("Creating blob service client with explicit scope: {Scope}", storageScope);
+            _blobServiceClient = new BlobServiceClient(new Uri(endpoint), credential, clientOptions);
         }
         else
         {
             _appLogger.LogInformation("Using default credentials (system-assigned managed identity or local credentials)");
-            _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential(), new BlobClientOptions());
+            
+            // Create default options but exclude non-relevant credential types
+            var options = new DefaultAzureCredentialOptions
+            {
+                ExcludeSharedTokenCacheCredential = true,
+                ExcludeVisualStudioCredential = true,
+                ExcludeVisualStudioCodeCredential = true
+            };
+            
+            var credential = new DefaultAzureCredential(options);
+            
+            // Set client options with retry policy
+            var clientOptions = new BlobClientOptions
+            {
+                Retry = { MaxRetries = 3, Delay = TimeSpan.FromSeconds(2) }
+            };
+            
+            _blobServiceClient = new BlobServiceClient(new Uri(endpoint), credential, clientOptions);
         }
 
         _appLogger.LogInformation("Blob storage client created for {Endpoint}", endpoint);
