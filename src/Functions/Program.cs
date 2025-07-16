@@ -8,8 +8,9 @@ using Utils.Validation;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Azure.Functions.Worker.Core;
 using Microsoft.Azure.Functions.Worker;
+using System;
+using System.Linq;
 
 public class Program
 {

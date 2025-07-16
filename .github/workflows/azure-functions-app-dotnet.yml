@@ -41,7 +41,8 @@ jobs:
                       --resource-group az-tw-website-functions \
                       --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
                                   USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
-                                  StorageAccountName="${{ env.StorageAccountName }}"
+                                  StorageAccountName="${{ env.StorageAccountName }}" \
+                                  MEDIA_DOCUMENTS_CONTAINER_NAME="documents"
                   else
                     echo "✅ Non-prod build: including FUNCTIONS_WORKER_RUNTIME"
                     az functionapp config appsettings set \
@@ -50,6 +51,7 @@ jobs:
                       --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
                                   USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
                                   StorageAccountName="${{ env.StorageAccountName }}" \
+                                  MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
                                   FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
                   fi
 
