@@ -40,13 +40,32 @@ jobs:
                     --setting-names WEBSITE_RUN_FROM_PACKAGE FUNCTIONS_WORKER_RUNTIME FUNCTIONS_WORKER_PROCESS_COUNT || echo "No settings to delete or settings don't exist"
 
                   echo "📝 Setting up app settings for Flex Consumption"
-                  az functionapp config appsettings set \
-                    --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-                    --resource-group az-tw-website-functions \
-                    --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
+                  if [ "${{ github.ref_name }}" = "master" ]; then
+                    echo "🔒 Production build: using connection string-less storage settings"
+                    az functionapp config appsettings set \
+                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                      --resource-group az-tw-website-functions \
+                      --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
                                 USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
                                 StorageAccountName="${{ env.StorageAccountName }}" \
+                                AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
                                 MEDIA_DOCUMENTS_CONTAINER_NAME="documents"
+                  else
+                    echo "✅ Non-prod build: configuring storage settings"
+                    az functionapp config appsettings set \
+                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                      --resource-group az-tw-website-functions \
+                      --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
+                                USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
+                                StorageAccountName="${{ env.StorageAccountName }}" \
+                                AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
+                                AzureWebJobsStorage__credential="managedidentity" \
+                                AzureWebJobsStorage__clientId="${{ secrets.MANAGED_IDENTITY_CLIENT_ID }}" \
+                                AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
+                                AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
+                                AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
+                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents"
+                  fi
 
             - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
               uses: actions/setup-dotnet@v4
