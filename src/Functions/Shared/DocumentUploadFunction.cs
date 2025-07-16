@@ -8,6 +8,7 @@ using System.Text.Json;
 using Utils;
 using Utils.Constants;
 using Utils.Validation;
+using SharedStorage.Services.Media.Handlers;
 
 namespace Functions.Shared;
 
@@ -59,9 +60,9 @@ public class DocumentUploadFunction
 
       // Check if conversion to PDF is requested (from query params)
       var convertToPdf = req.Query["convertToPdf"]?.ToLowerInvariant() == "true";
-
-      // Set environment variable for PDF conversion flag
-      Environment.SetEnvironmentVariable("CONVERT_DOCUMENT_TO_PDF", convertToPdf.ToString().ToLowerInvariant());
+      
+      // Set conversion preference using the static method
+      DocumentHandler.SetConvertToPdfPreference(convertToPdf);
 
       _logger.LogInformation("Processing document upload: {FileName}, Convert to PDF: {ConvertToPdf}",
           fileName, convertToPdf);
@@ -95,9 +96,6 @@ public class DocumentUploadFunction
           contentId,
           relatedContentType);
 
-      // Clear environment variable after use
-      Environment.SetEnvironmentVariable("CONVERT_DOCUMENT_TO_PDF", null);
-
       // Return success response with the media entity
       var response = req.CreateResponse(HttpStatusCode.Created);
       response.Headers.Add("Content-Type", "application/json");
@@ -116,8 +114,8 @@ public class DocumentUploadFunction
     {
       _logger.LogError("Failed to upload document: {Error}", ex, ex.Message);
 
-      // Clear environment variable in case of error
-      Environment.SetEnvironmentVariable("CONVERT_DOCUMENT_TO_PDF", null);
+      // Reset conversion preference in case of error
+      DocumentHandler.SetConvertToPdfPreference(false);
 
       var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
       await errorResponse.WriteStringAsync($"Failed to upload document: {ex.Message}");

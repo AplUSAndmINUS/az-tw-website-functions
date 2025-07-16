@@ -2,6 +2,7 @@ using SharedStorage.Models;
 using SharedStorage.Services.BaseServices;
 using Utils;
 using Utils.Constants;
+using System.Threading;
 
 namespace SharedStorage.Services.Media.Handlers;
 
@@ -178,11 +179,24 @@ public class DocumentHandler : MediaHandler, IMediaTypeHandler
     }
   }
 
+  // Static variable to store conversion preference (thread-safe)
+  private static readonly AsyncLocal<bool> _convertToPdf = new AsyncLocal<bool>();
+
+  // Method to set conversion preference from upstream code
+  public static void SetConvertToPdfPreference(bool convert)
+  {
+      _convertToPdf.Value = convert;
+  }
+
   private bool IsConvertToPdfRequested()
   {
-    // Check if the convert-to-pdf option is set from request context
-    // This could be stored in a thread-local variable, from query parameters, or from environment
-    // For now, we'll use an environment variable as a simple example
+    // First try to get from AsyncLocal context
+    if (_convertToPdf != null)
+    {
+        return _convertToPdf.Value;
+    }
+    
+    // Fall back to environment variable if AsyncLocal isn't set
     return System.Environment.GetEnvironmentVariable("CONVERT_DOCUMENT_TO_PDF")?.ToLowerInvariant() == "true";
   }
 
