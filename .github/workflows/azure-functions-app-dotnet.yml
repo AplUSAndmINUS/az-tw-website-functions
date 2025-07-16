@@ -52,7 +52,10 @@ jobs:
                                   USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
                                   StorageAccountName="${{ env.StorageAccountName }}" \
                                   MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
-                                  FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
+                                  FUNCTIONS_WORKER_RUNTIME=dotnet-isolated \
+                                  FUNCTIONS_EXTENSION_VERSION=~4 \
+                                  AzureWebJobsDisableHomepage=true \
+                                  WEBSITE_MOUNT_ENABLED=1
                   fi
 
             - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
@@ -70,10 +73,29 @@ jobs:
                   echo "Generating robots.txt for mock environment"
                   echo -e "User-agent: *\nDisallow: /" > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/robots.txt
 
-            - name: List output package contents
+            - name: List and validate output package contents
               run: |
                   echo "Showing contents of output folder..."
                   find ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+
+                  echo "Checking for critical files..."
+                  if [ ! -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json" ]; then
+                    echo "⚠️ WARNING: host.json missing from package!"
+                  else
+                    echo "✅ host.json found in package"
+                  fi
+
+                  if [ ! -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/Functions.dll" ]; then
+                    echo "⚠️ WARNING: Functions.dll missing from package!"
+                  else
+                    echo "✅ Functions.dll found in package"
+                  fi
+
+                  # Print host.json content for validation
+                  if [ -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json" ]; then
+                    echo "host.json content:"
+                    cat ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json
+                  fi
 
             - name: "Prepare for deployment"
               if: github.ref_name != 'master'
@@ -83,7 +105,8 @@ jobs:
                     --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
                     --settings WEBSITE_RUN_FROM_PACKAGE=1 \
-                                SCM_DO_BUILD_DURING_DEPLOYMENT=true
+                                SCM_DO_BUILD_DURING_DEPLOYMENT=false \
+                                FUNCTIONS_EXTENSION_VERSION=~4
 
             - name: "Create deployment zip package"
               run: |
@@ -112,6 +135,8 @@ jobs:
                   package: "deploy-package.zip"
                   enable-oryx-build: false
                   respect-funcignore: true
+                  scm-do-build-during-deployment: false
+                  remote-build: false
 
             - name: "Debug deployment status"
               if: always()
@@ -122,7 +147,11 @@ jobs:
                   az functionapp config show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
 
                   echo "📝 Manually syncing triggers..."
-                  az functionapp function sync --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "Sync failed but continuing"
+                  az rest --method post --uri "https://management.azure.com/subscriptions/$(az account show --query id -o tsv)/resourceGroups/az-tw-website-functions/providers/Microsoft.Web/sites/${{ env.AZURE_FUNCTIONAPP_NAME }}/syncfunctiontriggers?api-version=2022-03-01" || echo "REST API sync failed but continuing"
+
+                  # Restart function app to help with trigger sync
+                  echo "📝 Restarting function app..."
+                  az functionapp restart --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "Restart failed but continuing"
 
                   echo "📝 Getting Function App logs (last 100 lines)..."
                   az webapp log download --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --log-file app_logs.zip || echo "Log download failed but continuing"
