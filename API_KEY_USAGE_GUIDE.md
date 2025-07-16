@@ -10,17 +10,39 @@ The application uses a custom API key validation mechanism that checks for the `
 
 1. Include the `x-api-key` header in your HTTP requests
 2. Use the appropriate API key for each environment:
-   - Development: `***REMOVED***`
-   - Test: Check environment variable `X_API_ENVIRONMENT_KEY` in the test environment
-   - Production: Check environment variable `X_API_ENVIRONMENT_KEY` in the production environment
+    - Development: `***REMOVED***`
+    - Test: Check environment variable `X_API_ENVIRONMENT_KEY` in the test environment
+    - Production: Check environment variable `X_API_ENVIRONMENT_KEY` in the production environment
+
+## Security Considerations
+
+### API Key Best Practices
+
+1. **Key Strength**: API keys should be at least 32 characters long and include a mix of uppercase letters, lowercase letters, numbers, and special characters
+2. **Key Rotation**: Rotate API keys periodically (every 30-90 days) to limit exposure in case of leakage
+3. **Environmental Isolation**: Use different API keys for each environment (development, test, production)
+4. **Secure Storage**: Never commit API keys to source control; always use environment variables or Azure Key Vault
+5. **Access Control**: Limit who has access to API keys, especially production keys
+
+### Generating Secure API Keys
+
+For improved security, use a secure random generator to create API keys. For example:
+
+```bash
+# Generate a secure API key using OpenSSL (recommended for production)
+openssl rand -base64 24
+
+# Alternative using PowerShell
+[Convert]::ToBase64String((New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes(32))
+```
 
 ### Example API Call
 
 ```bash
 # Example using curl to call an API function with the API key header
-curl -X POST https://az-tw-website-develop.azurewebsites.net/authors/some-author-slug \
+curl -X POST https://{{AzureWebLink}}.azurewebsites.net/authors/some-author-slug \
   -H "Content-Type: application/json" \
-  -H "x-api-key: YOUR-API-KEY" \
+  -H "x-api-key: X_API_ENVIRONMENT_KEY" \
   -d '{"name": "Author Name", "bio": "Author Bio"}'
 ```
 
@@ -30,9 +52,9 @@ This approach bypasses the issue with function keys in the development and test 
 
 ### Function Authorization Levels
 
-While some functions are configured with `AuthorizationLevel.Function` and others with `AuthorizationLevel.Anonymous`, the application's custom API key validation is applied consistently to functions that require authentication, regardless of their authorization level.
+All functions are now configured with `AuthorizationLevel.Anonymous` to avoid issues with function keys. However, the application's custom API key validation is applied consistently to functions that require authentication, providing a uniform security model.
 
-For functions with `AuthorizationLevel.Anonymous`, the API key validation is still performed in the function code, so you still need to provide the `x-api-key` header for these functions if they implement the validation.
+The API key validation is performed in the function code for all protected endpoints, so you must provide the `x-api-key` header for these functions to authenticate your requests.
 
 ## Troubleshooting
 

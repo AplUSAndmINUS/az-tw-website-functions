@@ -23,7 +23,7 @@ public class PortfolioPieceMediaFunctions : BaseMediaRelationshipFunctions<IPort
 
   [Function("SetPortfolioPieceFeaturedImage")]
   public async Task<HttpResponseData> SetFeaturedImage(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "portfolio/{slug}/featured-image")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "post", Route = "portfolio/{slug}/featured-image")] HttpRequestData req,
       string slug)
   {
     return await ProcessMediaRelationshipAsync(
@@ -36,7 +36,7 @@ public class PortfolioPieceMediaFunctions : BaseMediaRelationshipFunctions<IPort
 
   [Function("SetPortfolioPieceFeaturedVideo")]
   public async Task<HttpResponseData> SetFeaturedVideo(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "portfolio/{slug}/featured-video")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "post", Route = "portfolio/{slug}/featured-video")] HttpRequestData req,
       string slug)
   {
     return await ProcessMediaRelationshipAsync(
@@ -49,7 +49,7 @@ public class PortfolioPieceMediaFunctions : BaseMediaRelationshipFunctions<IPort
 
   [Function("AddPortfolioPieceMediaReference")]
   public async Task<HttpResponseData> AddMediaReference(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "portfolio/{slug}/media")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "post", Route = "portfolio/{slug}/media")] HttpRequestData req,
       string slug)
   {
     return await ProcessMediaRelationshipAsync(
@@ -62,7 +62,7 @@ public class PortfolioPieceMediaFunctions : BaseMediaRelationshipFunctions<IPort
 
   [Function("RemovePortfolioPieceMediaReference")]
   public async Task<HttpResponseData> RemoveMediaReference(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "portfolio/{slug}/media/{mediaId}")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "portfolio/{slug}/media/{mediaId}")] HttpRequestData req,
       string slug,
       string mediaId)
   {

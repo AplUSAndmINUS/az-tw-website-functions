@@ -29,7 +29,7 @@ public class UpsertAuthorFunction : BaseContentFunctions<IAuthorService, AuthorM
 
   [Function("UpsertAuthorAsync")]
   public async Task<HttpResponseData> Run(
-    [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "authors/{slug}")] HttpRequestData req,
+    [HttpTrigger(AuthorizationLevel.Function, "put", Route = "authors/{slug}")] HttpRequestData req,
     string slug,
     FunctionContext executionContext)
   {

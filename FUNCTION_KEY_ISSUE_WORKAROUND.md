@@ -5,14 +5,16 @@
 There is currently an issue with retrieving and managing function keys in the develop and test environments of the Azure Functions app. This appears to be related to the specific configuration of these environments using the Flex Consumption plan with a user-assigned managed identity for storage access.
 
 When attempting to access or manage function keys, either through the Azure Portal or Azure CLI, the following errors occur:
-- Azure Portal: InternalServerError when accessing App Keys or Host Keys
-- Azure CLI: "Bad Request" when using `az functionapp keys list` or `az functionapp keys set` commands
+
+-   Azure Portal: InternalServerError when accessing App Keys or Host Keys
+-   Azure CLI: "Bad Request" when using `az functionapp keys list` or `az functionapp keys set` commands
 
 This issue does not affect the production environment, which uses a different storage configuration.
 
 ## Root Causes
 
 The issue appears to be related to one or more of the following factors:
+
 1. Flex Consumption plan configuration
 2. User-assigned managed identity used for storage access
 3. Custom storage configuration with `AzureWebJobsStorage__clientId` and related settings

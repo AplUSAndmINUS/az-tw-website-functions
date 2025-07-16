@@ -10,6 +10,7 @@ Azure Functions has two layers of authentication that can be confusing:
 ## Function Authorization Levels
 
 In your function declaration, you use:
+
 ```csharp
 [HttpTrigger(AuthorizationLevel.Function, "put", Route = "authors/{slug}")]
 ```
@@ -18,11 +19,11 @@ This means the Azure Functions runtime requires a valid function key before your
 
 ### Available Authorization Levels
 
-- **Anonymous**: No key required
-- **Function**: Requires a function-specific key or master key
-- **Admin**: Requires a master key
-- **User**: Requires user authentication through Easy Auth
-- **System**: Used for internal Azure Functions system calls
+-   **Anonymous**: No key required
+-   **Function**: Requires a function-specific key or master key
+-   **Admin**: Requires a master key
+-   **User**: Requires user authentication through Easy Auth
+-   **System**: Used for internal Azure Functions system calls
 
 ## How to Get Your Function Keys
 
@@ -66,10 +67,10 @@ For your current setup, you need to send:
 
 ## Best Practices
 
-- For production: Use `AuthorizationLevel.Function` and proper key management
-- For development: Use `AuthorizationLevel.Anonymous` locally, and rely on your custom API key validation
-- For testing: Create a specific function key for automated tests
-- Always keep your keys secure and never commit them to source control
+-   For production: Use `AuthorizationLevel.Function` and proper key management
+-   For development: Use `AuthorizationLevel.Anonymous` locally, and rely on your custom API key validation
+-   For testing: Create a specific function key for automated tests
+-   Always keep your keys secure and never commit them to source control
 
 ## Postman Settings
 

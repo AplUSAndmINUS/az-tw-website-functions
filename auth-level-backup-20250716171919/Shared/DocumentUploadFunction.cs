@@ -30,7 +30,7 @@ public class DocumentUploadFunction
 
   [Function("UploadDocument")]
   public async Task<HttpResponseData> UploadDocumentAsync(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "media/documents")] HttpRequestData req)
+      [HttpTrigger(AuthorizationLevel.Function, "post", Route = "media/documents")] HttpRequestData req)
   {
     _logger.LogInformation("Document upload request received");
 

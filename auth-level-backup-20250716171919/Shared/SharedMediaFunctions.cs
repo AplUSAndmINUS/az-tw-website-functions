@@ -33,7 +33,7 @@ public class SharedMediaFunctions
 
   [Function("UploadImage")]
   public async Task<HttpResponseData> UploadImage(
-    [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "media/images")] HttpRequestData req)
+    [HttpTrigger(AuthorizationLevel.Function, "post", Route = "media/images")] HttpRequestData req)
   {
     _appLogger.LogInformation("SharedMediaFunctions.UploadImage function triggered");
 
@@ -123,7 +123,7 @@ public class SharedMediaFunctions
 
   [Function("UploadVideo")]
   public async Task<HttpResponseData> UploadVideo(
-    [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "media/videos")] HttpRequestData req)
+    [HttpTrigger(AuthorizationLevel.Function, "post", Route = "media/videos")] HttpRequestData req)
   {
     _appLogger.LogInformation("SharedMediaFunctions.UploadVideo function triggered");
 
@@ -383,7 +383,7 @@ public class SharedMediaFunctions
 
   [Function("DeleteMedia")]
   public async Task<HttpResponseData> DeleteMedia(
-    [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "media/{mediaId}")] HttpRequestData req)
+    [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "media/{mediaId}")] HttpRequestData req)
   {
     _appLogger.LogInformation("SharedMediaFunctions.DeleteMedia function triggered");
 
