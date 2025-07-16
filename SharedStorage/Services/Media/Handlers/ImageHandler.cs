@@ -54,10 +54,13 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
       // Create the container name based on content section, explicitly passing the mock storage flag
       var containerName = ContentNameResolver.GetBlobContainerName(ContentSections.Blog, AssetType.Images, useMockStorage);
 
-      // Store original stream in memory so we can use it multiple times
-      using var memoryStream = new MemoryStream();
-      await stream.CopyToAsync(memoryStream);
-      var originalStreamData = memoryStream.ToArray();
+      // Store original stream in memory so we can use it multiple times - using a safer approach
+      byte[] originalStreamData;
+      using (var memoryStream = new MemoryStream())
+      {
+        await stream.CopyToAsync(memoryStream);
+        originalStreamData = memoryStream.ToArray();
+      }
 
       _logger.LogInformation("Copied stream to memory: {Length} bytes", originalStreamData.Length);
 

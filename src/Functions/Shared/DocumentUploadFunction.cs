@@ -60,7 +60,7 @@ public class DocumentUploadFunction
 
       // Check if conversion to PDF is requested (from query params)
       var convertToPdf = req.Query["convertToPdf"]?.ToLowerInvariant() == "true";
-      
+
       // Set conversion preference using the static method
       DocumentHandler.SetConvertToPdfPreference(convertToPdf);
 

@@ -64,7 +64,7 @@ public static class ServiceCollectionExtensions
     services.AddSingleton<IBlobStorageService>(provider =>
     {
       // Look for StorageAccountName first, then fall back to AZURE_STORAGE_ACCOUNT_NAME for compatibility
-      var storageAccountName = System.Environment.GetEnvironmentVariable("StorageAccountName") 
+      var storageAccountName = System.Environment.GetEnvironmentVariable("StorageAccountName")
               ?? System.Environment.GetEnvironmentVariable("AZURE_STORAGE_ACCOUNT_NAME")
               ?? throw new InvalidOperationException("Storage account name environment variable is required (StorageAccountName or AZURE_STORAGE_ACCOUNT_NAME)");
       var logger = provider.GetRequiredService<IAppInsightsLogger<BlobStorageService>>();
@@ -74,7 +74,7 @@ public static class ServiceCollectionExtensions
     services.AddSingleton<ITableStorageService>(provider =>
     {
       // Look for StorageAccountName first, then fall back to AZURE_STORAGE_ACCOUNT_NAME for compatibility
-      var storageAccountName = System.Environment.GetEnvironmentVariable("StorageAccountName") 
+      var storageAccountName = System.Environment.GetEnvironmentVariable("StorageAccountName")
               ?? System.Environment.GetEnvironmentVariable("AZURE_STORAGE_ACCOUNT_NAME")
               ?? throw new InvalidOperationException("Storage account name environment variable is required (StorageAccountName or AZURE_STORAGE_ACCOUNT_NAME)");
       var logger = provider.GetRequiredService<IAppInsightsLogger<TableStorageService>>();
