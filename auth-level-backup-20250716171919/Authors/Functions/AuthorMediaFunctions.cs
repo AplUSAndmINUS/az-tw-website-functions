@@ -23,7 +23,7 @@ public class AuthorMediaFunctions : BaseMediaRelationshipFunctions<IAuthorServic
 
   [Function("SetAuthorProfileImage")]
   public async Task<HttpResponseData> SetProfileImage(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "authors/{slug}/profile-image")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "post", Route = "authors/{slug}/profile-image")] HttpRequestData req,
       string slug)
   {
     return await ProcessMediaRelationshipAsync(
@@ -36,7 +36,7 @@ public class AuthorMediaFunctions : BaseMediaRelationshipFunctions<IAuthorServic
 
   [Function("SetAuthorBackgroundImage")]
   public async Task<HttpResponseData> SetBackgroundImage(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "authors/{slug}/background-image")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "post", Route = "authors/{slug}/background-image")] HttpRequestData req,
       string slug)
   {
     return await ProcessMediaRelationshipAsync(
@@ -49,7 +49,7 @@ public class AuthorMediaFunctions : BaseMediaRelationshipFunctions<IAuthorServic
 
   [Function("AddAuthorMediaReference")]
   public async Task<HttpResponseData> AddMediaReference(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "authors/{slug}/media")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "post", Route = "authors/{slug}/media")] HttpRequestData req,
       string slug)
   {
     return await ProcessMediaRelationshipAsync(
@@ -62,7 +62,7 @@ public class AuthorMediaFunctions : BaseMediaRelationshipFunctions<IAuthorServic
 
   [Function("RemoveAuthorMediaReference")]
   public async Task<HttpResponseData> RemoveMediaReference(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "authors/{slug}/media/{mediaId}")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "authors/{slug}/media/{mediaId}")] HttpRequestData req,
       string slug,
       string mediaId)
   {

@@ -75,7 +75,7 @@ public class UpsertBlogPost : BaseContentFunctions<IBlogPostService, BlogPostMod
 
   [Function("UpsertBlogPost")]
   public async Task<HttpResponseData> Run(
-    [HttpTrigger(AuthorizationLevel.Anonymous, "post", "put", Route = "posts/{slug?}")] HttpRequestData req)
+    [HttpTrigger(AuthorizationLevel.Function, "post", "put", Route = "posts/{slug?}")] HttpRequestData req)
   {
     _appLogger.LogInformation("UpsertBlogPost function triggered");
 

@@ -23,7 +23,7 @@ public class BlogPostMediaFunctions : BaseMediaRelationshipFunctions<IBlogPostSe
 
   [Function("SetBlogPostFeaturedImage")]
   public async Task<HttpResponseData> SetFeaturedImage(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "posts/{slug}/featured-image")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "post", Route = "posts/{slug}/featured-image")] HttpRequestData req,
       string slug)
   {
     return await ProcessMediaRelationshipAsync(
@@ -36,7 +36,7 @@ public class BlogPostMediaFunctions : BaseMediaRelationshipFunctions<IBlogPostSe
 
   [Function("SetBlogPostFeaturedVideo")]
   public async Task<HttpResponseData> SetFeaturedVideo(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "posts/{slug}/featured-video")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "post", Route = "posts/{slug}/featured-video")] HttpRequestData req,
       string slug)
   {
     return await ProcessMediaRelationshipAsync(
@@ -49,7 +49,7 @@ public class BlogPostMediaFunctions : BaseMediaRelationshipFunctions<IBlogPostSe
 
   [Function("AddBlogPostMediaReference")]
   public async Task<HttpResponseData> AddBlogPostMediaReference(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "posts/{slug}/media")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "post", Route = "posts/{slug}/media")] HttpRequestData req,
       string slug)
   {
     return await ProcessMediaRelationshipAsync(
@@ -62,7 +62,7 @@ public class BlogPostMediaFunctions : BaseMediaRelationshipFunctions<IBlogPostSe
 
   [Function("RemoveBlogPostMediaReference")]
   public async Task<HttpResponseData> RemoveBlogPostMediaReference(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "posts/{slug}/media/{mediaId}")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "posts/{slug}/media/{mediaId}")] HttpRequestData req,
       string slug,
       string mediaId)
   {

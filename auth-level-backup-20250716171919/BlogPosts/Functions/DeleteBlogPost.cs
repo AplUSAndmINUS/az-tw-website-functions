@@ -29,7 +29,7 @@ public class DeleteBlogPost : BaseContentFunctions<IBlogPostService, BlogPostMod
 
   [Function("DeleteBlogPost")]
   public async Task<HttpResponseData> Run(
-    [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "posts/{slug}")] HttpRequestData req)
+    [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "posts/{slug}")] HttpRequestData req)
   {
     return await ProcessDeleteAsync(req, "DeleteBlogPost", _blogPostService.DeletePostAsync);
   }

@@ -37,7 +37,7 @@ public class DeleteAuthorFunction : BaseContentFunctions<IAuthorService, AuthorM
   /// <returns>HTTP response indicating success or failure</returns>
   [Function("DeleteAuthor")]
   public async Task<HttpResponseData> Run(
-      [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "authors/{slug}")] HttpRequestData req,
+      [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "authors/{slug}")] HttpRequestData req,
       string slug)
   {
     return await ProcessDeleteAsync(req, "DeleteAuthor", async (authorSlug) =>
