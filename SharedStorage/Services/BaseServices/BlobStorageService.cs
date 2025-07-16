@@ -25,7 +25,21 @@ public class BlobStorageService : IBlobStorageService
         _appLogger.LogInformation("Creating blob storage client for {StorageAccount}", storageAccountName ?? "unknown");
 
         var endpoint = $"https://{storageAccountName}.blob.core.windows.net";
-        _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential());
+        
+        // Check for user-assigned managed identity client ID
+        var clientId = System.Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
+        if (!string.IsNullOrEmpty(clientId))
+        {
+            _appLogger.LogInformation("Using user-assigned managed identity with client ID: {ClientId}", clientId);
+            var options = new DefaultAzureCredentialOptions { ManagedIdentityClientId = clientId };
+            _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential(options));
+        }
+        else
+        {
+            _appLogger.LogInformation("Using default credentials (system-assigned managed identity or local credentials)");
+            _blobServiceClient = new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential());
+        }
+        
         _appLogger.LogInformation("Blob storage client created for {Endpoint}", endpoint);
     }
 

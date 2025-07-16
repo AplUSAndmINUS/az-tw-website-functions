@@ -41,15 +41,17 @@ jobs:
 
                   echo "📝 Setting up app settings for Flex Consumption"
                   if [ "${{ github.ref_name }}" = "master" ]; then
-                    echo "🔒 Production build: using system-assigned managed identity"
+                    echo "🔒 Production build: using user-assigned managed identity"
                     az functionapp config appsettings set \
                       --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                       --resource-group az-tw-website-functions \
                       --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
                                 USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
                                 StorageAccountName="${{ env.StorageAccountName }}" \
+                                AZURE_CLIENT_ID="5b693580-ba39-4221-b2fa-f42ec029d465" \
                                 AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
                                 AzureWebJobsStorage__credential="managedidentity" \
+                                AzureWebJobsStorage__clientId="5b693580-ba39-4221-b2fa-f42ec029d465" \
                                 AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
                                 AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
                                 AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
