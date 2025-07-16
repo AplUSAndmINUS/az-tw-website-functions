@@ -60,7 +60,12 @@ public class BlobStorageService : IBlobStorageService
                 ManagedIdentityClientId = clientId,
                 ExcludeSharedTokenCacheCredential = true,
                 ExcludeVisualStudioCredential = true,
-                ExcludeVisualStudioCodeCredential = true
+                // Modern approach: Include only the credentials we need instead of excluding ones we don't
+                ExcludeAzureCliCredential = false,
+                ExcludeManagedIdentityCredential = false,
+                ExcludeEnvironmentCredential = false,
+                // All other credential types are excluded by default
+                DisableInstanceDiscovery = true // Improves performance by avoiding AAD instance discovery
             };
             
             var credential = new DefaultAzureCredential(options);
@@ -78,12 +83,17 @@ public class BlobStorageService : IBlobStorageService
         {
             _appLogger.LogInformation("Using default credentials (system-assigned managed identity or local credentials)");
             
-            // Create default options but exclude non-relevant credential types
+            // Create default options including only relevant credential types
             var options = new DefaultAzureCredentialOptions
             {
                 ExcludeSharedTokenCacheCredential = true,
                 ExcludeVisualStudioCredential = true,
-                ExcludeVisualStudioCodeCredential = true
+                // Modern approach: Include only the credentials we need instead of excluding ones we don't
+                ExcludeAzureCliCredential = false,
+                ExcludeManagedIdentityCredential = false,
+                ExcludeEnvironmentCredential = false,
+                // All other credential types are excluded by default
+                DisableInstanceDiscovery = true // Improves performance by avoiding AAD instance discovery
             };
             
             var credential = new DefaultAzureCredential(options);
