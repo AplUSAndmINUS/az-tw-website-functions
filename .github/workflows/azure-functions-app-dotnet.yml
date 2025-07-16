@@ -41,17 +41,7 @@ jobs:
 
                   echo "📝 Setting up app settings for Flex Consumption"
                   if [ "${{ github.ref_name }}" = "master" ]; then
-                    echo "🔒 Production build: using connection string-less storage settings"
-                    az functionapp config appsettings set \
-                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-                      --resource-group az-tw-website-functions \
-                      --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
-                                USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
-                                StorageAccountName="${{ env.StorageAccountName }}" \
-                                AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
-                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents"
-                  else
-                    echo "✅ Non-prod build: configuring storage settings"
+                    echo "🔒 Production build: using system-assigned managed identity"
                     az functionapp config appsettings set \
                       --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                       --resource-group az-tw-website-functions \
@@ -60,7 +50,36 @@ jobs:
                                 StorageAccountName="${{ env.StorageAccountName }}" \
                                 AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
                                 AzureWebJobsStorage__credential="managedidentity" \
-                                AzureWebJobsStorage__clientId="${{ secrets.MANAGED_IDENTITY_CLIENT_ID }}" \
+                                AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
+                                AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
+                                AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
+                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents"
+                  elif [ "${{ github.ref_name }}" = "develop" ]; then
+                    echo "✅ Develop build: configuring with develop-uami managed identity"
+                    az functionapp config appsettings set \
+                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                      --resource-group az-tw-website-functions \
+                      --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
+                                USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
+                                StorageAccountName="${{ env.StorageAccountName }}" \
+                                AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
+                                AzureWebJobsStorage__credential="managedidentity" \
+                                AzureWebJobsStorage__clientId="{{your-develop-managed-identity-client-id}}" \
+                                AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
+                                AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
+                                AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
+                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents"
+                  elif [ "${{ github.ref_name }}" = "test" ]; then
+                    echo "✅ Test build: configuring with test-uami managed identity"
+                    az functionapp config appsettings set \
+                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                      --resource-group az-tw-website-functions \
+                      --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
+                                USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
+                                StorageAccountName="${{ env.StorageAccountName }}" \
+                                AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
+                                AzureWebJobsStorage__credential="managedidentity" \
+                                AzureWebJobsStorage__clientId="{{your-test-managed-identity-client-id}}" \
                                 AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
                                 AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
                                 AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
