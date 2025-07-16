@@ -44,7 +44,7 @@ jobs:
                                   StorageAccountName="${{ env.StorageAccountName }}" \
                                   MEDIA_DOCUMENTS_CONTAINER_NAME="documents"
                   else
-                    echo "✅ Non-prod build: including FUNCTIONS_WORKER_RUNTIME"
+                    echo "✅ Non-prod build: configuring for isolated worker process"
                     az functionapp config appsettings set \
                       --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                       --resource-group az-tw-website-functions \
@@ -57,7 +57,8 @@ jobs:
                                   AzureWebJobsDisableHomepage=true \
                                   WEBSITE_MOUNT_ENABLED=1 \
                                   FUNCTIONS_WORKER_PROCESS_COUNT=1 \
-                                  WEBSITE_RUN_FROM_PACKAGE=1
+                                  WEBSITE_RUN_FROM_PACKAGE=1 \
+                                  WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1
                   fi
 
             - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
@@ -78,7 +79,7 @@ jobs:
             - name: "Optimize package for consumption plan"
               if: github.ref_name != 'master'
               run: |
-                  # Create a simplified host.json that works better with consumption plans
+                  # Create an optimized host.json that works with consumption plans while preserving essential configurations
                   cat > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json << EOF
                   {
                       "version": "2.0",
@@ -90,13 +91,22 @@ jobs:
                               }
                           },
                           "logLevel": {
-                              "default": "Information"
+                              "default": "Information",
+                              "Function": "Information",
+                              "Host.Results": "Information",
+                              "Host.Aggregator": "Information"
                           }
                       },
                       "extensions": {
                           "http": {
                               "routePrefix": ""
                           }
+                      },
+                      "functionTimeout": "00:05:00",
+                      "retry": {
+                          "strategy": "fixedDelay",
+                          "maxRetryCount": 2,
+                          "delayInterval": "00:00:03"
                       }
                   }
                   EOF
@@ -149,31 +159,60 @@ jobs:
                   scm-do-build-during-deployment: false
                   remote-build: false
 
-            - name: "Debug deployment status"
+            - name: "Sync Function Triggers"
+              run: |
+                  echo "📝 Syncing function triggers..."
+                  # Wait a moment for deployment to settle
+                  sleep 30
+                  
+                  # Sync triggers using Azure CLI
+                  az functionapp function sync-all --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "CLI sync failed, trying REST API..."
+                  
+                  # Alternative sync using REST API if CLI fails
+                  az rest --method post --uri "https://management.azure.com/subscriptions/$(az account show --query id -o tsv)/resourceGroups/az-tw-website-functions/providers/Microsoft.Web/sites/${{ env.AZURE_FUNCTIONAPP_NAME }}/syncfunctiontriggers?api-version=2022-03-01" || echo "REST API sync also failed"
+                  
+                  # Restart function app to ensure triggers are properly loaded
+                  echo "📝 Restarting function app to ensure triggers are loaded..."
+                  az functionapp restart --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
+                  
+                  # Wait for restart to complete
+                  sleep 15
+
+            - name: "Validate deployment and debug if needed"
               if: always()
               run: |
                   echo "📝 Deployment result: ${{ steps.fa.outcome }}"
+                  
+                  # Check if deployment succeeded
+                  if [ "${{ steps.fa.outcome }}" = "success" ]; then
+                    echo "✅ Deployment succeeded!"
+                  else
+                    echo "❌ Deployment failed, running diagnostics..."
+                  fi
 
                   echo "📝 Checking function app configuration..."
                   az functionapp config show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
 
-                  echo "📝 Manually syncing triggers..."
-                  az rest --method post --uri "https://management.azure.com/subscriptions/$(az account show --query id -o tsv)/resourceGroups/az-tw-website-functions/providers/Microsoft.Web/sites/${{ env.AZURE_FUNCTIONAPP_NAME }}/syncfunctiontriggers?api-version=2022-03-01" || echo "REST API sync failed but continuing"
-
-                  # Restart function app to help with trigger sync
-                  echo "📝 Restarting function app..."
-                  az functionapp restart --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "Restart failed but continuing"
-
-                  echo "📝 Getting Function App logs (last 100 lines)..."
-                  az webapp log download --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --log-file app_logs.zip || echo "Log download failed but continuing"
-
-                  if [ -f app_logs.zip ]; then
-                    unzip -q app_logs.zip || echo "Unzip failed but continuing"
-                    find . -name "*.log" -type f | xargs tail -n 100 || echo "Log reading failed but continuing"
-                  fi
+                  echo "📝 Checking function app settings..."
+                  az functionapp config appsettings list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
 
                   echo "📝 Getting Function status..."
-                  az functionapp function list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "Function list failed but continuing"
+                  az functionapp function list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "Function list failed"
 
-                  echo "📝 Checking runtime version..."
-                  az functionapp config show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query 'properties.linuxFxVersion' -o tsv || echo "Runtime check failed but continuing"
+                  echo "📝 Checking runtime version and platform..."
+                  az functionapp config show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query 'properties.{runtime:linuxFxVersion,platform:platform,alwaysOn:siteConfig.alwaysOn}' -o table || echo "Runtime check failed"
+                  
+                  echo "📝 Testing function app health..."
+                  HEALTH_URL="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net"
+                  curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" "$HEALTH_URL" || echo "Health check failed"
+                  
+                  # Only get logs if there were issues
+                  if [ "${{ steps.fa.outcome }}" != "success" ]; then
+                    echo "📝 Getting Function App logs for troubleshooting..."
+                    az webapp log download --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --log-file app_logs.zip || echo "Log download failed"
+
+                    if [ -f app_logs.zip ]; then
+                      unzip -q app_logs.zip || echo "Unzip failed"
+                      find . -name "*.log" -type f | xargs tail -n 50 || echo "Log reading failed"
+                    fi
+                  fi
