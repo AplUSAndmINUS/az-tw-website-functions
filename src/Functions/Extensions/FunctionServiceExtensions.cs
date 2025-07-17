@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Functions.BlogPosts.Services;
 using Functions.Authors.Services;
 using Functions.PortfolioPiece.Services;
+using Functions.GitHub.Services;
 using SharedStorage.Extensions;
 
 namespace Functions.Extensions;
@@ -17,6 +18,10 @@ public static class FunctionServiceExtensions
     services.AddScoped<IBlogPostService, BlogPostService>();
     services.AddScoped<IAuthorService, AuthorService>();
     services.AddScoped<IPortfolioPieceService, PortfolioPieceService>();
+
+    // Register GitHub services
+    services.AddHttpClient<IGitHubApiService, GitHubApiService>();
+    services.AddScoped<IGitHubRepoService, GitHubRepoService>();
 
     // Add other Function-specific services here
 
