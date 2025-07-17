@@ -209,7 +209,7 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
   {
     var useMockStorage = Environment.GetEnvironmentVariable("USE_MOCK_STORAGE");
     var prefix = useMockStorage?.ToLowerInvariant() == "true" ? "mock" : string.Empty;
-    return $"{prefix}githubrepos";
+    return $"{prefix}github";
   }
 
   protected override GitHubRepoDTO EntityToDto(GitHubRepoEntity entity)
