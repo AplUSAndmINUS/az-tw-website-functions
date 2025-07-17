@@ -107,7 +107,7 @@ public class UpsertBook : BaseContentFunctions<IBookService, BookModel, BookDTO,
         return errorResponse;
       }
 
-      _appLogger.LogInformation("Deserialized book: Title={Title}, Slug={Slug}", model!.Title, model.Slug);
+      _appLogger.LogInformation("Deserialized book: Title={Title}, Slug={Slug}", model!.Title ?? "(no title)", model.Slug ?? "(no slug)");
 
       // Ensure the model slug matches the route slug
       model.Slug = slug!;
@@ -140,7 +140,7 @@ public class UpsertBook : BaseContentFunctions<IBookService, BookModel, BookDTO,
       var response = await CreateJsonResponseAsync(req, result);
       response.StatusCode = req.Method.ToUpper() == "POST" ? HttpStatusCode.Created : HttpStatusCode.OK;
 
-      _appLogger.LogInformation("Successfully upserted book with slug: {Slug}", slug);
+      _appLogger.LogInformation("Successfully upserted book with slug: {Slug}", slug ?? "(no slug)");
       return response;
     }
     catch (Exception ex)

@@ -66,7 +66,7 @@ public class GitHubApiService : IGitHubApiService
     }
   }
 
-  public async Task<IEnumerable<GitHubActivityGridDTO>> GetActivityGridAsync(string username)
+  public Task<IEnumerable<GitHubActivityGridDTO>> GetActivityGridAsync(string username)
   {
     if (string.IsNullOrWhiteSpace(username))
       throw new ArgumentException("Username cannot be null or empty", nameof(username));
@@ -80,12 +80,12 @@ public class GitHubApiService : IGitHubApiService
       // For now, returning empty data with a logged message
       _logger.LogWarning("GitHub activity grid fetching is not implemented yet - requires GraphQL API");
       
-      return [];
+      return Task.FromResult<IEnumerable<GitHubActivityGridDTO>>([]);
     }
     catch (Exception ex)
     {
       _logger.LogError("Error fetching activity grid for user {Username}", ex, username);
-      return [];
+      return Task.FromResult<IEnumerable<GitHubActivityGridDTO>>([]);
     }
   }
 
@@ -96,7 +96,7 @@ public class GitHubApiService : IGitHubApiService
       GitHubId = apiRepo.Id,
       Name = apiRepo.Name ?? string.Empty,
       FullName = apiRepo.FullName ?? string.Empty,
-      Description = apiRepo.Description,
+      Description = apiRepo.Description ?? string.Empty,
       HtmlUrl = apiRepo.HtmlUrl ?? string.Empty,
       Language = apiRepo.Language,
       StargazersCount = apiRepo.StargazersCount,

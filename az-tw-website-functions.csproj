@@ -22,5 +22,6 @@
     <Compile Remove="SharedStorage/**/*.cs" />
     <Compile Remove="Utils/**/*.cs" />
     <Compile Remove="src/BlogPosts/BlogPosts/**/*.cs" />
+    <Compile Remove="Tests/**/*.cs" />
   </ItemGroup>
 </Project>
