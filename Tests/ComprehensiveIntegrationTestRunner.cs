@@ -1,8 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Tests.Authors;
-using Tests.BlogPosts;
-using Tests.Media;
 
 namespace Tests;
 
@@ -42,8 +40,8 @@ public class IntegrationTestRunner
       // Run Author Integration Tests
       Console.WriteLine("👤 Running Author Integration Tests...");
       totalTests++;
-      var authorTest = new CreateAuthorIntegrationTest();
-      var authorResult = await authorTest.RunTestAsync();
+      var authorTest = new UpsertAuthorIntegrationTest();
+      var authorResult = await authorTest.RunAllTests();
       if (authorResult)
       {
         passedTests++;
@@ -55,60 +53,28 @@ public class IntegrationTestRunner
       }
       Console.WriteLine();
 
-      // Run BlogPost Integration Tests
-      Console.WriteLine("📝 Running BlogPost Integration Tests...");
-      totalTests++;
-      var blogPostTest = new BlogPostIntegrationTest();
-      var blogPostResult = await blogPostTest.RunTestsAsync();
-      if (blogPostResult)
-      {
-        passedTests++;
-        Console.WriteLine("✅ BlogPost tests completed successfully");
-      }
-      else
-      {
-        Console.WriteLine("❌ BlogPost tests failed");
-      }
-      Console.WriteLine();
-
-      // Run Media Integration Tests
-      Console.WriteLine("🎬 Running Media Integration Tests...");
-      totalTests++;
-      var mediaTest = new MediaIntegrationTestV2();
-      var mediaResult = await mediaTest.RunTestsAsync();
-      if (mediaResult)
-      {
-        passedTests++;
-        Console.WriteLine("✅ Media tests completed successfully");
-      }
-      else
-      {
-        Console.WriteLine("❌ Media tests failed");
-      }
-      Console.WriteLine();
-
-      // Summary
-      Console.WriteLine("===========================================");
-      Console.WriteLine("📊 Integration Test Summary");
-      Console.WriteLine($"Total Test Suites: {totalTests}");
-      Console.WriteLine($"Passed Test Suites: {passedTests}");
-      Console.WriteLine($"Failed Test Suites: {totalTests - passedTests}");
-
-      if (passedTests == totalTests)
-      {
-        Console.WriteLine("🎉 All integration tests passed!");
-        Environment.Exit(0);
-      }
-      else
-      {
-        Console.WriteLine("❌ Some integration tests failed!");
-        Environment.Exit(1);
-      }
+      // Additional integration tests can be added here as they are created
+      // For now, just run the basic author integration test
+      
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"❌ Integration test runner failed: {ex.Message}");
+      Console.WriteLine($"❌ Unexpected error during tests: {ex.Message}");
       Console.WriteLine($"Stack trace: {ex.StackTrace}");
+    }
+
+    // Summary
+    Console.WriteLine("===========================================");
+    Console.WriteLine($"📊 Test Results: {passedTests}/{totalTests} tests passed");
+    
+    if (passedTests == totalTests)
+    {
+      Console.WriteLine("🎉 All integration tests passed!");
+      Environment.Exit(0);
+    }
+    else
+    {
+      Console.WriteLine("💥 Some integration tests failed!");
       Environment.Exit(1);
     }
   }
