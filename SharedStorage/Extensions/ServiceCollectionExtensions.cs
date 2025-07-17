@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharedStorage.Services.BaseServices;
 using SharedStorage.Services.Media;
 using SharedStorage.Services.Media.Handlers;
+using SharedStorage.Services.Media.Platforms;
 using SharedStorage.Services.Email;
 using SharedStorage.Environment;
 using Utils;
@@ -41,6 +42,23 @@ public static class ServiceCollectionExtensions
       var tableStorage = provider.GetRequiredService<ITableStorageService>();
       var logger = provider.GetRequiredService<IAppInsightsLogger<MediaService>>();
       return new MediaService(handlers, tableStorage, logger);
+    });
+
+    // Register platform adapters for media gallery
+    services.AddSingleton<IPlatformMediaAdapter, TikTokPlatformAdapter>();
+    services.AddSingleton<IPlatformMediaAdapter, InstagramPlatformAdapter>();
+    services.AddSingleton<IPlatformMediaAdapter, YouTubePlatformAdapter>();
+    services.AddSingleton<IPlatformMediaAdapter, FacebookPlatformAdapter>();
+    services.AddSingleton<IPlatformMediaAdapter, LinkedInPlatformAdapter>();
+    services.AddSingleton<IPlatformMediaAdapter, PinterestPlatformAdapter>();
+
+    // Register media gallery service
+    services.AddSingleton<IMediaGalleryService>(provider =>
+    {
+      var platformAdapters = provider.GetServices<IPlatformMediaAdapter>();
+      var tableStorage = provider.GetRequiredService<ITableStorageService>();
+      var logger = provider.GetRequiredService<IAppInsightsLogger<MediaGalleryService>>();
+      return new MediaGalleryService(platformAdapters, tableStorage, logger);
     });
 
     return services;

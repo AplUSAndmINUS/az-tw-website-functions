@@ -19,7 +19,7 @@ public class YouTubePlatformAdapter : IPlatformMediaAdapter
     _logger = logger ?? throw new ArgumentNullException(nameof(logger));
   }
 
-  public override async Task<IEnumerable<MediaEntity>> FetchRecentMediaAsync(string authorId, int limit = 50)
+  public async Task<IEnumerable<MediaEntity>> FetchRecentMediaAsync(string authorId, int limit = 50)
   {
     _logger.LogInformation("Fetching recent YouTube media for author: {AuthorId}", authorId);
     
@@ -66,7 +66,7 @@ public class YouTubePlatformAdapter : IPlatformMediaAdapter
     return mockData;
   }
 
-  public override async Task<MediaEntity?> FetchMediaByExternalIdAsync(string externalId, string authorId)
+  public async Task<MediaEntity?> FetchMediaByExternalIdAsync(string externalId, string authorId)
   {
     _logger.LogInformation("Fetching YouTube media by external ID: {ExternalId}", externalId);
     

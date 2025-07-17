@@ -1,6 +1,9 @@
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using SharedStorage.Services.Media;
+using System.Net;
+using System.Text.Json;
 using Utils;
 
 namespace Functions.MediaGallery;
@@ -65,8 +68,8 @@ public class WriteMediaTableFunction
   /// HTTP trigger for manual media sync (for testing and admin purposes)
   /// </summary>
   [Function("WriteMediaTableManual")]
-  public async Task<Microsoft.Azure.Functions.Worker.Http.HttpResponseData> WriteMediaTableManual(
-    [Microsoft.Azure.Functions.Worker.Http.HttpTrigger(AuthorizationLevel.Function, "post", Route = "admin/sync-media")] Microsoft.Azure.Functions.Worker.Http.HttpRequestData req)
+  public async Task<HttpResponseData> WriteMediaTableManual(
+    [HttpTrigger(AuthorizationLevel.Function, "post", Route = "admin/sync-media")] HttpRequestData req)
   {
     _appLogger.LogInformation("WriteMediaTableManual HTTP trigger function started");
 
@@ -93,10 +96,10 @@ public class WriteMediaTableFunction
       }
 
       // Create success response
-      var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
+      var response = req.CreateResponse(HttpStatusCode.OK);
       response.Headers.Add("Content-Type", "application/json");
 
-      var responseBody = System.Text.Json.JsonSerializer.Serialize(new
+      var responseBody = JsonSerializer.Serialize(new
       {
         success = true,
         message = "Media sync completed successfully",
@@ -104,9 +107,9 @@ public class WriteMediaTableFunction
         authorId = authorId,
         platform = platform ?? "all",
         syncTime = DateTime.UtcNow
-      }, new System.Text.Json.JsonSerializerOptions
+      }, new JsonSerializerOptions
       {
-        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
       });
 
       await response.WriteStringAsync(responseBody);
@@ -118,7 +121,7 @@ public class WriteMediaTableFunction
     {
       _appLogger.LogError("Error during manual media sync", ex);
       
-      var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
+      var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
       await errorResponse.WriteStringAsync("Internal server error during media sync");
       return errorResponse;
     }

@@ -8,14 +8,18 @@ namespace SharedStorage.Services.Media.Platforms;
 /// Mock LinkedIn adapter for demonstration purposes
 /// In production, this would integrate with LinkedIn's API
 /// </summary>
-public class LinkedInPlatformAdapter : BasePlatformMediaAdapter
+public class LinkedInPlatformAdapter : IPlatformMediaAdapter
 {
-  public override string PlatformName => "linkedin";
+  private readonly IAppInsightsLogger<LinkedInPlatformAdapter> _logger;
 
-  public LinkedInPlatformAdapter(IAppInsightsLogger<LinkedInPlatformAdapter> logger, string authorId) 
-    : base(logger.As<BasePlatformMediaAdapter>(), authorId) { }
+  public string PlatformName => "linkedin";
 
-  public override async Task<IEnumerable<MediaEntity>> FetchRecentMediaAsync(string authorId, int limit = 50)
+  public LinkedInPlatformAdapter(IAppInsightsLogger<LinkedInPlatformAdapter> logger)
+  {
+    _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+  }
+
+  public async Task<IEnumerable<MediaEntity>> FetchRecentMediaAsync(string authorId, int limit = 50)
   {
     _logger.LogInformation("Fetching recent LinkedIn media for author: {AuthorId}", authorId);
     
@@ -56,7 +60,7 @@ public class LinkedInPlatformAdapter : BasePlatformMediaAdapter
     return mockData;
   }
 
-  public override async Task<MediaEntity?> FetchMediaByExternalIdAsync(string externalId, string authorId)
+  public async Task<MediaEntity?> FetchMediaByExternalIdAsync(string externalId, string authorId)
   {
     _logger.LogInformation("Fetching LinkedIn media by external ID: {ExternalId}", externalId);
     await Task.Delay(50);
@@ -88,10 +92,42 @@ public class LinkedInPlatformAdapter : BasePlatformMediaAdapter
     return entity;
   }
 
-  public override async Task<bool> ValidateConnectionAsync()
+  public async Task<bool> ValidateConnectionAsync()
   {
     _logger.LogInformation("Validating LinkedIn connection");
     await Task.Delay(100);
     return true;
+  }
+
+  private MediaEntity CreateBaseMediaEntity(string authorId, string mediaType = "image")
+  {
+    return new MediaEntity
+    {
+      Id = Guid.NewGuid().ToString(),
+      AuthorId = authorId,
+      PartitionKey = authorId,
+      RowKey = Guid.NewGuid().ToString(),
+      Platform = PlatformName,
+      MediaType = mediaType,
+      Purpose = "gallery",
+      UploadedAt = DateTime.UtcNow,
+      LastSyncedAt = DateTime.UtcNow
+    };
+  }
+
+  private string GenerateFileName(string externalId, string mediaType)
+  {
+    return $"{PlatformName}_{externalId}_{DateTime.UtcNow:yyyyMMdd}.{GetFileExtension(mediaType)}";
+  }
+
+  private string GetFileExtension(string mediaType)
+  {
+    return mediaType.ToLowerInvariant() switch
+    {
+      "image" => "jpg",
+      "video" => "mp4",
+      "audio" => "mp3",
+      _ => "dat"
+    };
   }
 }
