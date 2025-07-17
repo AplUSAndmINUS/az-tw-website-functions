@@ -13,7 +13,8 @@
             "Host.Results": "Information",
             "Host.Aggregator": "Information",
             "Utils.Validation": "Trace",
-            "Functions.Authors": "Trace"
+            "Functions.Authors": "Trace",
+            "Functions.GitHub": "Trace"
         }
     },
     "extensions": {
