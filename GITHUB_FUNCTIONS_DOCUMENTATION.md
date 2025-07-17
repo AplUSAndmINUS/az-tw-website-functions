@@ -9,7 +9,7 @@ This module provides Azure Functions for integrating with GitHub data, following
 - **Purpose**: Synchronizes GitHub repositories from the configured GitHub account
 - **Environment Variables**:
   - `GITHUB_USERNAME`: GitHub username to sync (defaults to "AplUSAndmINUS")
-  - `USE_MOCK_STORAGE`: Set to "true" for development/testing to use "mockgithubrepos" table
+  - `USE_MOCK_STORAGE`: Set to "true" for development/testing to use "mockgithub" table
 
 ### 2. GetGitHubReposTable (HTTP GET)
 - **Route**: `/github/repos`
@@ -88,8 +88,8 @@ Represents GitHub activity data:
 ## Storage
 
 Data is stored in Azure Table Storage:
-- **Development/Test**: `mockgithubrepos` table
-- **Production**: `githubrepos` table
+- **Development/Test**: `mockgithub` table
+- **Production**: `github` table
 
 The table naming is controlled by the `USE_MOCK_STORAGE` environment variable.
 
