@@ -97,7 +97,7 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
     try
     {
       _appLogger.LogInformation("Getting GitHub repositories with category: {Category}, isPublished: {IsPublished}, limit: {Limit}", 
-        category ?? "all", isPublished, limit);
+        category ?? "all", isPublished ?? false, limit ?? 0);
 
       var entities = await GetEntitiesAsync(category, isPublished, limit);
       var models = entities.Select(e => e.ToModel<GitHubRepoModel>());
