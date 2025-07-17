@@ -11,12 +11,15 @@ This project is a collection of Azure Functions written in .NET 8 that provide A
 - **src/Functions/** - Contains all Azure Functions endpoints organized by domain
   - **Authors/** - Author management functions
   - **BlogPosts/** - Blog post management functions
+  - **GitHub/** - GitHub integration functions (NEW)
 - **SharedStorage/** - Shared storage services for Azure Blob and Table Storage
 - **Utils/** - Utility classes, validators, and helpers
 
 ## Features
 
 - RESTful API endpoints for content management
+- GitHub repository synchronization and API endpoints (NEW)
+- Timer-triggered data synchronization from GitHub
 - Blob storage integration for media files
 - Table storage for structured data
 - Image conversion and thumbnail generation
