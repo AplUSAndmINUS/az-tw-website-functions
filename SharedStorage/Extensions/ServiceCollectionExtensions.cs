@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using SharedStorage.Services.BaseServices;
 using SharedStorage.Services.Media;
 using SharedStorage.Services.Media.Handlers;
+using SharedStorage.Services.Email;
+using SharedStorage.Environment;
 using Utils;
 
 namespace SharedStorage.Extensions;
@@ -51,6 +53,12 @@ public static class ServiceCollectionExtensions
   {
     // Register shared content services here if any
     // Function-specific services should be registered in Functions.Extensions
+
+    // Register email service
+    services.AddScoped<IEmailService, EmailService>();
+
+    // Register environment services
+    services.AddScoped<IAppMode, DefaultAppMode>();
 
     return services;
   }
