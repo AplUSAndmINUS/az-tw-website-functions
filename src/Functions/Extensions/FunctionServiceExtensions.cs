@@ -4,6 +4,7 @@ using Functions.Authors.Services;
 using Functions.PortfolioPiece.Services;
 using Functions.Books.Services;
 using Functions.GitHub.Services;
+using Functions.ContactMe.Services;
 using SharedStorage.Extensions;
 
 namespace Functions.Extensions;
@@ -24,6 +25,9 @@ public static class FunctionServiceExtensions
     // Register GitHub services
     services.AddHttpClient<IGitHubApiService, GitHubApiService>();
     services.AddScoped<IGitHubRepoService, GitHubRepoService>();
+
+    // Register ContactMe service
+    services.AddScoped<IContactMeService, ContactMeService>();
 
     // Add other Function-specific services here
 
