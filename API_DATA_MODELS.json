@@ -1,0 +1,2013 @@
+{
+    "apiTitle": "Azure Functions API Data Models",
+    "description": "Comprehensive documentation of data models used in the az-tw-website-functions API",
+    "version": "1.0.0",
+    "lastUpdated": "July 16, 2025",
+    "models": {
+        "baseModels": [
+            {
+                "name": "BaseContentModel",
+                "description": "Base model for all content types (Blog Posts, Portfolio Pieces, Videos, Books, etc.)",
+                "properties": [
+                    {
+                        "name": "Id",
+                        "type": "string",
+                        "description": "Unique identifier",
+                        "example": "{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "PartitionKey",
+                        "type": "string",
+                        "description": "Table storage partition key",
+                        "example": "2025-07"
+                    },
+                    {
+                        "name": "RowKey",
+                        "type": "string",
+                        "description": "Table storage row key",
+                        "example": "20250716122030_{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "Timestamp",
+                        "type": "DateTimeOffset?",
+                        "description": "Record timestamp"
+                    },
+                    {
+                        "name": "ETag",
+                        "type": "ETag",
+                        "description": "Entity tag for concurrency control"
+                    },
+                    {
+                        "name": "Title",
+                        "type": "string",
+                        "description": "Content title",
+                        "required": true,
+                        "example": "My First Blog Post"
+                    },
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "Author's slug identifier",
+                        "required": true,
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "Description",
+                        "type": "string",
+                        "description": "Brief content description",
+                        "example": "This is a description of my first blog post"
+                    },
+                    {
+                        "name": "Content",
+                        "type": "string",
+                        "description": "Main content body",
+                        "required": true,
+                        "example": "# My First Blog Post\n\nThis is the content of my first blog post..."
+                    },
+                    {
+                        "name": "Slug",
+                        "type": "string",
+                        "description": "URL-friendly identifier",
+                        "required": true,
+                        "example": "my-first-blog-post"
+                    },
+                    {
+                        "name": "Category",
+                        "type": "string",
+                        "description": "Content category",
+                        "required": true,
+                        "example": "Technology"
+                    },
+                    {
+                        "name": "Status",
+                        "type": "string",
+                        "description": "Publication status",
+                        "enum": ["Draft", "Published", "Archived"],
+                        "default": "Draft"
+                    },
+                    {
+                        "name": "FeaturedImageId",
+                        "type": "string",
+                        "description": "ID of featured image",
+                        "example": "image-123"
+                    },
+                    {
+                        "name": "FeaturedMediaId",
+                        "type": "string",
+                        "description": "ID of featured media",
+                        "example": "media-456"
+                    },
+                    {
+                        "name": "FeaturedVideoId",
+                        "type": "string",
+                        "description": "ID of featured video",
+                        "example": "video-789"
+                    },
+                    {
+                        "name": "MediaReferencesJson",
+                        "type": "string",
+                        "description": "JSON array of media IDs",
+                        "default": "[]",
+                        "example": "[\"image-123\", \"video-456\"]"
+                    },
+                    {
+                        "name": "PublishDate",
+                        "type": "DateTime",
+                        "description": "Date when content was published",
+                        "example": "2025-07-16T12:30:00Z"
+                    },
+                    {
+                        "name": "LastModified",
+                        "type": "DateTime",
+                        "description": "Date when content was last modified",
+                        "example": "2025-07-16T14:45:00Z"
+                    },
+                    {
+                        "name": "TagsList",
+                        "type": "string[]",
+                        "description": "Array of content tags",
+                        "default": "[]",
+                        "example": "[\"azure\", \"functions\", \"serverless\"]"
+                    },
+                    {
+                        "name": "IsPublished",
+                        "type": "bool",
+                        "description": "Computed property indicating if content is published",
+                        "computed": true
+                    }
+                ]
+            },
+            {
+                "name": "BaseContentEntity",
+                "description": "Base entity for all content types stored in Azure Table Storage",
+                "properties": [
+                    {
+                        "name": "PartitionKey",
+                        "type": "string",
+                        "description": "Table storage partition key",
+                        "example": "2025-07"
+                    },
+                    {
+                        "name": "RowKey",
+                        "type": "string",
+                        "description": "Table storage row key",
+                        "example": "20250716122030_{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "Timestamp",
+                        "type": "DateTimeOffset?",
+                        "description": "Record timestamp"
+                    },
+                    {
+                        "name": "ETag",
+                        "type": "ETag",
+                        "description": "Entity tag for concurrency control"
+                    },
+                    {
+                        "name": "Id",
+                        "type": "string",
+                        "description": "Unique identifier",
+                        "example": "{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "Title",
+                        "type": "string",
+                        "description": "Content title",
+                        "required": true,
+                        "example": "My First Blog Post"
+                    },
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "Author's slug identifier",
+                        "required": true,
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "Description",
+                        "type": "string",
+                        "description": "Brief content description",
+                        "example": "This is a description of my first blog post"
+                    },
+                    {
+                        "name": "Content",
+                        "type": "string",
+                        "description": "Main content body",
+                        "required": true,
+                        "example": "# My First Blog Post\n\nThis is the content of my first blog post..."
+                    },
+                    {
+                        "name": "Slug",
+                        "type": "string",
+                        "description": "URL-friendly identifier",
+                        "required": true,
+                        "example": "my-first-blog-post"
+                    },
+                    {
+                        "name": "Category",
+                        "type": "string",
+                        "description": "Content category",
+                        "required": true,
+                        "example": "Technology"
+                    },
+                    {
+                        "name": "Status",
+                        "type": "string",
+                        "description": "Publication status",
+                        "enum": ["Draft", "Published", "Archived"],
+                        "default": "Draft"
+                    },
+                    {
+                        "name": "FeaturedImageId",
+                        "type": "string",
+                        "description": "ID of featured image",
+                        "example": "image-123"
+                    },
+                    {
+                        "name": "FeaturedMediaId",
+                        "type": "string",
+                        "description": "ID of featured media",
+                        "example": "media-456"
+                    },
+                    {
+                        "name": "FeaturedVideoId",
+                        "type": "string",
+                        "description": "ID of featured video",
+                        "example": "video-789"
+                    },
+                    {
+                        "name": "MediaReferencesJson",
+                        "type": "string",
+                        "description": "JSON array of media IDs",
+                        "default": "[]",
+                        "example": "[\"image-123\", \"video-456\"]"
+                    },
+                    {
+                        "name": "PublishDate",
+                        "type": "DateTime",
+                        "description": "Date when content was published",
+                        "example": "2025-07-16T12:30:00Z"
+                    },
+                    {
+                        "name": "LastModified",
+                        "type": "DateTime",
+                        "description": "Date when content was last modified",
+                        "example": "2025-07-16T14:45:00Z"
+                    },
+                    {
+                        "name": "TagsJson",
+                        "type": "string",
+                        "description": "JSON array of content tags",
+                        "default": "[]",
+                        "example": "[\"azure\", \"functions\", \"serverless\"]"
+                    },
+                    {
+                        "name": "IsPublished",
+                        "type": "bool",
+                        "description": "Computed property indicating if content is published",
+                        "computed": true
+                    }
+                ]
+            },
+            {
+                "name": "MediaItemModel",
+                "description": "A shared model for media items that can be used across different content types",
+                "properties": [
+                    {
+                        "name": "Id",
+                        "type": "string",
+                        "description": "Unique identifier",
+                        "example": "{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "AuthorId",
+                        "type": "string",
+                        "description": "ID of the author who uploaded the media",
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "Filename",
+                        "type": "string",
+                        "description": "Original filename",
+                        "example": "profile-picture.jpg"
+                    },
+                    {
+                        "name": "MediaType",
+                        "type": "string",
+                        "description": "Type of media",
+                        "enum": ["image", "video", "audio"],
+                        "example": "image"
+                    },
+                    {
+                        "name": "Purpose",
+                        "type": "string",
+                        "description": "Purpose of the media item",
+                        "enum": [
+                            "profile",
+                            "cover",
+                            "gallery",
+                            "featured",
+                            "content"
+                        ],
+                        "example": "profile"
+                    },
+                    {
+                        "name": "ContentType",
+                        "type": "string",
+                        "description": "MIME type of the media",
+                        "example": "image/jpeg"
+                    },
+                    {
+                        "name": "Url",
+                        "type": "string",
+                        "description": "Full-size media URL",
+                        "example": "https://example.com/images/profile-picture.jpg"
+                    },
+                    {
+                        "name": "ThumbnailUrl",
+                        "type": "string",
+                        "description": "Thumbnail URL",
+                        "example": "https://example.com/images/profile-picture-thumb.jpg"
+                    },
+                    {
+                        "name": "Description",
+                        "type": "string",
+                        "description": "Media description",
+                        "example": "My profile picture at the beach"
+                    },
+                    {
+                        "name": "AltText",
+                        "type": "string",
+                        "description": "Alternative text for accessibility",
+                        "example": "Person standing on a beach at sunset"
+                    },
+                    {
+                        "name": "Width",
+                        "type": "int",
+                        "description": "Width in pixels",
+                        "example": 1200
+                    },
+                    {
+                        "name": "Height",
+                        "type": "int",
+                        "description": "Height in pixels",
+                        "example": 800
+                    },
+                    {
+                        "name": "SizeBytes",
+                        "type": "long",
+                        "description": "File size in bytes",
+                        "example": 204800
+                    },
+                    {
+                        "name": "Resolution",
+                        "type": "string",
+                        "description": "Media resolution",
+                        "example": "72dpi"
+                    },
+                    {
+                        "name": "UploadedAt",
+                        "type": "DateTime",
+                        "description": "Upload timestamp",
+                        "example": "2025-07-16T12:30:00Z"
+                    },
+                    {
+                        "name": "LastModified",
+                        "type": "DateTime",
+                        "description": "Last modification timestamp",
+                        "example": "2025-07-16T14:45:00Z"
+                    },
+                    {
+                        "name": "ContentId",
+                        "type": "string",
+                        "description": "ID of the related content",
+                        "example": "blog-post-123"
+                    },
+                    {
+                        "name": "RelatedContentType",
+                        "type": "string",
+                        "description": "Type of content this media is related to",
+                        "enum": ["blog", "portfolio", "author"],
+                        "example": "blog"
+                    },
+                    {
+                        "name": "ImagePurpose",
+                        "type": "string",
+                        "description": "More specific image purposes",
+                        "example": "hero"
+                    },
+                    {
+                        "name": "Duration",
+                        "type": "int",
+                        "description": "Duration in seconds (for videos)",
+                        "example": 120
+                    },
+                    {
+                        "name": "VideoQuality",
+                        "type": "string",
+                        "description": "Video quality",
+                        "enum": ["SD", "HD", "4K"],
+                        "example": "HD"
+                    },
+                    {
+                        "name": "AudioDuration",
+                        "type": "int",
+                        "description": "Duration in seconds (for audio)",
+                        "example": 180
+                    },
+                    {
+                        "name": "AudioBitrate",
+                        "type": "string",
+                        "description": "Audio bitrate",
+                        "example": "320kbps"
+                    },
+                    {
+                        "name": "MetadataJson",
+                        "type": "string",
+                        "description": "Additional metadata as JSON",
+                        "default": "{}",
+                        "example": "{\"location\": \"San Francisco\", \"device\": \"iPhone 13\"}"
+                    }
+                ]
+            },
+            {
+                "name": "MediaEntity",
+                "description": "Base entity for all media types stored in Azure Table Storage",
+                "properties": [
+                    {
+                        "name": "Id",
+                        "type": "string",
+                        "description": "Unique identifier",
+                        "example": "{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "PartitionKey",
+                        "type": "string",
+                        "description": "Table storage partition key",
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "RowKey",
+                        "type": "string",
+                        "description": "Table storage row key",
+                        "example": "{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "Timestamp",
+                        "type": "DateTimeOffset?",
+                        "description": "Record timestamp"
+                    },
+                    {
+                        "name": "ETag",
+                        "type": "ETag",
+                        "description": "Entity tag for concurrency control"
+                    },
+                    {
+                        "name": "AuthorId",
+                        "type": "string",
+                        "description": "ID of the author who uploaded the media",
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "Filename",
+                        "type": "string",
+                        "description": "Original filename",
+                        "example": "profile-picture.jpg"
+                    },
+                    {
+                        "name": "MediaType",
+                        "type": "string",
+                        "description": "Type of media",
+                        "enum": ["image", "video", "audio"],
+                        "example": "image"
+                    },
+                    {
+                        "name": "Purpose",
+                        "type": "string",
+                        "description": "Purpose of the media item",
+                        "enum": ["coverImage", "introVideo"],
+                        "example": "coverImage"
+                    },
+                    {
+                        "name": "Url",
+                        "type": "string",
+                        "description": "Media URL",
+                        "example": "https://example.com/images/profile-picture.jpg"
+                    },
+                    {
+                        "name": "Description",
+                        "type": "string",
+                        "description": "Media description",
+                        "example": "My profile picture at the beach"
+                    },
+                    {
+                        "name": "AltText",
+                        "type": "string",
+                        "description": "Alternative text for accessibility",
+                        "example": "Person standing on a beach at sunset"
+                    },
+                    {
+                        "name": "ThumbnailUrl",
+                        "type": "string",
+                        "description": "Thumbnail URL",
+                        "example": "https://example.com/images/profile-picture-thumb.jpg"
+                    },
+                    {
+                        "name": "ContentType",
+                        "type": "string",
+                        "description": "MIME type of the media",
+                        "example": "image/jpeg"
+                    },
+                    {
+                        "name": "ContentId",
+                        "type": "string",
+                        "description": "ID of the related content",
+                        "example": "blog-post-123"
+                    },
+                    {
+                        "name": "RelatedContentType",
+                        "type": "string",
+                        "description": "Type of content this media is related to",
+                        "enum": ["blog", "portfolio", "author"],
+                        "example": "blog"
+                    },
+                    {
+                        "name": "Width",
+                        "type": "int",
+                        "description": "Width in pixels",
+                        "example": 1200
+                    },
+                    {
+                        "name": "Height",
+                        "type": "int",
+                        "description": "Height in pixels",
+                        "example": 800
+                    },
+                    {
+                        "name": "UploadedAt",
+                        "type": "DateTime",
+                        "description": "Upload timestamp",
+                        "example": "2025-07-16T12:30:00Z"
+                    }
+                ]
+            },
+            {
+                "name": "BaseContentWithMediaDTO<T>",
+                "description": "Base class for DTOs that combine content with media items",
+                "properties": [
+                    {
+                        "name": "Content",
+                        "type": "T",
+                        "description": "The primary content object (BlogPost, PortfolioPiece, Author, etc.)"
+                    },
+                    {
+                        "name": "MediaItems",
+                        "type": "List<MediaItemModel>",
+                        "description": "All media items associated with this content"
+                    },
+                    {
+                        "name": "FeaturedImage",
+                        "type": "MediaItemModel?",
+                        "description": "Optional featured image for convenience"
+                    },
+                    {
+                        "name": "FeaturedVideo",
+                        "type": "MediaItemModel?",
+                        "description": "Optional featured video for convenience"
+                    },
+                    {
+                        "name": "FeaturedAudio",
+                        "type": "MediaItemModel?",
+                        "description": "Optional featured audio for convenience"
+                    }
+                ]
+            }
+        ],
+        "authorModels": [
+            {
+                "name": "AuthorModel",
+                "description": "Model for author information",
+                "properties": [
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "URL-friendly identifier",
+                        "required": true,
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "FirstName",
+                        "type": "string",
+                        "description": "Author's first name",
+                        "required": true,
+                        "example": "Terence"
+                    },
+                    {
+                        "name": "LastName",
+                        "type": "string",
+                        "description": "Author's last name",
+                        "required": true,
+                        "example": "Waters"
+                    },
+                    {
+                        "name": "Email",
+                        "type": "string",
+                        "description": "Author's email address",
+                        "required": true,
+                        "example": "terence@waters.com"
+                    },
+                    {
+                        "name": "Username",
+                        "type": "string",
+                        "description": "Username for authentication",
+                        "required": true,
+                        "example": "terencewaters"
+                    },
+                    {
+                        "name": "DisplayName",
+                        "type": "string",
+                        "description": "Author's display name",
+                        "required": true,
+                        "example": "Terence Waters"
+                    },
+                    {
+                        "name": "Location",
+                        "type": "string",
+                        "description": "Author's location",
+                        "example": "San Francisco, CA"
+                    },
+                    {
+                        "name": "Bio",
+                        "type": "string",
+                        "description": "Author's biography",
+                        "example": "Software Engineer with a passion for open source."
+                    },
+                    {
+                        "name": "Website",
+                        "type": "string",
+                        "description": "Author's website URL",
+                        "example": "https://terencewaters.com"
+                    },
+                    {
+                        "name": "TwitterHandle",
+                        "type": "string",
+                        "description": "Author's Twitter handle",
+                        "example": "@terencewaters"
+                    },
+                    {
+                        "name": "InstagramHandle",
+                        "type": "string",
+                        "description": "Author's Instagram handle",
+                        "example": "@terencewaters"
+                    },
+                    {
+                        "name": "LinkedInHandle",
+                        "type": "string",
+                        "description": "Author's LinkedIn URL",
+                        "example": "https://www.linkedin.com/in/terencewaters"
+                    },
+                    {
+                        "name": "BlueskyHandle",
+                        "type": "string",
+                        "description": "Author's Bluesky handle",
+                        "example": "@terencewaters.bsky.social"
+                    },
+                    {
+                        "name": "ProfileImageId",
+                        "type": "string",
+                        "description": "ID of profile image",
+                        "example": "image-123"
+                    },
+                    {
+                        "name": "ProfileImageBlobContainer",
+                        "type": "string",
+                        "description": "Blob container for profile image",
+                        "example": "authors-images"
+                    },
+                    {
+                        "name": "ProfileImageFileName",
+                        "type": "string",
+                        "description": "Filename of profile image",
+                        "example": "terence-waters.jpg"
+                    },
+                    {
+                        "name": "ProfileImageCdnUrl",
+                        "type": "string",
+                        "description": "CDN URL for profile image",
+                        "example": "https://example.com/images/terence-waters.jpg"
+                    },
+                    {
+                        "name": "ThumbnailCdnUrl",
+                        "type": "string",
+                        "description": "CDN URL for thumbnail",
+                        "example": "https://example.com/images/terence-waters-thumbnail.jpg"
+                    },
+                    {
+                        "name": "MediaReferencesJson",
+                        "type": "string",
+                        "description": "JSON array of media IDs",
+                        "default": "[]",
+                        "example": "[\"image-123\", \"image-456\"]"
+                    },
+                    {
+                        "name": "HasValidProfileImage",
+                        "type": "bool",
+                        "description": "Indicates if profile image is valid",
+                        "default": false
+                    },
+                    {
+                        "name": "ImageContentType",
+                        "type": "string",
+                        "description": "MIME type of profile image",
+                        "example": "image/jpeg"
+                    },
+                    {
+                        "name": "ImageSizeBytes",
+                        "type": "long",
+                        "description": "Size of profile image in bytes",
+                        "example": 204800
+                    },
+                    {
+                        "name": "ImageWidth",
+                        "type": "int",
+                        "description": "Width of profile image in pixels",
+                        "example": 800
+                    },
+                    {
+                        "name": "ImageHeight",
+                        "type": "int",
+                        "description": "Height of profile image in pixels",
+                        "example": 600
+                    }
+                ]
+            },
+            {
+                "name": "AuthorEntity",
+                "description": "Entity for storing author information in Azure Table Storage",
+                "properties": [
+                    {
+                        "name": "PartitionKey",
+                        "type": "string",
+                        "description": "Table storage partition key",
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "RowKey",
+                        "type": "string",
+                        "description": "Table storage row key",
+                        "default": "profile"
+                    },
+                    {
+                        "name": "Timestamp",
+                        "type": "DateTimeOffset?",
+                        "description": "Record timestamp"
+                    },
+                    {
+                        "name": "ETag",
+                        "type": "ETag",
+                        "description": "Entity tag for concurrency control"
+                    },
+                    {
+                        "name": "FirstName",
+                        "type": "string",
+                        "description": "Author's first name",
+                        "required": true,
+                        "example": "Terence"
+                    },
+                    {
+                        "name": "LastName",
+                        "type": "string",
+                        "description": "Author's last name",
+                        "required": true,
+                        "example": "Waters"
+                    },
+                    {
+                        "name": "Email",
+                        "type": "string",
+                        "description": "Author's email address",
+                        "required": true,
+                        "example": "terence@waters.com"
+                    },
+                    {
+                        "name": "Username",
+                        "type": "string",
+                        "description": "Username for authentication",
+                        "required": true,
+                        "example": "terencewaters"
+                    },
+                    {
+                        "name": "DisplayName",
+                        "type": "string",
+                        "description": "Author's display name",
+                        "required": true,
+                        "example": "Terence Waters"
+                    },
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "URL-friendly identifier (from PartitionKey)",
+                        "computed": true,
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "Location",
+                        "type": "string",
+                        "description": "Author's location",
+                        "example": "San Francisco, CA"
+                    },
+                    {
+                        "name": "Bio",
+                        "type": "string",
+                        "description": "Author's biography",
+                        "example": "Software Engineer with a passion for open source."
+                    },
+                    {
+                        "name": "Website",
+                        "type": "string",
+                        "description": "Author's website URL",
+                        "example": "https://terencewaters.com"
+                    },
+                    {
+                        "name": "TwitterHandle",
+                        "type": "string",
+                        "description": "Author's Twitter handle",
+                        "example": "@terencewaters"
+                    },
+                    {
+                        "name": "InstagramHandle",
+                        "type": "string",
+                        "description": "Author's Instagram handle",
+                        "example": "@terencewaters"
+                    },
+                    {
+                        "name": "LinkedInHandle",
+                        "type": "string",
+                        "description": "Author's LinkedIn URL",
+                        "example": "https://www.linkedin.com/in/terencewaters"
+                    },
+                    {
+                        "name": "BlueskyHandle",
+                        "type": "string",
+                        "description": "Author's Bluesky handle",
+                        "example": "@terencewaters.bsky.social"
+                    },
+                    {
+                        "name": "ProfileImageId",
+                        "type": "string",
+                        "description": "ID of profile image",
+                        "example": "image-123"
+                    },
+                    {
+                        "name": "ProfileImageFileName",
+                        "type": "string",
+                        "description": "Filename of profile image",
+                        "example": "terence-waters.jpg"
+                    },
+                    {
+                        "name": "ProfileImageCdnUrl",
+                        "type": "string",
+                        "description": "CDN URL for profile image",
+                        "example": "https://example.com/images/terence-waters.jpg"
+                    },
+                    {
+                        "name": "ThumbnailCdnUrl",
+                        "type": "string",
+                        "description": "CDN URL for thumbnail",
+                        "example": "https://example.com/images/terence-waters-thumbnail.jpg"
+                    },
+                    {
+                        "name": "HasValidProfileImage",
+                        "type": "bool",
+                        "description": "Indicates if profile image is valid",
+                        "default": false
+                    },
+                    {
+                        "name": "ImageContentType",
+                        "type": "string",
+                        "description": "MIME type of profile image",
+                        "example": "image/jpeg"
+                    },
+                    {
+                        "name": "ImageSizeBytes",
+                        "type": "long",
+                        "description": "Size of profile image in bytes",
+                        "example": 204800
+                    },
+                    {
+                        "name": "ImageWidth",
+                        "type": "int",
+                        "description": "Width of profile image in pixels",
+                        "example": 800
+                    },
+                    {
+                        "name": "ImageHeight",
+                        "type": "int",
+                        "description": "Height of profile image in pixels",
+                        "example": 600
+                    },
+                    {
+                        "name": "ProfileImageBlobContainer",
+                        "type": "string",
+                        "description": "Blob container for profile image",
+                        "example": "authors-images"
+                    },
+                    {
+                        "name": "MediaReferencesJson",
+                        "type": "string",
+                        "description": "JSON array of media IDs",
+                        "default": "[]",
+                        "example": "[\"image-123\", \"image-456\"]"
+                    }
+                ]
+            },
+            {
+                "name": "AuthorDTO",
+                "description": "Data transfer object for author information",
+                "properties": [
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "URL-friendly identifier",
+                        "required": true,
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "DisplayName",
+                        "type": "string",
+                        "description": "Author's display name",
+                        "required": true,
+                        "example": "terencewaters"
+                    },
+                    {
+                        "name": "FirstName",
+                        "type": "string",
+                        "description": "Author's first name",
+                        "required": true,
+                        "example": "Terence"
+                    },
+                    {
+                        "name": "LastName",
+                        "type": "string",
+                        "description": "Author's last name",
+                        "required": true,
+                        "example": "Waters"
+                    },
+                    {
+                        "name": "Email",
+                        "type": "string",
+                        "description": "Author's email address",
+                        "required": true,
+                        "example": "terence.waters@example.com"
+                    },
+                    {
+                        "name": "Username",
+                        "type": "string",
+                        "description": "Username for authentication",
+                        "required": true,
+                        "example": "terencewaters"
+                    },
+                    {
+                        "name": "Location",
+                        "type": "string",
+                        "description": "Author's location",
+                        "example": "San Francisco, CA"
+                    },
+                    {
+                        "name": "Bio",
+                        "type": "string",
+                        "description": "Author's biography",
+                        "example": "Software Engineer with a passion for open source."
+                    },
+                    {
+                        "name": "Website",
+                        "type": "string",
+                        "description": "Author's website URL",
+                        "example": "https://terencewaters.com"
+                    },
+                    {
+                        "name": "TwitterHandle",
+                        "type": "string",
+                        "description": "Author's Twitter handle",
+                        "example": "@terencewaters"
+                    },
+                    {
+                        "name": "InstagramHandle",
+                        "type": "string",
+                        "description": "Author's Instagram handle",
+                        "example": "@terencewaters"
+                    },
+                    {
+                        "name": "LinkedInHandle",
+                        "type": "string",
+                        "description": "Author's LinkedIn URL",
+                        "example": "https://www.linkedin.com/in/terencewaters"
+                    },
+                    {
+                        "name": "BlueskyHandle",
+                        "type": "string",
+                        "description": "Author's Bluesky handle",
+                        "example": "@terencewaters.bsky.social"
+                    },
+                    {
+                        "name": "HasValidProfileImage",
+                        "type": "bool",
+                        "description": "Indicates if profile image is valid",
+                        "default": false
+                    },
+                    {
+                        "name": "ProfileImageId",
+                        "type": "string",
+                        "description": "ID of profile image",
+                        "example": "image-123"
+                    },
+                    {
+                        "name": "ProfileImageFileName",
+                        "type": "string",
+                        "description": "Filename of profile image",
+                        "example": "terence-waters.jpg"
+                    },
+                    {
+                        "name": "ProfileImageCdnUrl",
+                        "type": "string",
+                        "description": "CDN URL for profile image",
+                        "example": "https://example.com/images/terence-waters.jpg"
+                    },
+                    {
+                        "name": "ThumbnailCdnUrl",
+                        "type": "string",
+                        "description": "CDN URL for thumbnail",
+                        "example": "https://example.com/images/terence-waters-thumbnail.jpg"
+                    },
+                    {
+                        "name": "MediaReferencesJson",
+                        "type": "string",
+                        "description": "JSON array of media IDs",
+                        "default": "[]",
+                        "example": "[\"image-123\", \"image-456\"]"
+                    }
+                ]
+            },
+            {
+                "name": "AuthorWithMediaDTO",
+                "description": "DTO for combining an author with their associated media items",
+                "properties": [
+                    {
+                        "name": "Author",
+                        "type": "AuthorModel",
+                        "description": "The author model"
+                    },
+                    {
+                        "name": "MediaItems",
+                        "type": "List<MediaItemModel>",
+                        "description": "All media items associated with this author"
+                    },
+                    {
+                        "name": "ProfileImage",
+                        "type": "MediaItemModel?",
+                        "description": "Convenience property for profile image"
+                    },
+                    {
+                        "name": "BackgroundImage",
+                        "type": "MediaItemModel?",
+                        "description": "Convenience property for background image"
+                    },
+                    {
+                        "name": "MediaReferencesJson",
+                        "type": "string",
+                        "description": "JSON serialized list of media references",
+                        "computed": true
+                    },
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "URL-friendly identifier",
+                        "computed": true
+                    },
+                    {
+                        "name": "FirstName",
+                        "type": "string",
+                        "description": "Author's first name",
+                        "computed": true
+                    },
+                    {
+                        "name": "LastName",
+                        "type": "string",
+                        "description": "Author's last name",
+                        "computed": true
+                    },
+                    {
+                        "name": "Email",
+                        "type": "string",
+                        "description": "Author's email address",
+                        "computed": true
+                    },
+                    {
+                        "name": "Username",
+                        "type": "string",
+                        "description": "Username for authentication",
+                        "computed": true
+                    },
+                    {
+                        "name": "DisplayName",
+                        "type": "string",
+                        "description": "Author's display name",
+                        "computed": true
+                    },
+                    {
+                        "name": "Location",
+                        "type": "string",
+                        "description": "Author's location",
+                        "computed": true
+                    },
+                    {
+                        "name": "Bio",
+                        "type": "string",
+                        "description": "Author's biography",
+                        "computed": true
+                    },
+                    {
+                        "name": "Website",
+                        "type": "string",
+                        "description": "Author's website URL",
+                        "computed": true
+                    },
+                    {
+                        "name": "TwitterHandle",
+                        "type": "string",
+                        "description": "Author's Twitter handle",
+                        "computed": true
+                    },
+                    {
+                        "name": "InstagramHandle",
+                        "type": "string",
+                        "description": "Author's Instagram handle",
+                        "computed": true
+                    },
+                    {
+                        "name": "LinkedInHandle",
+                        "type": "string",
+                        "description": "Author's LinkedIn URL",
+                        "computed": true
+                    },
+                    {
+                        "name": "BlueskyHandle",
+                        "type": "string",
+                        "description": "Author's Bluesky handle",
+                        "computed": true
+                    },
+                    {
+                        "name": "ProfileImageCdnUrl",
+                        "type": "string",
+                        "description": "CDN URL for profile image",
+                        "computed": true
+                    },
+                    {
+                        "name": "ThumbnailCdnUrl",
+                        "type": "string",
+                        "description": "CDN URL for thumbnail",
+                        "computed": true
+                    }
+                ]
+            },
+            {
+                "name": "AuthorImagesMetadataEntity",
+                "description": "Entity for storing author image metadata in Azure Table Storage",
+                "properties": [
+                    {
+                        "name": "PartitionKey",
+                        "type": "string",
+                        "description": "Table storage partition key (author slug)",
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "RowKey",
+                        "type": "string",
+                        "description": "Table storage row key (image file name or blob URI-safe ID)",
+                        "example": "profile-image-123"
+                    },
+                    {
+                        "name": "Timestamp",
+                        "type": "DateTimeOffset?",
+                        "description": "Record timestamp"
+                    },
+                    {
+                        "name": "ETag",
+                        "type": "ETag",
+                        "description": "Entity tag for concurrency control"
+                    },
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "Author's slug identifier (from PartitionKey)",
+                        "computed": true,
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "ProfileImageCdnUrl",
+                        "type": "string",
+                        "description": "CDN URL for profile image",
+                        "example": "https://example.com/images/terence-waters.jpg"
+                    },
+                    {
+                        "name": "ThumbnailCdnUrl",
+                        "type": "string",
+                        "description": "CDN URL for thumbnail",
+                        "example": "https://example.com/images/terence-waters-thumbnail.jpg"
+                    },
+                    {
+                        "name": "ImageContentType",
+                        "type": "string",
+                        "description": "MIME type of profile image",
+                        "required": true,
+                        "example": "image/jpeg"
+                    },
+                    {
+                        "name": "ImageSizeBytes",
+                        "type": "long",
+                        "description": "Size of profile image in bytes",
+                        "example": 204800
+                    },
+                    {
+                        "name": "ProfileImageFileName",
+                        "type": "string",
+                        "description": "Filename of profile image",
+                        "required": true,
+                        "example": "terence-waters.jpg"
+                    },
+                    {
+                        "name": "ProfileImageBlobContainer",
+                        "type": "string",
+                        "description": "Blob container for profile image",
+                        "example": "authors-images"
+                    },
+                    {
+                        "name": "ImageWidth",
+                        "type": "int",
+                        "description": "Width of profile image in pixels",
+                        "example": 800
+                    },
+                    {
+                        "name": "ImageHeight",
+                        "type": "int",
+                        "description": "Height of profile image in pixels",
+                        "example": 600
+                    }
+                ]
+            }
+        ],
+        "blogPostModels": [
+            {
+                "name": "BlogPostModel",
+                "description": "Model class for blog posts, inherits from BaseContentModel",
+                "inheritsFrom": "BaseContentModel",
+                "properties": []
+            },
+            {
+                "name": "BlogPostEntity",
+                "description": "Entity class for blog posts stored in Azure Table Storage",
+                "inheritsFrom": "BaseContentEntity",
+                "properties": []
+            },
+            {
+                "name": "BlogPostDTO",
+                "description": "Data transfer object for blog posts",
+                "properties": [
+                    {
+                        "name": "Id",
+                        "type": "string",
+                        "description": "Unique identifier",
+                        "example": "{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "PartitionKey",
+                        "type": "string",
+                        "description": "Table storage partition key",
+                        "example": "2025-07"
+                    },
+                    {
+                        "name": "RowKey",
+                        "type": "string",
+                        "description": "Table storage row key",
+                        "example": "20250716122030_{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "Timestamp",
+                        "type": "DateTimeOffset?",
+                        "description": "Record timestamp"
+                    },
+                    {
+                        "name": "Title",
+                        "type": "string",
+                        "description": "Blog post title",
+                        "required": true,
+                        "example": "My First Blog Post"
+                    },
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "Author's slug identifier",
+                        "required": true,
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "Description",
+                        "type": "string",
+                        "description": "Brief blog post description",
+                        "example": "This is a description of my first blog post"
+                    },
+                    {
+                        "name": "Content",
+                        "type": "string",
+                        "description": "Main blog post content",
+                        "required": true,
+                        "example": "# My First Blog Post\n\nThis is the content of my first blog post..."
+                    },
+                    {
+                        "name": "Slug",
+                        "type": "string",
+                        "description": "URL-friendly identifier",
+                        "required": true,
+                        "example": "my-first-blog-post"
+                    },
+                    {
+                        "name": "Category",
+                        "type": "string",
+                        "description": "Blog post category",
+                        "required": true,
+                        "example": "Technology"
+                    },
+                    {
+                        "name": "Status",
+                        "type": "string",
+                        "description": "Publication status",
+                        "enum": ["Draft", "Published", "Archived"],
+                        "default": "Draft"
+                    },
+                    {
+                        "name": "FeaturedImageId",
+                        "type": "string",
+                        "description": "ID of featured image",
+                        "example": "image-123"
+                    },
+                    {
+                        "name": "FeaturedMediaId",
+                        "type": "string",
+                        "description": "ID of featured media",
+                        "example": "media-456"
+                    },
+                    {
+                        "name": "FeaturedVideoId",
+                        "type": "string",
+                        "description": "ID of featured video",
+                        "example": "video-789"
+                    },
+                    {
+                        "name": "MediaReferencesJson",
+                        "type": "string",
+                        "description": "JSON array of media IDs",
+                        "default": "[]",
+                        "example": "[\"image-123\", \"video-456\"]"
+                    },
+                    {
+                        "name": "PublishDate",
+                        "type": "DateTime",
+                        "description": "Date when blog post was published",
+                        "example": "2025-07-16T12:30:00Z"
+                    },
+                    {
+                        "name": "LastModified",
+                        "type": "DateTime",
+                        "description": "Date when blog post was last modified",
+                        "example": "2025-07-16T14:45:00Z"
+                    },
+                    {
+                        "name": "TagsList",
+                        "type": "string[]",
+                        "description": "Array of blog post tags",
+                        "default": "[]",
+                        "example": "[\"azure\", \"functions\", \"serverless\"]"
+                    }
+                ]
+            },
+            {
+                "name": "BlogPostWithMediaDTO",
+                "description": "DTO for combining a blog post with its associated media items",
+                "properties": [
+                    {
+                        "name": "BlogPost",
+                        "type": "BlogPostDTO",
+                        "description": "The blog post DTO"
+                    },
+                    {
+                        "name": "MediaItems",
+                        "type": "List<MediaItemModel>",
+                        "description": "All media items associated with this blog post"
+                    },
+                    {
+                        "name": "FeaturedImage",
+                        "type": "MediaItemModel?",
+                        "description": "Convenience property for featured image"
+                    },
+                    {
+                        "name": "FeaturedVideo",
+                        "type": "MediaItemModel?",
+                        "description": "Convenience property for featured video"
+                    },
+                    {
+                        "name": "FeaturedMedia",
+                        "type": "MediaItemModel?",
+                        "description": "Convenience property for featured media"
+                    },
+                    {
+                        "name": "LegacyFeaturedImage",
+                        "type": "MediaEntity?",
+                        "description": "Legacy reference to featured image",
+                        "deprecated": true
+                    },
+                    {
+                        "name": "LegacyFeaturedMedia",
+                        "type": "MediaEntity?",
+                        "description": "Legacy reference to featured media",
+                        "deprecated": true
+                    },
+                    {
+                        "name": "LegacyFeaturedVideo",
+                        "type": "MediaEntity?",
+                        "description": "Legacy reference to featured video",
+                        "deprecated": true
+                    },
+                    {
+                        "name": "LegacyMediaReferences",
+                        "type": "List<MediaEntity>",
+                        "description": "Legacy references to media items",
+                        "deprecated": true
+                    },
+                    {
+                        "name": "Id",
+                        "type": "string",
+                        "description": "Unique identifier",
+                        "computed": true
+                    },
+                    {
+                        "name": "PartitionKey",
+                        "type": "string",
+                        "description": "Table storage partition key",
+                        "computed": true
+                    },
+                    {
+                        "name": "RowKey",
+                        "type": "string",
+                        "description": "Table storage row key",
+                        "computed": true
+                    },
+                    {
+                        "name": "Timestamp",
+                        "type": "DateTimeOffset?",
+                        "description": "Record timestamp",
+                        "computed": true
+                    },
+                    {
+                        "name": "Title",
+                        "type": "string",
+                        "description": "Blog post title",
+                        "computed": true
+                    },
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "Author's slug identifier",
+                        "computed": true
+                    },
+                    {
+                        "name": "Description",
+                        "type": "string",
+                        "description": "Brief blog post description",
+                        "computed": true
+                    },
+                    {
+                        "name": "Content",
+                        "type": "string",
+                        "description": "Main blog post content",
+                        "computed": true
+                    },
+                    {
+                        "name": "Slug",
+                        "type": "string",
+                        "description": "URL-friendly identifier",
+                        "computed": true
+                    },
+                    {
+                        "name": "Category",
+                        "type": "string",
+                        "description": "Blog post category",
+                        "computed": true
+                    },
+                    {
+                        "name": "Status",
+                        "type": "string",
+                        "description": "Publication status",
+                        "computed": true
+                    },
+                    {
+                        "name": "FeaturedImageId",
+                        "type": "string",
+                        "description": "ID of featured image",
+                        "computed": true
+                    },
+                    {
+                        "name": "FeaturedMediaId",
+                        "type": "string",
+                        "description": "ID of featured media",
+                        "computed": true
+                    },
+                    {
+                        "name": "FeaturedVideoId",
+                        "type": "string",
+                        "description": "ID of featured video",
+                        "computed": true
+                    },
+                    {
+                        "name": "MediaReferencesJson",
+                        "type": "string",
+                        "description": "JSON array of media IDs",
+                        "computed": true
+                    },
+                    {
+                        "name": "PublishDate",
+                        "type": "DateTime",
+                        "description": "Date when blog post was published",
+                        "computed": true
+                    },
+                    {
+                        "name": "LastModified",
+                        "type": "DateTime",
+                        "description": "Date when blog post was last modified",
+                        "computed": true
+                    },
+                    {
+                        "name": "TagsList",
+                        "type": "string[]",
+                        "description": "Array of blog post tags",
+                        "computed": true
+                    }
+                ]
+            }
+        ],
+        "portfolioPieceModels": [
+            {
+                "name": "PortfolioPieceModel",
+                "description": "Model class for portfolio pieces, inherits from BaseContentModel",
+                "inheritsFrom": "BaseContentModel",
+                "properties": []
+            },
+            {
+                "name": "PortfolioPieceEntity",
+                "description": "Entity class for portfolio pieces stored in Azure Table Storage",
+                "inheritsFrom": "BaseContentEntity",
+                "properties": []
+            },
+            {
+                "name": "PortfolioPieceDTO",
+                "description": "Data transfer object for portfolio pieces",
+                "properties": [
+                    {
+                        "name": "Id",
+                        "type": "string",
+                        "description": "Unique identifier",
+                        "example": "{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "PartitionKey",
+                        "type": "string",
+                        "description": "Table storage partition key",
+                        "example": "2025-07"
+                    },
+                    {
+                        "name": "RowKey",
+                        "type": "string",
+                        "description": "Table storage row key",
+                        "example": "20250716122030_{{REDACTED-GUID}}"
+                    },
+                    {
+                        "name": "Timestamp",
+                        "type": "DateTimeOffset?",
+                        "description": "Record timestamp"
+                    },
+                    {
+                        "name": "Title",
+                        "type": "string",
+                        "description": "Portfolio piece title",
+                        "required": true,
+                        "example": "My First Portfolio Piece"
+                    },
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "Author's slug identifier",
+                        "required": true,
+                        "example": "terence-waters"
+                    },
+                    {
+                        "name": "Description",
+                        "type": "string",
+                        "description": "Brief portfolio piece description",
+                        "example": "This is a description of my first portfolio piece"
+                    },
+                    {
+                        "name": "Content",
+                        "type": "string",
+                        "description": "Main portfolio piece content",
+                        "required": true,
+                        "example": "# My First Portfolio Piece\n\nThis is the content of my first portfolio piece..."
+                    },
+                    {
+                        "name": "Slug",
+                        "type": "string",
+                        "description": "URL-friendly identifier",
+                        "required": true,
+                        "example": "my-first-portfolio-piece"
+                    },
+                    {
+                        "name": "Category",
+                        "type": "string",
+                        "description": "Portfolio piece category",
+                        "required": true,
+                        "example": "Web Development"
+                    },
+                    {
+                        "name": "Status",
+                        "type": "string",
+                        "description": "Publication status",
+                        "enum": ["Draft", "Published", "Archived"],
+                        "default": "Draft"
+                    },
+                    {
+                        "name": "FeaturedImageId",
+                        "type": "string",
+                        "description": "ID of featured image",
+                        "example": "image-123"
+                    },
+                    {
+                        "name": "FeaturedMediaId",
+                        "type": "string",
+                        "description": "ID of featured media",
+                        "example": "media-456"
+                    },
+                    {
+                        "name": "FeaturedVideoId",
+                        "type": "string",
+                        "description": "ID of featured video",
+                        "example": "video-789"
+                    },
+                    {
+                        "name": "MediaReferencesJson",
+                        "type": "string",
+                        "description": "JSON array of media IDs",
+                        "default": "[]",
+                        "example": "[\"image-123\", \"video-456\"]"
+                    },
+                    {
+                        "name": "PublishDate",
+                        "type": "DateTime",
+                        "description": "Date when portfolio piece was published",
+                        "example": "2025-07-16T12:30:00Z"
+                    },
+                    {
+                        "name": "LastModified",
+                        "type": "DateTime",
+                        "description": "Date when portfolio piece was last modified",
+                        "example": "2025-07-16T14:45:00Z"
+                    },
+                    {
+                        "name": "TagsList",
+                        "type": "string[]",
+                        "description": "Array of portfolio piece tags",
+                        "default": "[]",
+                        "example": "[\"react\", \"typescript\", \"azure\"]"
+                    },
+                    {
+                        "name": "IsPublished",
+                        "type": "bool",
+                        "description": "Computed property indicating if portfolio piece is published",
+                        "computed": true
+                    }
+                ]
+            },
+            {
+                "name": "PortfolioPieceWithMediaDTO",
+                "description": "DTO for combining a portfolio piece with its associated media items",
+                "properties": [
+                    {
+                        "name": "PortfolioPiece",
+                        "type": "PortfolioPieceDTO",
+                        "description": "The portfolio piece DTO"
+                    },
+                    {
+                        "name": "MediaItems",
+                        "type": "List<MediaItemModel>",
+                        "description": "All media items associated with this portfolio piece"
+                    },
+                    {
+                        "name": "FeaturedImage",
+                        "type": "MediaItemModel?",
+                        "description": "Convenience property for featured image"
+                    },
+                    {
+                        "name": "FeaturedVideo",
+                        "type": "MediaItemModel?",
+                        "description": "Convenience property for featured video"
+                    },
+                    {
+                        "name": "FeaturedMedia",
+                        "type": "MediaItemModel?",
+                        "description": "Convenience property for featured media"
+                    },
+                    {
+                        "name": "LegacyFeaturedImage",
+                        "type": "MediaEntity?",
+                        "description": "Legacy reference to featured image",
+                        "deprecated": true
+                    },
+                    {
+                        "name": "LegacyFeaturedMedia",
+                        "type": "MediaEntity?",
+                        "description": "Legacy reference to featured media",
+                        "deprecated": true
+                    },
+                    {
+                        "name": "LegacyFeaturedVideo",
+                        "type": "MediaEntity?",
+                        "description": "Legacy reference to featured video",
+                        "deprecated": true
+                    },
+                    {
+                        "name": "LegacyMediaReferences",
+                        "type": "List<MediaEntity>",
+                        "description": "Legacy references to media items",
+                        "deprecated": true
+                    },
+                    {
+                        "name": "Id",
+                        "type": "string",
+                        "description": "Unique identifier",
+                        "computed": true
+                    },
+                    {
+                        "name": "PartitionKey",
+                        "type": "string",
+                        "description": "Table storage partition key",
+                        "computed": true
+                    },
+                    {
+                        "name": "RowKey",
+                        "type": "string",
+                        "description": "Table storage row key",
+                        "computed": true
+                    },
+                    {
+                        "name": "Timestamp",
+                        "type": "DateTimeOffset?",
+                        "description": "Record timestamp",
+                        "computed": true
+                    },
+                    {
+                        "name": "Title",
+                        "type": "string",
+                        "description": "Portfolio piece title",
+                        "computed": true
+                    },
+                    {
+                        "name": "AuthorSlug",
+                        "type": "string",
+                        "description": "Author's slug identifier",
+                        "computed": true
+                    },
+                    {
+                        "name": "Description",
+                        "type": "string",
+                        "description": "Brief portfolio piece description",
+                        "computed": true
+                    },
+                    {
+                        "name": "Content",
+                        "type": "string",
+                        "description": "Main portfolio piece content",
+                        "computed": true
+                    },
+                    {
+                        "name": "Slug",
+                        "type": "string",
+                        "description": "URL-friendly identifier",
+                        "computed": true
+                    },
+                    {
+                        "name": "Category",
+                        "type": "string",
+                        "description": "Portfolio piece category",
+                        "computed": true
+                    },
+                    {
+                        "name": "Status",
+                        "type": "string",
+                        "description": "Publication status",
+                        "computed": true
+                    },
+                    {
+                        "name": "FeaturedImageId",
+                        "type": "string",
+                        "description": "ID of featured image",
+                        "computed": true
+                    },
+                    {
+                        "name": "FeaturedMediaId",
+                        "type": "string",
+                        "description": "ID of featured media",
+                        "computed": true
+                    },
+                    {
+                        "name": "FeaturedVideoId",
+                        "type": "string",
+                        "description": "ID of featured video",
+                        "computed": true
+                    },
+                    {
+                        "name": "MediaReferencesJson",
+                        "type": "string",
+                        "description": "JSON array of media IDs",
+                        "computed": true
+                    },
+                    {
+                        "name": "PublishDate",
+                        "type": "DateTime",
+                        "description": "Date when portfolio piece was published",
+                        "computed": true
+                    },
+                    {
+                        "name": "LastModified",
+                        "type": "DateTime",
+                        "description": "Date when portfolio piece was last modified",
+                        "computed": true
+                    },
+                    {
+                        "name": "TagsList",
+                        "type": "string[]",
+                        "description": "Array of portfolio piece tags",
+                        "computed": true
+                    },
+                    {
+                        "name": "Post",
+                        "type": "PortfolioPieceModel",
+                        "description": "Compatibility property for backward compatibility",
+                        "deprecated": true
+                    }
+                ]
+            }
+        ]
+    },
+    "endpoints": {
+        "authors": [
+            {
+                "route": "GetAuthors",
+                "method": "GET",
+                "description": "Retrieves all authors",
+                "responseModel": "AuthorDTO[]"
+            },
+            {
+                "route": "GetAuthor/{authorSlug}",
+                "method": "GET",
+                "description": "Retrieves an author by slug",
+                "parameters": [
+                    {
+                        "name": "authorSlug",
+                        "type": "string",
+                        "description": "The author's slug identifier",
+                        "required": true,
+                        "in": "path"
+                    }
+                ],
+                "responseModel": "AuthorDTO"
+            },
+            {
+                "route": "UpsertAuthor",
+                "method": "POST",
+                "description": "Creates or updates an author",
+                "requestModel": "AuthorModel",
+                "responseModel": "AuthorDTO"
+            }
+        ],
+        "blogPosts": [
+            {
+                "route": "GetBlogPosts",
+                "method": "GET",
+                "description": "Retrieves all blog posts",
+                "responseModel": "BlogPostDTO[]"
+            },
+            {
+                "route": "GetBlogPost/{slug}",
+                "method": "GET",
+                "description": "Retrieves a blog post by slug",
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "type": "string",
+                        "description": "The blog post's slug identifier",
+                        "required": true,
+                        "in": "path"
+                    }
+                ],
+                "responseModel": "BlogPostWithMediaDTO"
+            },
+            {
+                "route": "UpsertBlogPost",
+                "method": "POST",
+                "description": "Creates or updates a blog post",
+                "requestModel": "BlogPostModel",
+                "responseModel": "BlogPostDTO"
+            }
+        ],
+        "portfolioPieces": [
+            {
+                "route": "GetPortfolioPieces",
+                "method": "GET",
+                "description": "Retrieves all portfolio pieces",
+                "responseModel": "PortfolioPieceDTO[]"
+            },
+            {
+                "route": "GetPortfolioPiece/{slug}",
+                "method": "GET",
+                "description": "Retrieves a portfolio piece by slug",
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "type": "string",
+                        "description": "The portfolio piece's slug identifier",
+                        "required": true,
+                        "in": "path"
+                    }
+                ],
+                "responseModel": "PortfolioPieceWithMediaDTO"
+            },
+            {
+                "route": "UpsertPortfolioPiece",
+                "method": "POST",
+                "description": "Creates or updates a portfolio piece",
+                "requestModel": "PortfolioPieceModel",
+                "responseModel": "PortfolioPieceDTO"
+            }
+        ],
+        "media": [
+            {
+                "route": "UploadMedia",
+                "method": "POST",
+                "description": "Uploads a media file",
+                "requestFormat": "multipart/form-data",
+                "parameters": [
+                    {
+                        "name": "file",
+                        "type": "file",
+                        "description": "The media file to upload",
+                        "required": true,
+                        "in": "formData"
+                    },
+                    {
+                        "name": "purpose",
+                        "type": "string",
+                        "description": "The purpose of the media file",
+                        "required": true,
+                        "in": "formData"
+                    },
+                    {
+                        "name": "contentId",
+                        "type": "string",
+                        "description": "ID of the related content",
+                        "required": false,
+                        "in": "formData"
+                    },
+                    {
+                        "name": "relatedContentType",
+                        "type": "string",
+                        "description": "Type of the related content",
+                        "required": false,
+                        "in": "formData"
+                    }
+                ],
+                "responseModel": "MediaItemModel"
+            },
+            {
+                "route": "GetMedia/{id}",
+                "method": "GET",
+                "description": "Retrieves a media item by ID",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "string",
+                        "description": "The media item's ID",
+                        "required": true,
+                        "in": "path"
+                    }
+                ],
+                "responseModel": "MediaItemModel"
+            }
+        ]
+    }
+}
