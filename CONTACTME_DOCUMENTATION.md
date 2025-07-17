@@ -19,7 +19,7 @@ The ContactMe Azure Function is a POST-only HTTP trigger that accepts form data 
 
 ### Data Flow
 
-1. HTTP POST request received at `/api/contact`
+1. HTTP POST request received at `/contact`
 2. API key validation
 3. Request body validation and deserialization
 4. Contact form data validation
@@ -33,7 +33,7 @@ The ContactMe Azure Function is a POST-only HTTP trigger that accepts form data 
 ### Endpoint
 
 ```
-POST /api/contact
+POST /contact
 ```
 
 ### Headers
@@ -229,7 +229,7 @@ The function includes comprehensive error handling:
 You can test the function using curl:
 
 ```bash
-curl -X POST "https://your-function-app.azurewebsites.net/api/contact" \
+curl -X POST "https://your-function-app.azurewebsites.net/contact" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key" \
   -d '{
