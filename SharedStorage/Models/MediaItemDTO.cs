@@ -46,4 +46,19 @@ public class MediaItemDTO
   // For audio
   public int AudioDuration { get; set; } // In seconds
   public string AudioBitrate { get; set; } = string.Empty;
+
+  // External platform properties
+  public string Platform { get; set; } = string.Empty; // "blob", "tiktok", "instagram", "youtube", "facebook", "linkedin", "pinterest"
+  public string ExternalId { get; set; } = string.Empty; // External platform's unique identifier
+  public string ExternalUrl { get; set; } = string.Empty; // Direct link to external platform content
+  public string EmbedCode { get; set; } = string.Empty; // HTML embed code for external content
+  public DateTime? ExternalCreatedAt { get; set; } // When content was created on external platform
+  public DateTime? LastSyncedAt { get; set; } // When metadata was last synced from external platform
+
+  // Platform-specific metadata
+  public string PlatformMetadata { get; set; } = string.Empty; // JSON string with platform-specific data
+  public int LikeCount { get; set; } = 0; // External platform likes/reactions
+  public int ShareCount { get; set; } = 0; // External platform shares
+  public int ViewCount { get; set; } = 0; // External platform views
+  public string Tags { get; set; } = string.Empty; // Comma-separated tags from external platform
 }
