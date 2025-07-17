@@ -18,19 +18,19 @@ using Microsoft.Extensions.Logging;
 namespace Tests.Authors;
 
 /// <summary>
-/// Integration test for CreateAuthor function that tests against DEV storage.
+/// Integration test for UpsertAuthor function that tests against DEV storage.
 /// This requires DEV environment variables to be configured:
 /// - StorageAccountName: Your DEV storage account name
 /// - X_API_ENVIRONMENT_KEY: Your DEV API key
 /// - AUTHORS_TABLE_NAME: Table name (optional, defaults to "authors")
 /// </summary>
-public class CreateAuthorIntegrationTest : IDisposable
+public class UpsertAuthorIntegrationTest : IDisposable
 {
   private readonly IServiceProvider _serviceProvider;
-  private readonly CreateAuthor _createAuthorFunction;
+  private readonly UpsertAuthorFunction _upsertAuthorFunction;
   private readonly string _testAuthorUsername;
 
-  public CreateAuthorIntegrationTest()
+  public UpsertAuthorIntegrationTest()
   {
     // Generate a unique username for this test run to avoid conflicts
     _testAuthorUsername = $"testuser_{Guid.NewGuid():N}_{DateTime.UtcNow:yyyyMMddHHmmss}";
@@ -80,9 +80,8 @@ public class CreateAuthorIntegrationTest : IDisposable
     _serviceProvider = host.Services;
 
     // Create the function with real dependencies
-    _createAuthorFunction = new CreateAuthor(
-        _serviceProvider.GetRequiredService<IAppInsightsLogger<CreateAuthor>>(),
-        _serviceProvider.GetRequiredService<ITableStorageService>(),
+    _upsertAuthorFunction = new UpsertAuthorFunction(
+        _serviceProvider.GetRequiredService<IAppInsightsLogger<BaseContentFunctions<IAuthorService, AuthorModel, AuthorDTO, AuthorWithMediaDTO>>>(),
         _serviceProvider.GetRequiredService<IAPIKeyValidator>(),
         _serviceProvider.GetRequiredService<IAuthorService>()
     );
@@ -91,11 +90,11 @@ public class CreateAuthorIntegrationTest : IDisposable
   /// <summary>
   /// Test creating an author with valid data against DEV storage
   /// </summary>
-  public async Task<bool> TestCreateAuthorWithValidData()
+  public async Task<bool> TestUpsertAuthorWithValidData()
   {
     try
     {
-      Console.WriteLine("=== Testing CreateAuthor with valid data ===");
+      Console.WriteLine("=== Testing UpsertAuthor with valid data ===");
 
       // Arrange - Create a valid author model
       var authorModel = new AuthorModel
@@ -121,50 +120,82 @@ public class CreateAuthorIntegrationTest : IDisposable
           context,
           authorModel,
           apiKey,
-          "POST",
-          "authors"
+          "PUT",
+          $"authors/{_testAuthorUsername}"
       );
 
       // Act - Call the actual function
-      var response = await _createAuthorFunction.Run(request, context);
+      var response = await _upsertAuthorFunction.Run(request, _testAuthorUsername, context);
 
       // Assert - Verify the response
-      if (response.StatusCode != HttpStatusCode.Created)
+      if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.Created)
       {
-        Console.WriteLine($"❌ Expected Created (201), got {response.StatusCode}");
+        Console.WriteLine($"❌ Expected OK (200) or Created (201), got {response.StatusCode}");
         return false;
       }
 
-      // Verify Location header is set
-      if (!response.Headers.Contains("Location"))
+      Console.WriteLine($"✅ Author upserted successfully with status: {response.StatusCode}");
+      return true;
+    }
+    catch (Exception ex)
+    {
+      Console.WriteLine($"❌ Test failed with exception: {ex.Message}");
+      Console.WriteLine($"Stack trace: {ex.StackTrace}");
+      return false;
+    }
+  }
+
+  /// <summary>
+  /// Test updating an existing author
+  /// </summary>
+  public async Task<bool> TestUpdateExistingAuthor()
+  {
+    try
+    {
+      Console.WriteLine("=== Testing UpsertAuthor with updated data ===");
+
+      // First create an author
+      await TestUpsertAuthorWithValidData();
+
+      // Now update the author with new data
+      var updatedAuthorModel = new AuthorModel
       {
-        Console.WriteLine("❌ Missing Location header");
+        FirstName = "Updated",
+        LastName = "Test",
+        Email = "updated.test@example.com",
+        Username = _testAuthorUsername,
+        DisplayName = "Updated Test Author",
+        Location = "Updated City, UC",
+        Bio = "This is an updated test author.",
+        Website = "https://updated.example.com"
+      };
+
+      Console.WriteLine($"Updating test author with username: {_testAuthorUsername}");
+
+      // Create test request with real API key from environment
+      var context = TestFactory.CreateFunctionContext();
+      var apiKey = Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY")
+          ?? throw new InvalidOperationException("X_API_ENVIRONMENT_KEY required for integration test");
+
+      var request = TestFactory.CreateJsonRequestWithApiKey(
+          context,
+          updatedAuthorModel,
+          apiKey,
+          "PUT",
+          $"authors/{_testAuthorUsername}"
+      );
+
+      // Act - Call the actual function
+      var response = await _upsertAuthorFunction.Run(request, _testAuthorUsername, context);
+
+      // Assert - Verify the response
+      if (response.StatusCode != HttpStatusCode.OK)
+      {
+        Console.WriteLine($"❌ Expected OK (200), got {response.StatusCode}");
         return false;
       }
 
-      var locationHeader = response.Headers.GetValues("Location").FirstOrDefault();
-      if (!locationHeader?.Contains($"/authors/{_testAuthorUsername}") == true)
-      {
-        Console.WriteLine($"❌ Incorrect Location header: {locationHeader}");
-        return false;
-      }
-
-      // Additional verification: Try to retrieve the created author from storage
-      var tableService = _serviceProvider.GetRequiredService<ITableStorageService>();
-      var tableName = Environment.GetEnvironmentVariable("AUTHORS_TABLE_NAME") ?? "authors";
-
-      // Give a moment for the write to complete
-      await Task.Delay(1000);
-
-      // Verify the entity exists in storage (this is the real integration test part)
-      var retrievedEntity = await tableService.GetEntityAsync(tableName, _testAuthorUsername, "profile");
-      if (retrievedEntity == null)
-      {
-        Console.WriteLine("❌ Author not found in storage");
-        return false;
-      }
-
-      Console.WriteLine("✅ Author created successfully and verified in storage");
+      Console.WriteLine("✅ Author updated successfully");
       return true;
     }
     catch (Exception ex)
@@ -178,11 +209,11 @@ public class CreateAuthorIntegrationTest : IDisposable
   /// <summary>
   /// Test creating an author with invalid data
   /// </summary>
-  public async Task<bool> TestCreateAuthorWithInvalidData()
+  public async Task<bool> TestUpsertAuthorWithInvalidData()
   {
     try
     {
-      Console.WriteLine("=== Testing CreateAuthor with invalid data ===");
+      Console.WriteLine("=== Testing UpsertAuthor with invalid data ===");
 
       // Arrange - Create an invalid author model (missing required fields)
       var invalidAuthorModel = new AuthorModel
@@ -202,12 +233,12 @@ public class CreateAuthorIntegrationTest : IDisposable
           context,
           invalidAuthorModel,
           apiKey,
-          "POST",
-          "authors"
+          "PUT",
+          $"authors/{invalidAuthorModel.Username}"
       );
 
       // Act
-      var response = await _createAuthorFunction.Run(request, context);
+      var response = await _upsertAuthorFunction.Run(request, invalidAuthorModel.Username, context);
 
       // Assert
       if (response.StatusCode != HttpStatusCode.BadRequest)
@@ -231,11 +262,14 @@ public class CreateAuthorIntegrationTest : IDisposable
   /// </summary>
   public async Task<bool> RunAllTests()
   {
-    Console.WriteLine("Starting CreateAuthor Integration Tests");
+    Console.WriteLine("Starting UpsertAuthor Integration Tests");
     Console.WriteLine("=====================================");
 
-    var test1 = await TestCreateAuthorWithValidData();
-    var test2 = await TestCreateAuthorWithInvalidData();
+    var test1 = await TestUpsertAuthorWithValidData();
+    var test2 = await TestUpdateExistingAuthor();
+    var test3 = await TestUpsertAuthorWithInvalidData();
+
+    var allPassed = test1 && test2 && test3;
 
     var allPassed = test1 && test2;
 

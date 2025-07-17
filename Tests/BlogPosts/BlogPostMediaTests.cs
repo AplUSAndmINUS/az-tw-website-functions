@@ -17,7 +17,7 @@ namespace Tests.BlogPosts
     {
         private readonly Mock<ITableStorageService> _mockTableStorage;
         private readonly Mock<IMediaService> _mockMediaService;
-        private readonly Mock<IAppInsightsLogger<ContentService<BlogPostEntity, BlogPostModel, BlogPostDTO>>> _mockLogger;
+        private readonly Mock<IAppInsightsLogger<BlogPostService>> _mockLogger;
         private readonly BlogPostService _blogPostService;
         private readonly string _testBlogSlug = "test-blog-post";
         private readonly string _testImageId = "test-image-id";
@@ -28,7 +28,7 @@ namespace Tests.BlogPosts
         {
             _mockTableStorage = new Mock<ITableStorageService>();
             _mockMediaService = new Mock<IMediaService>();
-            _mockLogger = new Mock<IAppInsightsLogger<ContentService<BlogPostEntity, BlogPostModel, BlogPostDTO>>>();
+            _mockLogger = new Mock<IAppInsightsLogger<BlogPostService>>();
 
             // Setup the blog post service with mocked dependencies
             _blogPostService = new BlogPostService(
