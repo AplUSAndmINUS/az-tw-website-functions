@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Tests.Authors;
 
-public class CreateAuthorTests
+public class UpsertAuthorTests
 {
   private HttpResponseData CreateMockResponse(FunctionContext context, HttpStatusCode statusCode)
   {
@@ -29,11 +29,10 @@ public class CreateAuthorTests
   }
 
   [Fact]
-  public async Task CreateAuthorAsync_ValidRequest_ReturnsCreatedResponse()
+  public async Task UpsertAuthorAsync_ValidRequest_ReturnsSuccessResponse()
   {
     // Arrange
-    var mockLogger = new Mock<IAppInsightsLogger<CreateAuthor>>();
-    var mockTableStorageService = new Mock<ITableStorageService>();
+    var mockLogger = new Mock<IAppInsightsLogger<BaseContentFunctions<IAuthorService, AuthorModel, AuthorDTO, AuthorWithMediaDTO>>>();
     var mockApiKeyValidator = new Mock<IAPIKeyValidator>();
     var mockAuthorService = new Mock<IAuthorService>();
 
@@ -72,12 +71,11 @@ public class CreateAuthorTests
       .Returns(Task.CompletedTask);
 
     mockAuthorService
-      .Setup(s => s.CreateAuthorAsync(It.IsAny<AuthorModel>()))
+      .Setup(s => s.UpsertAsync(It.IsAny<AuthorModel>()))
       .ReturnsAsync(createdAuthor);
 
-    var function = new CreateAuthor(
+    var function = new UpsertAuthorFunction(
       mockLogger.Object,
-      mockTableStorageService.Object,
       mockApiKeyValidator.Object,
       mockAuthorService.Object
     );
@@ -88,27 +86,26 @@ public class CreateAuthorTests
       context,
       authorModel,
       "***REMOVED***",
-      "POST",
-      "authors"
+      "PUT",
+      $"authors/{authorModel.Username}"
     );
 
     // Act
-    var response = await function.Run(request, context);
+    var response = await function.Run(request, authorModel.Username, context);
 
     // Assert
-    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    Assert.True(response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Created);
     
     // Verify service was called
-    mockAuthorService.Verify(s => s.CreateAuthorAsync(It.IsAny<AuthorModel>()), Times.Once);
+    mockAuthorService.Verify(s => s.UpsertAsync(It.IsAny<AuthorModel>()), Times.Once);
     mockApiKeyValidator.Verify(v => v.ValidateOrThrowAsync(It.IsAny<HttpRequestData>()), Times.Once);
   }
 
   [Fact]
-  public async Task CreateAuthorAsync_InvalidJson_ReturnsBadRequest()
+  public async Task UpsertAuthorAsync_InvalidJson_ReturnsBadRequest()
   {
     // Arrange
-    var mockLogger = new Mock<IAppInsightsLogger<CreateAuthor>>();
-    var mockTableStorageService = new Mock<ITableStorageService>();
+    var mockLogger = new Mock<IAppInsightsLogger<BaseContentFunctions<IAuthorService, AuthorModel, AuthorDTO, AuthorWithMediaDTO>>>();
     var mockApiKeyValidator = new Mock<IAPIKeyValidator>();
     var mockAuthorService = new Mock<IAuthorService>();
 
@@ -116,9 +113,8 @@ public class CreateAuthorTests
       .Setup(v => v.ValidateOrThrowAsync(It.IsAny<HttpRequestData>()))
       .Returns(Task.CompletedTask);
 
-    var function = new CreateAuthor(
+    var function = new UpsertAuthorFunction(
       mockLogger.Object,
-      mockTableStorageService.Object,
       mockApiKeyValidator.Object,
       mockAuthorService.Object
     );
@@ -127,8 +123,8 @@ public class CreateAuthorTests
     var context = TestFactory.CreateFunctionContext();
     var request = TestFactory.CreateHttpRequestData(
       context,
-      "POST",
-      "authors",
+      "PUT",
+      "authors/testuser",
       "{ invalid json }",
       new Dictionary<string, string> 
       { 
@@ -138,18 +134,17 @@ public class CreateAuthorTests
     );
 
     // Act
-    var response = await function.Run(request, context);
+    var response = await function.Run(request, "testuser", context);
 
     // Assert
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
 
   [Fact]
-  public async Task CreateAuthorAsync_NullModel_ReturnsBadRequest()
+  public async Task UpsertAuthorAsync_NullModel_ReturnsBadRequest()
   {
     // Arrange
-    var mockLogger = new Mock<IAppInsightsLogger<CreateAuthor>>();
-    var mockTableStorageService = new Mock<ITableStorageService>();
+    var mockLogger = new Mock<IAppInsightsLogger<BaseContentFunctions<IAuthorService, AuthorModel, AuthorDTO, AuthorWithMediaDTO>>>();
     var mockApiKeyValidator = new Mock<IAPIKeyValidator>();
     var mockAuthorService = new Mock<IAuthorService>();
 

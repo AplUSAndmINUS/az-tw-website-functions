@@ -1,92 +1,88 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SharedStorage.Extensions;
+using Xunit;
 using SharedStorage.Models;
-using System;
+using SharedStorage.Extensions;
 
-namespace Function.Tests.Media
+namespace Tests.Media
 {
-  [TestClass]
-  public class MediaCdnUrlTests
-  {
-    [TestMethod]
-    public void MediaItemModel_EnsureValidCdnUrls_LogsWarningForInvalidUrls()
+    public class MediaCdnUrlTests
     {
-      // Arrange
-      var model = new MediaItemModel
-      {
-        Id = Guid.NewGuid().ToString(),
-        Url = "https://invalidurl.com/media/image.jpg",
-        ThumbnailUrl = "https://invalidurl.com/media/thumb_image.jpg"
-      };
+        [Fact]
+        public void MediaItem_ShouldGenerateCorrectCdnUrl_ForImage()
+        {
+            // Arrange
+            var mediaItem = new MediaItemModel
+            {
+                Id = "test-image-id",
+                ContentType = "image/jpeg",
+                FileName = "test-image.jpg",
+                ContainerName = "media-images"
+            };
 
-      // Act
-      // The EnsureValidCdnUrls method will log warnings for invalid URLs
-      var result = model.EnsureValidCdnUrls();
+            // Act
+            var cdnUrl = mediaItem.GenerateCdnUrl();
 
-      // Assert
-      Assert.AreEqual(model.Id, result.Id);
-      // In a real test environment, we would validate that warnings were logged
-      // But since this is a simple validation, we're just ensuring the method returns the model
+            // Assert
+            Assert.NotNull(cdnUrl);
+            Assert.Contains("test-image", cdnUrl);
+            Assert.Contains(".jpg", cdnUrl);
+        }
+
+        [Fact]
+        public void MediaItem_ShouldGenerateCorrectCdnUrl_ForVideo()
+        {
+            // Arrange
+            var mediaItem = new MediaItemModel
+            {
+                Id = "test-video-id",
+                ContentType = "video/mp4",
+                FileName = "test-video.mp4",
+                ContainerName = "media-videos"
+            };
+
+            // Act
+            var cdnUrl = mediaItem.GenerateCdnUrl();
+
+            // Assert
+            Assert.NotNull(cdnUrl);
+            Assert.Contains("test-video", cdnUrl);
+            Assert.Contains(".mp4", cdnUrl);
+        }
+
+        [Fact]
+        public void MediaItem_ShouldGenerateCorrectThumbnailUrl()
+        {
+            // Arrange
+            var mediaItem = new MediaItemModel
+            {
+                Id = "test-thumbnail-id",
+                ContentType = "image/jpeg",
+                FileName = "test-thumbnail.jpg",
+                ContainerName = "media-thumbnails"
+            };
+
+            // Act
+            var thumbnailUrl = mediaItem.GenerateThumbnailUrl();
+
+            // Assert
+            Assert.NotNull(thumbnailUrl);
+            Assert.Contains("test-thumbnail", thumbnailUrl);
+            Assert.Contains(".jpg", thumbnailUrl);
+        }
+
+        [Fact]
+        public void MediaItem_ShouldHandleNullValues()
+        {
+            // Arrange
+            var mediaItem = new MediaItemModel
+            {
+                Id = null,
+                ContentType = null,
+                FileName = null,
+                ContainerName = null
+            };
+
+            // Act & Assert
+            Assert.Throws<ArgumentException>(() => mediaItem.GenerateCdnUrl());
+        }
     }
-
-    [TestMethod]
-    public void MediaItemModel_EnsureValidCdnUrls_NoWarningsForValidUrls()
-    {
-      // Arrange
-      var model = new MediaItemModel
-      {
-        Id = Guid.NewGuid().ToString(),
-        Url = "https://twmedia-cdn.azureedge.net/media/image.jpg",
-        ThumbnailUrl = "https://twmedia-cdn.azureedge.net/media/thumb_image.jpg"
-      };
-
-      // Act
-      // The EnsureValidCdnUrls method will not log warnings for valid URLs
-      var result = model.EnsureValidCdnUrls();
-
-      // Assert
-      Assert.AreEqual(model.Id, result.Id);
-      // No assertions for logging since we expect no warnings
-    }
-
-    [TestMethod]
-    public void MediaItemDTO_EnsureValidCdnUrls_LogsWarningForInvalidUrls()
-    {
-      // Arrange
-      var dto = new MediaItemDTO
-      {
-        Id = Guid.NewGuid().ToString(),
-        Url = "https://invalidurl.com/media/image.jpg",
-        ThumbnailUrl = "https://invalidurl.com/media/thumb_image.jpg"
-      };
-
-      // Act
-      // The EnsureValidCdnUrls method will log warnings for invalid URLs
-      var result = dto.EnsureValidCdnUrls();
-
-      // Assert
-      Assert.AreEqual(dto.Id, result.Id);
-      // In a real test environment, we would validate that warnings were logged
-    }
-
-    [TestMethod]
-    public void MediaItemDTO_EnsureValidCdnUrls_NoWarningsForValidUrls()
-    {
-      // Arrange
-      var dto = new MediaItemDTO
-      {
-        Id = Guid.NewGuid().ToString(),
-        Url = "https://twmedia-cdn.azureedge.net/media/image.jpg",
-        ThumbnailUrl = "https://twmedia-cdn.azureedge.net/media/thumb_image.jpg"
-      };
-
-      // Act
-      // The EnsureValidCdnUrls method will not log warnings for valid URLs
-      var result = dto.EnsureValidCdnUrls();
-
-      // Assert
-      Assert.AreEqual(dto.Id, result.Id);
-      // No assertions for logging since we expect no warnings
-    }
-  }
 }
