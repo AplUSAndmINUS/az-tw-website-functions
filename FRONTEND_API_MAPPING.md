@@ -2,6 +2,13 @@
 
 This document provides a comprehensive mapping of API endpoints required for the frontend implementation, including function names, endpoints, request/response structures, data models (DTOs), and implementation guidelines for proper integration.
 
+**Key Features:**
+
+-   Azure Key Vault integration for secure API key management
+-   No `/api` route prefix (routePrefix set to empty string)
+-   Environment-specific API key handling (dev/staging/production)
+-   Comprehensive media upload and management support
+
 ## Table of Contents
 
 -   [Authentication & Authorization](#authentication--authorization)
@@ -36,7 +43,7 @@ This document provides a comprehensive mapping of API endpoints required for the
 
 ## Authentication & Authorization
 
-All API endpoints require proper authentication via the `X-API-Key` header. This API key validation is implemented at the function level through the `IAPIKeyValidator` interface.
+All API endpoints require proper authentication via the `x-api-key` header. This API key validation is implemented at the function level through the `IAPIKeyValidator` interface with Azure Key Vault integration.
 
 ### Authentication Implementation
 
@@ -49,9 +56,11 @@ const apiClient = axios.create({
     baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:7071",
     headers: {
         "Content-Type": "application/json",
-        "X-API-Key": process.env.REACT_APP_API_KEY
+        "x-api-key": process.env.REACT_APP_API_KEY || ""
     }
 });
+
+// Note: No /api prefix is used as the Function App has routePrefix set to empty string
 
 // Add response interceptor for error handling
 apiClient.interceptors.response.use(
@@ -68,27 +77,52 @@ apiClient.interceptors.response.use(
 export default apiClient;
 ```
 
+### Environment Configuration
+
+The API supports different environments with corresponding API keys managed through Azure Key Vault:
+
+-   **Development**: `DEV-X-API-ENVIRONMENT-KEY` secret
+-   **Staging**: `STAGING-X-API-ENVIRONMENT-KEY` secret
+-   **Production**: `PROD-X-API-ENVIRONMENT-KEY` secret
+
+Set your environment variables accordingly:
+
+```typescript
+// .env.local
+REACT_APP_API_BASE_URL=http://localhost:7071
+REACT_APP_API_KEY=your-dev-key-here
+
+// .env.development
+REACT_APP_API_BASE_URL=https://mock-dev-api.terencewaters.com
+REACT_APP_API_KEY=your-dev-key-here
+
+// .env.staging
+REACT_APP_API_BASE_URL=https://mock-tst-api.terencewaters.com
+REACT_APP_API_KEY=your-staging-key-here
+
+// .env.production
+REACT_APP_API_BASE_URL=https://api.terencewaters.com
+REACT_APP_API_KEY=your-production-key-here
+```
+
 ### Important Notes on Authentication
 
 1. **API Key Storage**: Store the API key in environment variables, never in source code
-2. **Key Rotation**: Implement a key rotation strategy for production
-3. **CORS**: The backend is configured with CORS settings to allow requests from the frontend domain
+2. **Key Vault Integration**: API keys are managed through Azure Key Vault with environment-specific secrets
+3. **Header Name**: Use `x-api-key` (lowercase) for the authentication header
+4. **CORS**: The backend is configured with CORS settings to allow requests from the frontend domain
 
 ## Books API
 
 ### Books Endpoints
 
-| Function Name              | HTTP Method | Endpoint                        | Description                       | Query Parameters                                                                                                                                                                                                                                      | Request Body            | Response                                 |
-| -------------------------- | ----------- | ------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------- |
-| `GetBooks`                 | GET         | `/books`                        | Retrieves a collection of books   | `authorSlug` (optional): Filter by author<br>`category` (optional): Filter by category<br>`isPublished` (optional): Filter by publication status<br>`limit` (optional): Max results (default: 50)<br>`includeMedia` (optional): Include media content | None                    | Array of `BookDTO` or `BookWithMediaDTO` |
-| `GetBook`                  | GET         | `/books/{slug}`                 | Retrieves a specific book by slug | `isPublished` (optional): Filter by publication status<br>`includeMedia` (optional): Include media content                                                                                                                                            | None                    | `BookDTO` or `BookWithMediaDTO`          |
-| `UpsertBook`               | POST/PUT    | `/books/{slug}`                 | Creates or updates a book         | None                                                                                                                                                                                                                                                  | `BookModel` (see below) | `BookDTO`                                |
-| `DeleteBook`               | DELETE      | `/books/{slug}`                 | Removes a book                    | None                                                                                                                                                                                                                                                  | None                    | 200 OK or 404 Not Found                  |
-| `SetBookFeaturedImage`     | POST        | `/books/{slug}/featured-image`  | Sets book cover image             | None                                                                                                                                                                                                                                                  | `{ "mediaId": "guid" }` | `BookDTO`                                |
-| `SetBookFeaturedVideo`     | POST        | `/books/{slug}/featured-video`  | Sets book promotional video       | None                                                                                                                                                                                                                                                  | `{ "mediaId": "guid" }` | `BookDTO`                                |
-| `SetBookFeaturedMedia`     | POST        | `/books/{slug}/featured-media`  | Sets book primary media           | None                                                                                                                                                                                                                                                  | `{ "mediaId": "guid" }` | `BookDTO`                                |
-| `AddBookMediaReference`    | POST        | `/books/{slug}/media`           | Adds media to a book              | None                                                                                                                                                                                                                                                  | `{ "mediaId": "guid" }` | `BookDTO`                                |
-| `RemoveBookMediaReference` | DELETE      | `/books/{slug}/media/{mediaId}` | Removes media from a book         | None                                                                                                                                                                                                                                                  | None                    | `BookDTO`                                |
+| Function Name             | HTTP Method | Endpoint                       | Description                       | Query Parameters                                                                                                                                                                                                                                      | Request Body            | Response                                 |
+| ------------------------- | ----------- | ------------------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------- |
+| `GetBooks`                | GET         | `/books`                       | Retrieves a collection of books   | `authorSlug` (optional): Filter by author<br>`category` (optional): Filter by category<br>`isPublished` (optional): Filter by publication status<br>`limit` (optional): Max results (default: 50)<br>`includeMedia` (optional): Include media content | None                    | Array of `BookDTO` or `BookWithMediaDTO` |
+| `GetBook`                 | GET         | `/books/{slug}`                | Retrieves a specific book by slug | `isPublished` (optional): Filter by publication status<br>`includeMedia` (optional): Include media content                                                                                                                                            | None                    | `BookDTO` or `BookWithMediaDTO`          |
+| `UpsertBook`              | POST/PUT    | `/books/{slug}`                | Creates or updates a book         | None                                                                                                                                                                                                                                                  | `BookModel` (see below) | `BookDTO`                                |
+| `DeleteBook`              | DELETE      | `/books/{slug}`                | Removes a book                    | None                                                                                                                                                                                                                                                  | None                    | 200 OK or 404 Not Found                  |
+| `UploadBookFeaturedImage` | POST        | `/books/{slug}/featured-image` | Upload book cover/featured image  | None                                                                                                                                                                                                                                                  | Form-data file upload   | `BookDTO`                                |
 
 ### Books Data Models
 
@@ -1552,6 +1586,8 @@ interface ContactMeDTO {
     name: string; // Required, min 2 chars
     email: string; // Required, valid email format
     message: string; // Required, min 10 chars
+    // Note: Additional fields like phone, company, website, subject
+    // can be included but are not processed by the current DTO
 }
 ```
 
@@ -2275,7 +2311,7 @@ export const PortfolioGrid: React.FC<PortfolioGridProps> = ({
 
 ## Authentication
 
-All endpoints require API key authentication via the `X-API-Key` header. The API key value should be obtained from environment configuration.
+All endpoints require API key authentication via the `x-api-key` header. The API key value should be obtained from environment configuration and is managed through Azure Key Vault.
 
 ## Error Handling
 
