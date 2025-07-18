@@ -3,6 +3,7 @@ using SharedStorage.Services.BaseServices;
 using SharedStorage.Services.Media;
 using Utils;
 using Utils.Constants;
+using Utils.Extensions;
 
 namespace SharedStorage.Services.Media.Handlers;
 
@@ -127,7 +128,7 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
         ContentType = "image/webp", // Always WebP after conversion
         Width = width,
         Height = height,
-        UploadedAt = DateTime.UtcNow,
+        UploadedAt = DateTime.UtcNow.EnsureValidStorageDate(),
         ContentId = contentId ?? string.Empty, // Set ContentId if provided
         RelatedContentType = relatedContentType ?? string.Empty // Set RelatedContentType if provided
       };

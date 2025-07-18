@@ -18,13 +18,13 @@ public class ContactMeEntity : ITableEntity
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
-    public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
+    public DateTime SubmittedAt { get; set; } = DateTime.UtcNow.EnsureValidStorageDate();
     public string UserAgent { get; set; } = string.Empty;
     public string IpAddress { get; set; } = string.Empty;
 
     public ContactMeEntity()
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.UtcNow.EnsureValidStorageDate();
         SubmittedAt = now;
         SetKeys(now);
     }
@@ -35,7 +35,7 @@ public class ContactMeEntity : ITableEntity
         Name = model.Name;
         Email = model.Email;
         Message = model.Message;
-        SubmittedAt = model.SubmittedAt.EnsureUtc();
+        SubmittedAt = model.SubmittedAt.EnsureValidStorageDate();
         UserAgent = model.UserAgent;
         IpAddress = model.IpAddress;
         SetKeys(SubmittedAt);

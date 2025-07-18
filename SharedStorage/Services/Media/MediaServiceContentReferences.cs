@@ -5,6 +5,7 @@ using SharedStorage.Models;
 using SharedStorage.Services.Media;
 using Azure.Data.Tables;
 using Azure;
+using Utils.Extensions;
 
 namespace SharedStorage.Services.Media;
 
@@ -42,7 +43,7 @@ public partial class MediaService
         ContentType = contentType,
         MediaId = mediaId,
         MediaType = media.MediaType,
-        AssociatedAt = DateTime.UtcNow
+        AssociatedAt = DateTime.UtcNow.EnsureValidStorageDate()
       };
 
       // Get the appropriate table name for the content type
@@ -140,6 +141,6 @@ public class MediaContentReferenceEntity : ITableEntity
   public string ContentType { get; set; } = string.Empty;
   public string MediaId { get; set; } = string.Empty;
   public string MediaType { get; set; } = string.Empty;
-  public DateTime AssociatedAt { get; set; } = DateTime.UtcNow;
+  public DateTime AssociatedAt { get; set; } = DateTime.UtcNow.EnsureValidStorageDate();
   public string Purpose { get; set; } = string.Empty;
 }

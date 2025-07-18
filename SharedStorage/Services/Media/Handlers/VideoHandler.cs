@@ -7,6 +7,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Webp;
+using Utils.Extensions;
 
 namespace SharedStorage.Services.Media.Handlers;
 
@@ -116,7 +117,7 @@ public class VideoHandler : MediaHandler, IMediaTypeHandler
         ContentType = "video/mp4", // Always MP4 content type
         Width = needsResize ? targetWidth : videoMetadata.Width, // Use target width if resized
         Height = needsResize ? targetHeight : videoMetadata.Height, // Use target height if resized
-        UploadedAt = DateTime.UtcNow,
+        UploadedAt = DateTime.UtcNow.EnsureValidStorageDate(),
         Resolution = needsResize ? $"{targetWidth}x{targetHeight}" : $"{videoMetadata.Width}x{videoMetadata.Height}",
         VidPurpose = "introVideo", // Default purpose
         ContentId = contentId ?? string.Empty, // Set ContentId if provided

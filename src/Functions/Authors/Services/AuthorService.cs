@@ -6,6 +6,7 @@ using SharedStorage.Validators;
 using Utils;
 using System.Text.Json;
 using Utils.Constants;
+using Utils.Extensions;
 
 namespace Functions.Authors.Services;
 
@@ -467,7 +468,7 @@ public class AuthorService : IAuthorService
         ["MediaId"] = mediaId,
         ["MediaType"] = media.MediaType,
         ["Purpose"] = purpose ?? "general",
-        ["CreatedAt"] = DateTime.UtcNow
+        ["CreatedAt"] = DateTime.UtcNow.EnsureValidStorageDate()
       };
 
       // Add to the metadata table

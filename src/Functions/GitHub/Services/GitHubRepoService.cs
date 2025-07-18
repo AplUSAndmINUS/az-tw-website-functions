@@ -5,6 +5,7 @@ using Utils;
 using Utils.Constants;
 using Azure.Data.Tables;
 using System.Text.Json;
+using Utils.Extensions;
 
 namespace Functions.GitHub.Services;
 
@@ -96,7 +97,7 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
   {
     try
     {
-      _appLogger.LogInformation("Getting GitHub repositories with category: {Category}, isPublished: {IsPublished}, limit: {Limit}", 
+      _appLogger.LogInformation("Getting GitHub repositories with category: {Category}, isPublished: {IsPublished}, limit: {Limit}",
         category ?? "all", isPublished ?? false, limit ?? 0);
 
       var entities = await GetEntitiesAsync(category, isPublished, limit);
@@ -193,7 +194,7 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
         }
       }
 
-      _appLogger.LogInformation("Successfully synced {SyncedCount} out of {TotalCount} repositories for user: {Username}", 
+      _appLogger.LogInformation("Successfully synced {SyncedCount} out of {TotalCount} repositories for user: {Username}",
         syncedCount, repositories.Count(), username);
 
       return syncedCount;
@@ -230,7 +231,7 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
     entity.Content = model.Content ?? string.Empty;
     entity.Category = model.Category ?? "repository";
     entity.Status = "Published";
-    entity.LastModified = DateTime.UtcNow;
+    entity.LastModified = DateTime.UtcNow.EnsureValidStorageDate();
     entity.GitHubId = model.GitHubId;
     entity.Name = model.Name;
     entity.FullName = model.FullName;
@@ -253,13 +254,13 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
   protected override void ValidateModel(GitHubRepoModel model)
   {
     ArgumentNullException.ThrowIfNull(model);
-    
+
     if (string.IsNullOrWhiteSpace(model.Name))
       throw new ArgumentException("Repository name is required", nameof(model.Name));
-    
+
     if (string.IsNullOrWhiteSpace(model.FullName))
       throw new ArgumentException("Repository full name is required", nameof(model.FullName));
-    
+
     if (model.GitHubId <= 0)
       throw new ArgumentException("GitHub ID must be positive", nameof(model.GitHubId));
   }
@@ -354,7 +355,7 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
   {
     var result = await _tableStorageService.GetEntitiesAsync(_tableName);
     var entities = new List<GitHubRepoEntity>();
-    
+
     foreach (var tableEntity in result.Entities)
     {
       var entity = ConvertTableEntityToTEntity(tableEntity);
@@ -363,7 +364,7 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
         entities.Add(entity);
       }
     }
-    
+
     return entities;
   }
 
@@ -395,7 +396,7 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
     // Set partition and row keys
     entity.PartitionKey = GetPartitionKey(entity.Slug);
     entity.RowKey = GetRowKey(entity.Slug);
-    
+
     await _tableStorageService.UpsertEntityAsync(_tableName, entity);
     return entity;
   }

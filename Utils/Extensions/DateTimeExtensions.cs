@@ -7,6 +7,10 @@ namespace Utils.Extensions
   /// </summary>
   public static class DateTimeExtensions
   {
+    // Default date to use when a valid date is required but not provided
+    // Azure Table Storage doesn't accept default DateTime value (1/1/0001)
+    private static readonly DateTime DefaultFutureDate = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     /// <summary>
     /// Ensures that a DateTime value is in UTC format
     /// </summary>
@@ -28,6 +32,23 @@ namespace Utils.Extensions
 
       // If it's Local, convert to UTC
       return dateTime.ToUniversalTime();
+    }
+
+    /// <summary>
+    /// Ensures that a DateTime value is valid for Azure Table Storage
+    /// </summary>
+    /// <param name="dateTime">The DateTime value to ensure is valid</param>
+    /// <returns>A valid DateTime (DefaultFutureDate if the input is default/MinValue)</returns>
+    public static DateTime EnsureValidStorageDate(this DateTime dateTime)
+    {
+      // If it's the default value, use our predetermined future date
+      if (dateTime == default(DateTime) || dateTime == DateTime.MinValue)
+      {
+        return DefaultFutureDate;
+      }
+
+      // Otherwise, ensure it's in UTC format
+      return dateTime.EnsureUtc();
     }
 
     /// <summary>

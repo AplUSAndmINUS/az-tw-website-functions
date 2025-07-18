@@ -212,7 +212,7 @@ public class BookService : ContentService<BookEntity, BookModel, BookDTO>, IBook
       AuthorSlug = model.AuthorSlug,
       Category = model.Category,
       Status = model.Status,
-      PublishDate = model.PublishDate.EnsureUtc(),
+      PublishDate = model.PublishDate.EnsureValidStorageDate(),
       LastModified = DateTime.UtcNow,
       TagsJson = System.Text.Json.JsonSerializer.Serialize(model.TagsList),
       FeaturedImageId = model.FeaturedImageId,
@@ -242,7 +242,8 @@ public class BookService : ContentService<BookEntity, BookModel, BookDTO>, IBook
     entity.AuthorSlug = model.AuthorSlug;
     entity.Category = model.Category;
     entity.Status = model.Status;
-    entity.PublishDate = model.PublishDate.EnsureUtc();
+
+    entity.PublishDate = model.PublishDate.EnsureValidStorageDate();
     entity.LastModified = DateTime.UtcNow;
     entity.TagsJson = System.Text.Json.JsonSerializer.Serialize(model.TagsList);
     entity.FeaturedImageId = model.FeaturedImageId;

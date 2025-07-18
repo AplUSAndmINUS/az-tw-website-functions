@@ -3,6 +3,7 @@ using SharedStorage.Services.BaseServices;
 using Utils;
 using Utils.Constants;
 using System.Threading;
+using Utils.Extensions;
 
 namespace SharedStorage.Services.Media.Handlers;
 
@@ -95,7 +96,7 @@ public class DocumentHandler : MediaHandler, IMediaTypeHandler
         MediaType = "document",
         Url = mediaReference.CdnUrl,
         ContentType = finalContentType,
-        UploadedAt = DateTime.UtcNow,
+        UploadedAt = DateTime.UtcNow.EnsureValidStorageDate(),
         ContentId = contentId ?? string.Empty,
         RelatedContentType = relatedContentType ?? string.Empty
       };
