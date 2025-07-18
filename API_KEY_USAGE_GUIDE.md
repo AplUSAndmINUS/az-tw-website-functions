@@ -10,7 +10,7 @@ The application uses a custom API key validation mechanism that checks for the `
 
 1. Include the `x-api-key` header in your HTTP requests
 2. Use the appropriate API key for each environment:
-    - Development: `***REMOVED***`
+    - Development: Check environment variable `X_API_ENVIRONMENT_KEY` in the develop environment
     - Test: Check environment variable `X_API_ENVIRONMENT_KEY` in the test environment
     - Production: Check environment variable `X_API_ENVIRONMENT_KEY` in the production environment
 

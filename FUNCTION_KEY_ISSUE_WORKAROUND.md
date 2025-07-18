@@ -40,4 +40,4 @@ If function key management is required in the future, the following solutions co
 
 ## Testing
 
-A test script (`***REMOVED***-auth.sh`) has been created to demonstrate and verify the custom API key authentication approach. This script can be used to test API calls in the develop environment without relying on function keys.
+A test script (`test-api-key-auth.sh`) has been created to demonstrate and verify the custom API key authentication approach. This script can be used to test API calls in the develop environment without relying on function keys.

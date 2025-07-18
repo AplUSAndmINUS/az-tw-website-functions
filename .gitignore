@@ -64,4 +64,4 @@ function-app.zip
 assign-storage-roles.sh
 .gitignore
 STORAGE_AUTH_TROUBLESHOOTING.md
-***REMOVED***-auth.sh
+test-api-key-auth.sh

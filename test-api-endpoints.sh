@@ -5,7 +5,7 @@
 
 # Configuration
 API_BASE_URL="http://localhost:7071"
-API_KEY="***REMOVED***"
+API_KEY="az-tw-DEV-website-api-key-9874"
 TIMESTAMP=$(date +%s)
 TEST_OUTPUT_DIR="./test-results"
 
