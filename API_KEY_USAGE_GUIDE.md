@@ -11,7 +11,7 @@ The application uses a custom API key validation mechanism that checks for the `
 1. Include the `x-api-key` header in your HTTP requests
 2. Use the appropriate API key for each environment:
     - Development: Use the new rotated key in your environment variable `X_API_ENVIRONMENT_KEY`
-    - Test: Use the new rotated key in your environment variable `X_API_ENVIRONMENT_KEY` 
+    - Test: Use the new rotated key in your environment variable `X_API_ENVIRONMENT_KEY`
     - Production: Use the new rotated key in your environment variable `X_API_ENVIRONMENT_KEY`
 
 **Note**: The new API key (generated after the security incident) should be stored securely and never committed to version control.
