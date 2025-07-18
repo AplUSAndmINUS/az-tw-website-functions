@@ -38,6 +38,15 @@ local.settings.*
 bin/
 obj/
 
+# API Keys and Secrets (Security)
+*api-key*
+*API_KEY*
+*secret*
+*SECRET*
+*.env
+.env.*
+api_keys_to_remove.txt
+
 # .NET Core
 project.lock.json
 project.fragment.lock.json

@@ -10,11 +10,21 @@ The application uses a custom API key validation mechanism that checks for the `
 
 1. Include the `x-api-key` header in your HTTP requests
 2. Use the appropriate API key for each environment:
-    - Development: Check environment variable `X_API_ENVIRONMENT_KEY` in the develop environment
-    - Test: Check environment variable `X_API_ENVIRONMENT_KEY` in the test environment
-    - Production: Check environment variable `X_API_ENVIRONMENT_KEY` in the production environment
+    - Development: Use the new rotated key in your environment variable `X_API_ENVIRONMENT_KEY`
+    - Test: Use the new rotated key in your environment variable `X_API_ENVIRONMENT_KEY` 
+    - Production: Use the new rotated key in your environment variable `X_API_ENVIRONMENT_KEY`
+
+**Note**: The new API key (generated after the security incident) should be stored securely and never committed to version control.
 
 ## Security Considerations
+
+### Security Incident Response
+
+⚠️ **IMPORTANT SECURITY NOTICE**: API keys were accidentally committed to Git history. The following remediation steps have been taken:
+
+1. **Immediate Key Rotation**: All API keys have been rotated and old keys deactivated
+2. **History Cleanup**: Git history has been cleaned using BFG Repo-Cleaner to remove all traces of the old API keys
+3. **Force Push**: All branches have been force-pushed to update the remote repository with the cleaned history
 
 ### API Key Best Practices
 
