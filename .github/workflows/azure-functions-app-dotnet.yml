@@ -44,11 +44,11 @@ jobs:
 
                   echo "📝 Setting up app settings for Flex Consumption"
                   if [ "${{ github.ref_name }}" = "master" ]; then
-                    echo "🔒 Production build: using user-assigned managed identity"
+                    echo "🔒 Production build: using user-assigned managed identity and Key Vault"
                     az functionapp config appsettings set \
                       --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                       --resource-group az-tw-website-functions \
-                      --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
+                      --settings X_API_ENVIRONMENT_KEY="@Microsoft.KeyVault(VaultName=kv-tw-website-vault;SecretName=PROD-X-API-ENVIRONMENT-KEY)" \
                                 USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
                                 StorageAccountName="${{ env.StorageAccountName }}" \
                                 AZURE_CLIENT_ID="{{your-production-managed-identity-client-id}}" \
@@ -58,13 +58,14 @@ jobs:
                                 AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
                                 AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
                                 AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
-                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents"
+                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
+                                KEY_VAULT_URI="https://kv-tw-website-vault.vault.azure.net/"
                   elif [ "${{ github.ref_name }}" = "develop" ]; then
-                    echo "✅ Develop build: configuring with develop-uami managed identity"
+                    echo "✅ Develop build: configuring with develop-uami managed identity and Key Vault"
                     az functionapp config appsettings set \
                       --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                       --resource-group az-tw-website-functions \
-                      --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
+                      --settings X_API_ENVIRONMENT_KEY="@Microsoft.KeyVault(VaultName=kv-tw-website-vault;SecretName=DEV-X-API-ENVIRONMENT-KEY)" \
                                 USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
                                 StorageAccountName="${{ env.StorageAccountName }}" \
                                 AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
@@ -73,13 +74,14 @@ jobs:
                                 AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
                                 AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
                                 AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
-                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents"
+                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
+                                KEY_VAULT_URI="https://kv-tw-website-vault.vault.azure.net/"
                   elif [ "${{ github.ref_name }}" = "test" ]; then
-                    echo "✅ Test build: configuring with test-uami managed identity"
+                    echo "✅ Test build: configuring with test-uami managed identity and Key Vault"
                     az functionapp config appsettings set \
                       --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                       --resource-group az-tw-website-functions \
-                      --settings X_API_ENVIRONMENT_KEY="${{ env.X_API_ENVIRONMENT_KEY }}" \
+                      --settings X_API_ENVIRONMENT_KEY="@Microsoft.KeyVault(VaultName=kv-tw-website-vault;SecretName=STAGING-X-API-ENVIRONMENT-KEY)" \
                                 USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
                                 StorageAccountName="${{ env.StorageAccountName }}" \
                                 AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
@@ -88,7 +90,8 @@ jobs:
                                 AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
                                 AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
                                 AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
-                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents"
+                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
+                                KEY_VAULT_URI="https://kv-tw-website-vault.vault.azure.net/"
                   fi
 
             - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment

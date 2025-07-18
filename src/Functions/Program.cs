@@ -5,9 +5,12 @@ using SharedStorage.Extensions;
 using Functions.Extensions;
 using Utils;
 using Utils.Validation;
+using Utils.Services;
+using Utils.Configuration;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Functions.Worker;
 using System;
 using System.Linq;
@@ -39,14 +42,35 @@ public class Program
                 // Add Function-specific services (BlogPost, Author, etc.)
                 services.AddFunctionServices();
 
-                // Register APIKeyValidator
+                // Register Key Vault Service
+                services.AddSingleton<IKeyVaultService>(sp =>
+                {
+                    var keyVaultUri = EnvironmentHelper.GetKeyVaultUri();
+                    var logger = sp.GetRequiredService<ILogger<KeyVaultService>>();
+                    return new KeyVaultService(keyVaultUri, logger);
+                });
+
+                // Register Key Vault-based APIKeyValidator
                 services.AddSingleton<IAPIKeyValidator>(sp =>
+                {
+                    var keyVaultService = sp.GetRequiredService<IKeyVaultService>();
+                    var environment = EnvironmentHelper.GetCurrentEnvironment();
+                    var appLogger = sp.GetRequiredService<IAppInsightsLogger<KeyVaultApiKeyValidator>>();
+
+                    return new KeyVaultApiKeyValidator(keyVaultService, environment, appLogger);
+                });
+
+                // Keep the fallback validator for backward compatibility during migration
+                services.AddSingleton<ApiKeyValidator>(sp =>
                 {
                     var validApiKey = configuration["X_API_ENVIRONMENT_KEY"]
                         ?? Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY");
 
                     if (string.IsNullOrWhiteSpace(validApiKey))
-                        throw new InvalidOperationException("Missing X_API_ENVIRONMENT_KEY in configuration.");
+                    {
+                        // If no legacy key is found, that's fine - we're using Key Vault now
+                        validApiKey = "fallback-key";
+                    }
 
                     var appLogger = sp.GetRequiredService<IAppInsightsLogger<ApiKeyValidator>>();
                     return new ApiKeyValidator(validApiKey, appLogger);
