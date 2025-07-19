@@ -20,10 +20,10 @@ This document provides a comprehensive mapping of API endpoints required for the
     -   [Endpoints](#blog-posts-endpoints)
     -   [Data Models](#blog-posts-data-models)
     -   [Integration Guidelines](#blog-posts-integration-guidelines)
--   [Portfolio Pieces API](#portfolio-pieces-api)
-    -   [Endpoints](#portfolio-pieces-endpoints)
-    -   [Data Models](#portfolio-pieces-data-models)
-    -   [Integration Guidelines](#portfolio-pieces-integration-guidelines)
+-   [Portfolio API](#portfolio-api)
+    -   [Endpoints](#portfolio-endpoints)
+    -   [Data Models](#portfolio-data-models)
+    -   [Integration Guidelines](#portfolio-integration-guidelines)
 -   [Authors API](#authors-api)
     -   [Endpoints](#authors-endpoints)
     -   [Data Models](#authors-data-models)
@@ -43,7 +43,7 @@ This document provides a comprehensive mapping of API endpoints required for the
 
 ## Authentication & Authorization
 
-All API endpoints require proper authentication via the `x-api-key` header. This API key validation is implemented at the function level through the `IAPIKeyValidator` interface with Azure Key Vault integration.
+All API endpoints require proper authentication via the `X-API-Key` header. This API key validation is implemented at the function level through the `IAPIKeyValidator` interface.
 
 ### Authentication Implementation
 
@@ -59,8 +59,6 @@ const apiClient = axios.create({
         "x-api-key": process.env.REACT_APP_API_KEY || ""
     }
 });
-
-// Note: No /api prefix is used as the Function App has routePrefix set to empty string
 
 // Add response interceptor for error handling
 apiClient.interceptors.response.use(
@@ -116,13 +114,17 @@ REACT_APP_API_KEY=your-production-key-here
 
 ### Books Endpoints
 
-| Function Name             | HTTP Method | Endpoint                       | Description                       | Query Parameters                                                                                                                                                                                                                                      | Request Body            | Response                                 |
-| ------------------------- | ----------- | ------------------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------- |
-| `GetBooks`                | GET         | `/books`                       | Retrieves a collection of books   | `authorSlug` (optional): Filter by author<br>`category` (optional): Filter by category<br>`isPublished` (optional): Filter by publication status<br>`limit` (optional): Max results (default: 50)<br>`includeMedia` (optional): Include media content | None                    | Array of `BookDTO` or `BookWithMediaDTO` |
-| `GetBook`                 | GET         | `/books/{slug}`                | Retrieves a specific book by slug | `isPublished` (optional): Filter by publication status<br>`includeMedia` (optional): Include media content                                                                                                                                            | None                    | `BookDTO` or `BookWithMediaDTO`          |
-| `UpsertBook`              | POST/PUT    | `/books/{slug}`                | Creates or updates a book         | None                                                                                                                                                                                                                                                  | `BookModel` (see below) | `BookDTO`                                |
-| `DeleteBook`              | DELETE      | `/books/{slug}`                | Removes a book                    | None                                                                                                                                                                                                                                                  | None                    | 200 OK or 404 Not Found                  |
-| `UploadBookFeaturedImage` | POST        | `/books/{slug}/featured-image` | Upload book cover/featured image  | None                                                                                                                                                                                                                                                  | Form-data file upload   | `BookDTO`                                |
+| Function Name              | HTTP Method | Endpoint                        | Description                       | Query Parameters                                                                                                                                                                                                                                      | Request Body                         | Response                                 |
+| -------------------------- | ----------- | ------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------- |
+| `GetBooks`                 | GET         | `/books`                        | Retrieves a collection of books   | `authorSlug` (optional): Filter by author<br>`category` (optional): Filter by category<br>`isPublished` (optional): Filter by publication status<br>`limit` (optional): Max results (default: 50)<br>`includeMedia` (optional): Include media content | None                                 | Array of `BookDTO` or `BookWithMediaDTO` |
+| `GetBook`                  | GET         | `/books/{slug}`                 | Retrieves a specific book by slug | `isPublished` (optional): Filter by publication status<br>`includeMedia` (optional): Include media content                                                                                                                                            | None                                 | `BookDTO` or `BookWithMediaDTO`          |
+| `UpsertBook`               | POST/PUT    | `/books/{slug}`                 | Creates or updates a book         | None                                                                                                                                                                                                                                                  | `BookModel` (see Data Models)        | `BookDTO`                                |
+| `DeleteBook`               | DELETE      | `/books/{slug}`                 | Removes a book                    | None                                                                                                                                                                                                                                                  | None                                 | 200 OK or 404 Not Found                  |
+| `SetBookFeaturedImage`     | POST        | `/books/{slug}/featured-image`  | Sets book featured image          | None                                                                                                                                                                                                                                                  | `{ "mediaId": "{{media-id-guid}}" }` | `BookDTO`                                |
+| `SetBookFeaturedVideo`     | POST        | `/books/{slug}/featured-video`  | Sets book featured video          | None                                                                                                                                                                                                                                                  | `{ "mediaId": "{{media-id-guid}}" }` | `BookDTO`                                |
+| `SetBookFeaturedMedia`     | POST        | `/books/{slug}/featured-media`  | Sets book featured media          | None                                                                                                                                                                                                                                                  | `{ "mediaId": "{{media-id-guid}}" }` | `BookDTO`                                |
+| `AddBookMediaReference`    | POST        | `/books/{slug}/media`           | Adds media to a book              | None                                                                                                                                                                                                                                                  | `{ "mediaId": "{{media-id-guid}}" }` | `BookDTO`                                |
+| `RemoveBookMediaReference` | DELETE      | `/books/{slug}/media/{mediaId}` | Removes media from a book         | None                                                                                                                                                                                                                                                  | None                                 | `BookDTO`                                |
 
 ### Books Data Models
 
@@ -706,16 +708,16 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
 
 ### Blog Posts Endpoints
 
-| Function Name                  | HTTP Method | Endpoint                             | Description                          | Query Parameters                                                                                                                                                                                                                                                                         | Request Body                | Response                                         |
-| ------------------------------ | ----------- | ------------------------------------ | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | ------------------------------------------------ |
-| `GetBlogPosts`                 | GET         | `/blog-posts`                        | Retrieves a collection of blog posts | `authorSlug` (optional): Filter by author<br>`category` (optional): Filter by category<br>`tag` (optional): Filter by tag<br>`isPublished` (optional): Filter by publication status<br>`limit` (optional): Max results (default: 50)<br>`includeMedia` (optional): Include media content | None                        | Array of `BlogPostDTO` or `BlogPostWithMediaDTO` |
-| `GetBlogPost`                  | GET         | `/blog-posts/{slug}`                 | Retrieves a specific blog post       | `isPublished` (optional): Filter by publication status<br>`includeMedia` (optional): Include media content                                                                                                                                                                               | None                        | `BlogPostDTO` or `BlogPostWithMediaDTO`          |
-| `UpsertBlogPost`               | POST/PUT    | `/blog-posts/{slug}`                 | Creates or updates a blog post       | None                                                                                                                                                                                                                                                                                     | `BlogPostModel` (see below) | `BlogPostDTO`                                    |
-| `DeleteBlogPost`               | DELETE      | `/blog-posts/{slug}`                 | Removes a blog post                  | None                                                                                                                                                                                                                                                                                     | None                        | 200 OK or 404 Not Found                          |
-| `SetBlogPostFeaturedImage`     | POST        | `/blog-posts/{slug}/featured-image`  | Sets blog post featured image        | None                                                                                                                                                                                                                                                                                     | `{ "mediaId": "guid" }`     | `BlogPostDTO`                                    |
-| `SetBlogPostFeaturedVideo`     | POST        | `/blog-posts/{slug}/featured-video`  | Sets blog post featured video        | None                                                                                                                                                                                                                                                                                     | `{ "mediaId": "guid" }`     | `BlogPostDTO`                                    |
-| `AddBlogPostMediaReference`    | POST        | `/blog-posts/{slug}/media`           | Adds media to a blog post            | None                                                                                                                                                                                                                                                                                     | `{ "mediaId": "guid" }`     | `BlogPostDTO`                                    |
-| `RemoveBlogPostMediaReference` | DELETE      | `/blog-posts/{slug}/media/{mediaId}` | Removes media from a blog post       | None                                                                                                                                                                                                                                                                                     | None                        | `BlogPostDTO`                                    |
+| Function Name                  | HTTP Method | Endpoint                        | Description                          | Query Parameters                                                                                                                                                                                                                                                                         | Request Body                         | Response                                         |
+| ------------------------------ | ----------- | ------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------ |
+| `GetBlogPosts`                 | GET         | `/posts`                        | Retrieves a collection of blog posts | `authorSlug` (optional): Filter by author<br>`category` (optional): Filter by category<br>`tag` (optional): Filter by tag<br>`isPublished` (optional): Filter by publication status<br>`limit` (optional): Max results (default: 50)<br>`includeMedia` (optional): Include media content | None                                 | Array of `BlogPostDTO` or `BlogPostWithMediaDTO` |
+| `GetBlogPost`                  | GET         | `/posts/{slug}`                 | Retrieves a specific blog post       | `isPublished` (optional): Filter by publication status<br>`includeMedia` (optional): Include media content                                                                                                                                                                               | None                                 | `BlogPostDTO` or `BlogPostWithMediaDTO`          |
+| `UpsertBlogPost`               | POST/PUT    | `/posts/{slug?}`                | Creates or updates a blog post       | None                                                                                                                                                                                                                                                                                     | `BlogPostModel` (see Data Models)    | `BlogPostDTO`                                    |
+| `DeleteBlogPost`               | DELETE      | `/posts/{slug}`                 | Removes a blog post                  | None                                                                                                                                                                                                                                                                                     | None                                 | 200 OK or 404 Not Found                          |
+| `SetBlogPostFeaturedImage`     | POST        | `/posts/{slug}/featured-image`  | Sets blog post featured image        | None                                                                                                                                                                                                                                                                                     | `{ "mediaId": "{{media-id-guid}}" }` | `BlogPostDTO`                                    |
+| `SetBlogPostFeaturedVideo`     | POST        | `/posts/{slug}/featured-video`  | Sets blog post featured video        | None                                                                                                                                                                                                                                                                                     | `{ "mediaId": "{{media-id-guid}}" }` | `BlogPostDTO`                                    |
+| `AddBlogPostMediaReference`    | POST        | `/posts/{slug}/media`           | Adds media to a blog post            | None                                                                                                                                                                                                                                                                                     | `{ "mediaId": "{{media-id-guid}}" }` | `BlogPostDTO`                                    |
+| `RemoveBlogPostMediaReference` | DELETE      | `/posts/{slug}/media/{mediaId}` | Removes media from a blog post       | None                                                                                                                                                                                                                                                                                     | None                                 | `BlogPostDTO`                                    |
 
 ### Blog Posts Data Models
 
@@ -1608,22 +1610,22 @@ interface ContactErrorResponse {
 }
 ```
 
-## Portfolio Pieces API
+## Portfolio API
 
-### Portfolio Pieces Endpoints
+### Portfolio Endpoints
 
-| Function Name                        | HTTP Method | Endpoint                                   | Description                                | Query Parameters                                                                                                                                                                                                                                      | Request Body                      | Response                                                     |
-| ------------------------------------ | ----------- | ------------------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------ |
-| `GetPortfolioPieces`                 | GET         | `/portfolio-pieces`                        | Retrieves a collection of portfolio pieces | `authorSlug` (optional): Filter by author<br>`category` (optional): Filter by category<br>`isPublished` (optional): Filter by publication status<br>`limit` (optional): Max results (default: 50)<br>`includeMedia` (optional): Include media content | None                              | Array of `PortfolioPieceDTO` or `PortfolioPieceWithMediaDTO` |
-| `GetPortfolioPiece`                  | GET         | `/portfolio-pieces/{slug}`                 | Retrieves a specific portfolio piece       | `isPublished` (optional): Filter by publication status<br>`includeMedia` (optional): Include media content                                                                                                                                            | None                              | `PortfolioPieceDTO` or `PortfolioPieceWithMediaDTO`          |
-| `UpsertPortfolioPiece`               | POST/PUT    | `/portfolio-pieces/{slug}`                 | Creates or updates a portfolio piece       | None                                                                                                                                                                                                                                                  | `PortfolioPieceModel` (see below) | `PortfolioPieceDTO`                                          |
-| `DeletePortfolioPiece`               | DELETE      | `/portfolio-pieces/{slug}`                 | Removes a portfolio piece                  | None                                                                                                                                                                                                                                                  | None                              | 200 OK or 404 Not Found                                      |
-| `SetPortfolioPieceFeaturedImage`     | POST        | `/portfolio-pieces/{slug}/featured-image`  | Sets portfolio piece featured image        | None                                                                                                                                                                                                                                                  | `{ "mediaId": "guid" }`           | `PortfolioPieceDTO`                                          |
-| `SetPortfolioPieceFeaturedVideo`     | POST        | `/portfolio-pieces/{slug}/featured-video`  | Sets portfolio piece featured video        | None                                                                                                                                                                                                                                                  | `{ "mediaId": "guid" }`           | `PortfolioPieceDTO`                                          |
-| `AddPortfolioPieceMediaReference`    | POST        | `/portfolio-pieces/{slug}/media`           | Adds media to a portfolio piece            | None                                                                                                                                                                                                                                                  | `{ "mediaId": "guid" }`           | `PortfolioPieceDTO`                                          |
-| `RemovePortfolioPieceMediaReference` | DELETE      | `/portfolio-pieces/{slug}/media/{mediaId}` | Removes media from a portfolio piece       | None                                                                                                                                                                                                                                                  | None                              | `PortfolioPieceDTO`                                          |
+| Function Name                        | HTTP Method | Endpoint                            | Description                                | Query Parameters                                                                                                                                                                                                                                      | Request Body                            | Response                                                     |
+| ------------------------------------ | ----------- | ----------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------ |
+| `GetPortfolioPieces`                 | GET         | `/portfolio`                        | Retrieves a collection of portfolio pieces | `authorSlug` (optional): Filter by author<br>`category` (optional): Filter by category<br>`isPublished` (optional): Filter by publication status<br>`limit` (optional): Max results (default: 50)<br>`includeMedia` (optional): Include media content | None                                    | Array of `PortfolioPieceDTO` or `PortfolioPieceWithMediaDTO` |
+| `GetPortfolioPiece`                  | GET         | `/portfolio/{slug}`                 | Retrieves a specific portfolio piece       | `isPublished` (optional): Filter by publication status<br>`includeMedia` (optional): Include media content                                                                                                                                            | None                                    | `PortfolioPieceDTO` or `PortfolioPieceWithMediaDTO`          |
+| `UpsertPortfolioPiece`               | POST/PUT    | `/portfolio/{slug}`                 | Creates or updates a portfolio piece       | None                                                                                                                                                                                                                                                  | `PortfolioPieceModel` (see Data Models) | `PortfolioPieceDTO`                                          |
+| `DeletePortfolioPiece`               | DELETE      | `/portfolio/{slug}`                 | Removes a portfolio piece                  | None                                                                                                                                                                                                                                                  | None                                    | 200 OK or 404 Not Found                                      |
+| `SetPortfolioPieceFeaturedImage`     | POST        | `/portfolio/{slug}/featured-image`  | Sets portfolio piece featured image        | None                                                                                                                                                                                                                                                  | `{ "mediaId": "{{media-id-guid}}" }`    | `PortfolioPieceDTO`                                          |
+| `SetPortfolioPieceFeaturedVideo`     | POST        | `/portfolio/{slug}/featured-video`  | Sets portfolio piece featured video        | None                                                                                                                                                                                                                                                  | `{ "mediaId": "{{media-id-guid}}" }`    | `PortfolioPieceDTO`                                          |
+| `AddPortfolioPieceMediaReference`    | POST        | `/portfolio/{slug}/media`           | Adds media to a portfolio piece            | None                                                                                                                                                                                                                                                  | `{ "mediaId": "{{media-id-guid}}" }`    | `PortfolioPieceDTO`                                          |
+| `RemovePortfolioPieceMediaReference` | DELETE      | `/portfolio/{slug}/media/{mediaId}` | Removes media from a portfolio piece       | None                                                                                                                                                                                                                                                  | None                                    | `PortfolioPieceDTO`                                          |
 
-### Portfolio Pieces Data Models
+### Portfolio Data Models
 
 #### PortfolioPieceDTO (Response Model)
 
@@ -1687,7 +1689,7 @@ interface PortfolioPieceRequest {
 }
 ```
 
-### Portfolio Pieces Integration Guidelines
+### Portfolio Integration Guidelines
 
 #### Setting Up Portfolio Pieces API Service
 
@@ -1709,7 +1711,7 @@ export const PortfolioPiecesService = {
         limit?: number;
         includeMedia?: boolean;
     }): Promise<PortfolioPieceDTO[] | PortfolioPieceWithMediaDTO[]> {
-        const response = await apiClient.get("/portfolio-pieces", {params});
+        const response = await apiClient.get("/portfolio", {params});
         return response.data;
     },
 
@@ -1721,7 +1723,7 @@ export const PortfolioPiecesService = {
             includeMedia?: boolean;
         }
     ): Promise<PortfolioPieceDTO | PortfolioPieceWithMediaDTO> {
-        const response = await apiClient.get(`/portfolio-pieces/${slug}`, {
+        const response = await apiClient.get(`/portfolio/${slug}`, {
             params
         });
         return response.data;
@@ -1733,7 +1735,7 @@ export const PortfolioPiecesService = {
         portfolioPiece: PortfolioPieceRequest
     ): Promise<PortfolioPieceDTO> {
         const response = await apiClient.post(
-            `/portfolio-pieces/${slug}`,
+            `/portfolio/${slug}`,
             portfolioPiece
         );
         return response.data;
@@ -1741,7 +1743,7 @@ export const PortfolioPiecesService = {
 
     // Delete a portfolio piece
     async deletePortfolioPiece(slug: string): Promise<void> {
-        await apiClient.delete(`/portfolio-pieces/${slug}`);
+        await apiClient.delete(`/portfolio/${slug}`);
     },
 
     // Set featured image
@@ -1750,7 +1752,7 @@ export const PortfolioPiecesService = {
         mediaId: string
     ): Promise<PortfolioPieceDTO> {
         const response = await apiClient.post(
-            `/portfolio-pieces/${slug}/featured-image`,
+            `/portfolio/${slug}/featured-image`,
             {mediaId}
         );
         return response.data;
@@ -1762,7 +1764,7 @@ export const PortfolioPiecesService = {
         mediaId: string
     ): Promise<PortfolioPieceDTO> {
         const response = await apiClient.post(
-            `/portfolio-pieces/${slug}/featured-video`,
+            `/portfolio/${slug}/featured-video`,
             {mediaId}
         );
         return response.data;
@@ -1773,10 +1775,9 @@ export const PortfolioPiecesService = {
         slug: string,
         mediaId: string
     ): Promise<PortfolioPieceDTO> {
-        const response = await apiClient.post(
-            `/portfolio-pieces/${slug}/media`,
-            {mediaId}
-        );
+        const response = await apiClient.post(`/portfolio/${slug}/media`, {
+            mediaId
+        });
         return response.data;
     },
 
@@ -1786,7 +1787,7 @@ export const PortfolioPiecesService = {
         mediaId: string
     ): Promise<PortfolioPieceDTO> {
         const response = await apiClient.delete(
-            `/portfolio-pieces/${slug}/media/${mediaId}`
+            `/portfolio/${slug}/media/${mediaId}`
         );
         return response.data;
     }
@@ -2308,6 +2309,193 @@ export const PortfolioGrid: React.FC<PortfolioGridProps> = ({
         );
     };
     ```
+
+## Authors API
+
+### Authors Endpoints
+
+| Function Name                | HTTP Method | Endpoint                           | Description                  | Query Parameters                                 | Request Body                         | Response                            |
+| ---------------------------- | ----------- | ---------------------------------- | ---------------------------- | ------------------------------------------------ | ------------------------------------ | ----------------------------------- |
+| `GetAuthor`                  | GET         | `/authors/{slug}`                  | Retrieves a specific author  | `includeMedia` (optional): Include media content | None                                 | `AuthorDTO` or `AuthorWithMediaDTO` |
+| `UpsertAuthor`               | PUT         | `/authors/{slug}`                  | Creates or updates an author | None                                             | `AuthorModel` (see Data Models)      | `AuthorDTO`                         |
+| `DeleteAuthor`               | DELETE      | `/authors/{slug}`                  | Removes an author            | None                                             | None                                 | 200 OK or 404 Not Found             |
+| `SetAuthorProfileImage`      | POST        | `/authors/{slug}/profile-image`    | Sets author profile image    | None                                             | `{ "mediaId": "{{media-id-guid}}" }` | `AuthorDTO`                         |
+| `SetAuthorBackgroundImage`   | POST        | `/authors/{slug}/background-image` | Sets author background image | None                                             | `{ "mediaId": "{{media-id-guid}}" }` | `AuthorDTO`                         |
+| `AddAuthorMediaReference`    | POST        | `/authors/{slug}/media`            | Adds media to an author      | None                                             | `{ "mediaId": "{{media-id-guid}}" }` | `AuthorDTO`                         |
+| `RemoveAuthorMediaReference` | DELETE      | `/authors/{slug}/media/{mediaId}`  | Removes media from an author | None                                             | None                                 | `AuthorDTO`                         |
+
+### Authors Data Models
+
+#### AuthorDTO (Response Model)
+
+```typescript
+interface AuthorDTO {
+    id: string;
+    slug: string;
+    name: string;
+    bio?: string;
+    email?: string;
+    websiteUrl?: string;
+    socialLinks?: {
+        twitter?: string;
+        linkedin?: string;
+        github?: string;
+    };
+    profileImageId?: string;
+    backgroundImageId?: string;
+    mediaReferences?: string[];
+    createdAt: string;
+    lastModified: string;
+}
+```
+
+#### AuthorWithMediaDTO (Response Model with Media)
+
+```typescript
+interface AuthorWithMediaDTO {
+    author: AuthorDTO;
+    profileMedia?: MediaItemModel;
+    backgroundMedia?: MediaItemModel;
+    mediaReferences?: MediaItemModel[];
+}
+```
+
+#### Author Request Model
+
+```typescript
+interface AuthorRequest {
+    name: string; // Required
+    bio?: string;
+    email?: string;
+    websiteUrl?: string;
+    socialLinks?: {
+        twitter?: string;
+        linkedin?: string;
+        github?: string;
+    };
+}
+```
+
+## Media API
+
+### Media Endpoints
+
+| Function Name         | HTTP Method | Endpoint                     | Description                          | Query Parameters                                                                                                            | Request Body                  | Response                  |
+| --------------------- | ----------- | ---------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------- |
+| `UploadImage`         | POST        | `/media/images`              | Uploads an image file                | None                                                                                                                        | Multipart form data with file | `MediaItemModel`          |
+| `UploadVideo`         | POST        | `/media/videos`              | Uploads a video file                 | None                                                                                                                        | Multipart form data with file | `MediaItemModel`          |
+| `UploadDocument`      | POST        | `/media/documents`           | Uploads a document file              | None                                                                                                                        | Multipart form data with file | `MediaItemModel`          |
+| `GetMediaItem`        | GET         | `/media/{mediaId}`           | Retrieves a specific media item      | None                                                                                                                        | None                          | `MediaItemModel`          |
+| `GetAllMedia`         | GET         | `/media`                     | Retrieves all media items            | `contentType` (optional): Filter by type<br>`limit` (optional): Max results<br>`contentId` (optional): Filter by content ID | None                          | Array of `MediaItemModel` |
+| `GetMediaByContentId` | GET         | `/media/content/{contentId}` | Retrieves media for specific content | None                                                                                                                        | None                          | Array of `MediaItemModel` |
+| `DeleteMediaItem`     | DELETE      | `/media/{mediaId}`           | Deletes a media item                 | None                                                                                                                        | None                          | 200 OK or 404 Not Found   |
+| `MediaPingTest`       | GET         | `/media/ping`                | Simple ping test for media service   | None                                                                                                                        | None                          | `{ "status": "ok" }`      |
+
+### Media Data Models
+
+#### MediaItemModel (Response Model)
+
+```typescript
+interface MediaItemModel {
+    id: string;
+    fileName: string;
+    originalFileName: string;
+    contentType: string;
+    size: number;
+    url: string;
+    cdnUrl: string;
+    description?: string;
+    uploadedAt: string;
+    lastModified: string;
+    assetType: "Images" | "Videos" | "Documents";
+    contentSection: string;
+}
+```
+
+## Contact Me API
+
+### Contact Endpoints
+
+| Function Name       | HTTP Method | Endpoint   | Description                    | Query Parameters | Request Body                     | Response                   |
+| ------------------- | ----------- | ---------- | ------------------------------ | ---------------- | -------------------------------- | -------------------------- |
+| `SubmitContactForm` | POST        | `/contact` | Submits a contact form message | None             | `ContactFormRequest` (see below) | `ContactFormResponseModel` |
+
+### Contact Data Models
+
+#### ContactFormRequest (Request Model)
+
+```typescript
+interface ContactFormRequest {
+    name: string; // Required
+    email: string; // Required
+    subject: string; // Required
+    message: string; // Required
+    company?: string;
+    phone?: string;
+}
+```
+
+#### ContactFormResponseModel (Response Model)
+
+```typescript
+interface ContactFormResponseModel {
+    success: boolean;
+    message: string;
+    timestamp: string;
+}
+```
+
+## GitHub Repositories API
+
+### GitHub Endpoints
+
+| Function Name             | HTTP Method | Endpoint                            | Description                                         | Query Parameters | Request Body | Response                         |
+| ------------------------- | ----------- | ----------------------------------- | --------------------------------------------------- | ---------------- | ------------ | -------------------------------- |
+| `GetGitHubActivityGrid`   | GET         | `/github/activity`                  | Retrieves GitHub activity grid data                 | None             | None         | `GitHubActivityGridModel`        |
+| `GetGitHubRepos`          | GET         | `/github/repos`                     | Retrieves all GitHub repositories                   | None             | None         | Array of `GitHubRepositoryModel` |
+| `GetGitHubRepoBySlug`     | GET         | `/github/repos/{slug}`              | Retrieves a specific GitHub repository by slug      | None             | None         | `GitHubRepositoryModel`          |
+| `GetGitHubRepoByGitHubId` | GET         | `/github/repos/githubid/{githubId}` | Retrieves a specific GitHub repository by GitHub ID | None             | None         | `GitHubRepositoryModel`          |
+
+### GitHub Data Models
+
+#### GitHubRepositoryModel (Response Model)
+
+```typescript
+interface GitHubRepositoryModel {
+    id: string;
+    githubId: number;
+    name: string;
+    fullName: string;
+    description?: string;
+    slug: string;
+    url: string;
+    homepage?: string;
+    language?: string;
+    stargazersCount: number;
+    forksCount: number;
+    isPrivate: boolean;
+    isFork: boolean;
+    createdAt: string;
+    updatedAt: string;
+    pushedAt: string;
+    topics: string[];
+}
+```
+
+#### GitHubActivityGridModel (Response Model)
+
+```typescript
+interface GitHubActivityGridModel {
+    weeks: Array<{
+        week: string; // ISO date string
+        days: Array<{
+            date: string; // ISO date string
+            contributionCount: number;
+        }>;
+    }>;
+    totalContributions: number;
+}
+```
 
 ## Authentication
 

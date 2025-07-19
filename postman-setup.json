@@ -1,0 +1,1208 @@
+{
+    "info": {
+        "name": "Azure Functions Website API",
+        "description": "Complete API collection for testing Azure Functions endpoints with Key Vault integration",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "version": "2.0.0"
+    },
+    "auth": {
+        "type": "apikey",
+        "apikey": [
+            {
+                "key": "key",
+                "value": "x-api-key",
+                "type": "string"
+            },
+            {
+                "key": "value",
+                "value": "{{API_KEY}}",
+                "type": "string"
+            },
+            {
+                "key": "in",
+                "value": "header",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "BASE_URL",
+            "value": "https://{{ENVIRONMENT}}-api.terencewaters.com",
+            "type": "string",
+            "description": "API URL - use ENVIRONMENT variable to switch between mock-dev, mock-tst, or api (prod)"
+        },
+        {
+            "key": "LOCAL_URL",
+            "value": "http://localhost:7071",
+            "type": "string",
+            "description": "Local development URL - use this value in BASE_URL for local testing"
+        },
+        {
+            "key": "ENVIRONMENT",
+            "value": "mock-dev",
+            "type": "string",
+            "description": "Environment prefix: mock-dev, mock-tst, or api (for production)"
+        },
+        {
+            "key": "API_KEY",
+            "value": "{{your-api-key-here}}",
+            "type": "string",
+            "description": "API key for authentication - replace with your actual key"
+        },
+        {
+            "key": "test_slug",
+            "value": "sample-content-slug",
+            "type": "string",
+            "description": "Sample slug for testing content endpoints"
+        },
+        {
+            "key": "test_media_id",
+            "value": "{{your-test-media-id-guid}}",
+            "type": "string",
+            "description": "Sample media ID for testing media operations"
+        },
+        {
+            "key": "github_id",
+            "value": "123456789",
+            "type": "string",
+            "description": "Sample GitHub repository ID for testing"
+        }
+    ],
+    "item": [
+        {
+            "name": "👤 Authors",
+            "item": [
+                {
+                    "name": "Get Author",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{test_slug}}?includeMedia=false",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["authors", "{{test_slug}}"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "false",
+                                    "description": "Include media in response (true/false)"
+                                }
+                            ]
+                        },
+                        "description": "Get an author by slug. Set includeMedia=true to include media assets."
+                    }
+                },
+                {
+                    "name": "Get Author with Media",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{test_slug}}?includeMedia=true",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["authors", "{{test_slug}}"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "true",
+                                    "description": "Include media in response"
+                                }
+                            ]
+                        },
+                        "description": "Get an author by slug with all associated media."
+                    }
+                },
+                {
+                    "name": "Create/Update Author",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Sample Author\",\n  \"bio\": \"This is a sample author biography.\",\n  \"email\": \"author@example.com\",\n  \"websiteUrl\": \"https://example.com\",\n  \"socialLinks\": {\n    \"twitter\": \"@author\",\n    \"linkedin\": \"author-linkedin\",\n    \"github\": \"author-github\"\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["authors", "{{test_slug}}"]
+                        },
+                        "description": "Create or update an author. The slug in the URL will be used."
+                    }
+                },
+                {
+                    "name": "Delete Author",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["authors", "{{test_slug}}"]
+                        },
+                        "description": "Delete an author by slug."
+                    }
+                },
+                {
+                    "name": "Set Author Profile Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{test_slug}}/profile-image",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "authors",
+                                "{{test_slug}}",
+                                "profile-image"
+                            ]
+                        },
+                        "description": "Set a profile image for an author using media ID."
+                    }
+                },
+                {
+                    "name": "Set Author Background Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{test_slug}}/background-image",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "authors",
+                                "{{test_slug}}",
+                                "background-image"
+                            ]
+                        },
+                        "description": "Set a background image for an author using media ID."
+                    }
+                },
+                {
+                    "name": "Add Author Media",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{test_slug}}/media",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["authors", "{{test_slug}}", "media"]
+                        },
+                        "description": "Add general media reference to an author."
+                    }
+                },
+                {
+                    "name": "Remove Author Media",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{test_slug}}/media/{{test_media_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "authors",
+                                "{{test_slug}}",
+                                "media",
+                                "{{test_media_id}}"
+                            ]
+                        },
+                        "description": "Remove specific media associated with an author."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📝 Blog Posts",
+            "item": [
+                {
+                    "name": "Get All Posts",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts?limit=10&includeMedia=false",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts"],
+                            "query": [
+                                {
+                                    "key": "authorSlug",
+                                    "value": "{{test_slug}}",
+                                    "description": "Filter by author slug",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "category",
+                                    "value": "Technology",
+                                    "description": "Filter by category",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "isPublished",
+                                    "value": "true",
+                                    "description": "Filter by publication status (true/false)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Maximum number of results (default: 50)"
+                                },
+                                {
+                                    "key": "includeMedia",
+                                    "value": "false",
+                                    "description": "Include media content (true/false)"
+                                }
+                            ]
+                        },
+                        "description": "Get all blog posts with optional filtering and pagination."
+                    }
+                },
+                {
+                    "name": "Get Single Post",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{test_slug}}?includeMedia=true",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{test_slug}}"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "true",
+                                    "description": "Include media content"
+                                },
+                                {
+                                    "key": "isPublished",
+                                    "value": "true",
+                                    "description": "Filter by publication status",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Get a specific blog post by slug."
+                    }
+                },
+                {
+                    "name": "Create Post",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Sample Blog Post\",\n  \"content\": \"This is the content of the sample blog post.\",\n  \"excerpt\": \"A brief excerpt of the post.\",\n  \"authorSlug\": \"{{test_slug}}\",\n  \"category\": \"Technology\",\n  \"tagsList\": [\"tech\", \"tutorial\", \"example\"],\n  \"status\": \"Draft\",\n  \"featuredImageId\": null,\n  \"featuredVideoId\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{test_slug}}"]
+                        },
+                        "description": "Create a new blog post."
+                    }
+                },
+                {
+                    "name": "Update Post",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Updated Blog Post\",\n  \"content\": \"This is the updated content of the blog post.\",\n  \"excerpt\": \"Updated excerpt.\",\n  \"authorSlug\": \"{{test_slug}}\",\n  \"category\": \"Technology\",\n  \"tagsList\": [\"tech\", \"tutorial\", \"updated\"],\n  \"status\": \"Published\",\n  \"featuredImageId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{test_slug}}"]
+                        },
+                        "description": "Update an existing blog post."
+                    }
+                },
+                {
+                    "name": "Delete Post",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{test_slug}}"]
+                        },
+                        "description": "Delete a blog post by slug."
+                    }
+                },
+                {
+                    "name": "Set Post Featured Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{test_slug}}/featured-image",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{test_slug}}", "featured-image"]
+                        },
+                        "description": "Set featured image for a blog post."
+                    }
+                },
+                {
+                    "name": "Set Post Featured Video",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{test_slug}}/featured-video",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{test_slug}}", "featured-video"]
+                        },
+                        "description": "Set featured video for a blog post."
+                    }
+                },
+                {
+                    "name": "Add Post Media",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{test_slug}}/media",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{test_slug}}", "media"]
+                        },
+                        "description": "Add media reference to a blog post."
+                    }
+                },
+                {
+                    "name": "Remove Post Media",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{test_slug}}/media/{{test_media_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "posts",
+                                "{{test_slug}}",
+                                "media",
+                                "{{test_media_id}}"
+                            ]
+                        },
+                        "description": "Remove media reference from a blog post."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📚 Books",
+            "item": [
+                {
+                    "name": "Get All Books",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/books?limit=10&includeMedia=false",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books"],
+                            "query": [
+                                {
+                                    "key": "authorSlug",
+                                    "value": "{{test_slug}}",
+                                    "description": "Filter by author slug",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "category",
+                                    "value": "Fiction",
+                                    "description": "Filter by category/genre",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "isPublished",
+                                    "value": "true",
+                                    "description": "Filter by publication status (true/false)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Maximum number of results (default: 50, max: 100)"
+                                },
+                                {
+                                    "key": "includeMedia",
+                                    "value": "false",
+                                    "description": "Include media content (true/false)"
+                                }
+                            ]
+                        },
+                        "description": "Get all books with optional filtering and pagination."
+                    }
+                },
+                {
+                    "name": "Get Single Book",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{test_slug}}?includeMedia=true",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{test_slug}}"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "true",
+                                    "description": "Include media content"
+                                },
+                                {
+                                    "key": "isPublished",
+                                    "value": "true",
+                                    "description": "Filter by publication status",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Get a specific book by slug."
+                    }
+                },
+                {
+                    "name": "Create Book",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Sample Book Title\",\n  \"content\": \"This is the main content/description of the book.\",\n  \"authorSlug\": \"{{test_slug}}\",\n  \"category\": \"Fiction\",\n  \"tagsList\": [\"adventure\", \"fantasy\", \"epic\"],\n  \"status\": \"Draft\",\n  \"isbn\": \"978-0-123456-78-9\",\n  \"publishDate\": \"2024-01-01T00:00:00Z\",\n  \"featuredImageId\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{test_slug}}"]
+                        },
+                        "description": "Create a new book."
+                    }
+                },
+                {
+                    "name": "Update Book",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Updated Book Title\",\n  \"content\": \"This is the updated content/description of the book.\",\n  \"authorSlug\": \"{{test_slug}}\",\n  \"category\": \"Fiction\",\n  \"tagsList\": [\"adventure\", \"fantasy\", \"epic\", \"updated\"],\n  \"status\": \"Published\",\n  \"isbn\": \"978-0-123456-78-9\",\n  \"publishDate\": \"2024-01-01T00:00:00Z\",\n  \"featuredImageId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{test_slug}}"]
+                        },
+                        "description": "Update an existing book."
+                    }
+                },
+                {
+                    "name": "Delete Book",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{test_slug}}"]
+                        },
+                        "description": "Delete a book by slug."
+                    }
+                },
+                {
+                    "name": "Set Book Featured Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{test_slug}}/featured-image",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{test_slug}}", "featured-image"]
+                        },
+                        "description": "Set featured image for a book (book cover)."
+                    }
+                },
+                {
+                    "name": "Set Book Featured Video",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{test_slug}}/featured-video",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{test_slug}}", "featured-video"]
+                        },
+                        "description": "Set featured video for a book."
+                    }
+                },
+                {
+                    "name": "Set Book Featured Media",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{test_slug}}/featured-media",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{test_slug}}", "featured-media"]
+                        },
+                        "description": "Set general featured media for a book."
+                    }
+                },
+                {
+                    "name": "Add Book Media",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{test_slug}}/media",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{test_slug}}", "media"]
+                        },
+                        "description": "Add media reference to a book."
+                    }
+                },
+                {
+                    "name": "Remove Book Media",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{test_slug}}/media/{{test_media_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "books",
+                                "{{test_slug}}",
+                                "media",
+                                "{{test_media_id}}"
+                            ]
+                        },
+                        "description": "Remove media reference from a book."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "💼 Portfolio",
+            "item": [
+                {
+                    "name": "Get All Portfolio Pieces",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio?limit=10&includeMedia=false",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["portfolio"],
+                            "query": [
+                                {
+                                    "key": "authorSlug",
+                                    "value": "{{test_slug}}",
+                                    "description": "Filter by author slug",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "category",
+                                    "value": "Web Development",
+                                    "description": "Filter by category",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "isPublished",
+                                    "value": "true",
+                                    "description": "Filter by publication status (true/false)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Maximum number of results (default: 50)"
+                                },
+                                {
+                                    "key": "includeMedia",
+                                    "value": "false",
+                                    "description": "Include media content (true/false)"
+                                }
+                            ]
+                        },
+                        "description": "Get all portfolio pieces with optional filtering and pagination."
+                    }
+                },
+                {
+                    "name": "Get Single Portfolio Piece",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{test_slug}}?includeMedia=true",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["portfolio", "{{test_slug}}"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "true",
+                                    "description": "Include media content"
+                                },
+                                {
+                                    "key": "isPublished",
+                                    "value": "true",
+                                    "description": "Filter by publication status",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Get a specific portfolio piece by slug."
+                    }
+                },
+                {
+                    "name": "Create Portfolio Piece",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Sample Portfolio Project\",\n  \"description\": \"This is a detailed description of the portfolio project.\",\n  \"authorSlug\": \"{{test_slug}}\",\n  \"category\": \"Web Development\",\n  \"tagsList\": [\"react\", \"javascript\", \"web\"],\n  \"status\": \"Published\",\n  \"projectUrl\": \"https://example.com/project\",\n  \"githubUrl\": \"https://github.com/user/project\",\n  \"technologies\": [\"React\", \"Node.js\", \"Azure\"],\n  \"featuredImageId\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["portfolio", "{{test_slug}}"]
+                        },
+                        "description": "Create a new portfolio piece."
+                    }
+                },
+                {
+                    "name": "Update Portfolio Piece",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Updated Portfolio Project\",\n  \"description\": \"This is the updated description of the portfolio project.\",\n  \"authorSlug\": \"{{test_slug}}\",\n  \"category\": \"Web Development\",\n  \"tagsList\": [\"react\", \"javascript\", \"web\", \"updated\"],\n  \"status\": \"Published\",\n  \"projectUrl\": \"https://example.com/updated-project\",\n  \"githubUrl\": \"https://github.com/user/updated-project\",\n  \"technologies\": [\"React\", \"Node.js\", \"Azure\", \"TypeScript\"],\n  \"featuredImageId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["portfolio", "{{test_slug}}"]
+                        },
+                        "description": "Update an existing portfolio piece."
+                    }
+                },
+                {
+                    "name": "Delete Portfolio Piece",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["portfolio", "{{test_slug}}"]
+                        },
+                        "description": "Delete a portfolio piece by slug."
+                    }
+                },
+                {
+                    "name": "Set Portfolio Featured Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{test_slug}}/featured-image",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "portfolio",
+                                "{{test_slug}}",
+                                "featured-image"
+                            ]
+                        },
+                        "description": "Set featured image for a portfolio piece."
+                    }
+                },
+                {
+                    "name": "Set Portfolio Featured Video",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{test_slug}}/featured-video",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "portfolio",
+                                "{{test_slug}}",
+                                "featured-video"
+                            ]
+                        },
+                        "description": "Set featured video for a portfolio piece."
+                    }
+                },
+                {
+                    "name": "Add Portfolio Media",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mediaId\": \"{{test_media_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{test_slug}}/media",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["portfolio", "{{test_slug}}", "media"]
+                        },
+                        "description": "Add media reference to a portfolio piece."
+                    }
+                },
+                {
+                    "name": "Remove Portfolio Media",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{test_slug}}/media/{{test_media_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "portfolio",
+                                "{{test_slug}}",
+                                "media",
+                                "{{test_media_id}}"
+                            ]
+                        },
+                        "description": "Remove media reference from a portfolio piece."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📧 Contact",
+            "item": [
+                {
+                    "name": "Submit Contact Form",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"subject\": \"General Inquiry\",\n  \"message\": \"Hello, I have a question about your services.\",\n  \"company\": \"Example Corp\",\n  \"phone\": \"+1-555-123-4567\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/contact",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["contact"]
+                        },
+                        "description": "Submit a contact form message."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🐙 GitHub",
+            "item": [
+                {
+                    "name": "Get GitHub Activity Grid",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/github/activity",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["github", "activity"]
+                        },
+                        "description": "Get GitHub activity grid data for contribution visualization."
+                    }
+                },
+                {
+                    "name": "Get All GitHub Repos",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/github/repos",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["github", "repos"]
+                        },
+                        "description": "Get all GitHub repositories."
+                    }
+                },
+                {
+                    "name": "Get GitHub Repo by Slug",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/github/repos/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["github", "repos", "{{test_slug}}"]
+                        },
+                        "description": "Get a specific GitHub repository by slug."
+                    }
+                },
+                {
+                    "name": "Get GitHub Repo by GitHub ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/github/repos/githubid/{{github_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "github",
+                                "repos",
+                                "githubid",
+                                "{{github_id}}"
+                            ]
+                        },
+                        "description": "Get a specific GitHub repository by its GitHub ID."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🖼️ Media",
+            "item": [
+                {
+                    "name": "Upload Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "multipart/form-data",
+                                "disabled": true
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": [],
+                                    "description": "Image file to upload (jpg, png, gif, webp)"
+                                },
+                                {
+                                    "key": "description",
+                                    "value": "Sample image description",
+                                    "type": "text",
+                                    "description": "Optional description of the image"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/images",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "images"]
+                        },
+                        "description": "Upload an image file. Supports jpg, png, gif, webp formats."
+                    }
+                },
+                {
+                    "name": "Upload Video",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "multipart/form-data",
+                                "disabled": true
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": [],
+                                    "description": "Video file to upload (mp4, avi, mov, etc.)"
+                                },
+                                {
+                                    "key": "description",
+                                    "value": "Sample video description",
+                                    "type": "text",
+                                    "description": "Optional description of the video"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/videos",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "videos"]
+                        },
+                        "description": "Upload a video file. Supports various video formats."
+                    }
+                },
+                {
+                    "name": "Upload Document",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "multipart/form-data",
+                                "disabled": true
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": [],
+                                    "description": "Document file to upload (pdf, doc, txt, etc.)"
+                                },
+                                {
+                                    "key": "description",
+                                    "value": "Sample document description",
+                                    "type": "text",
+                                    "description": "Optional description of the document"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/documents",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "documents"]
+                        },
+                        "description": "Upload a document file. Supports pdf, doc, txt and other document formats."
+                    }
+                },
+                {
+                    "name": "Get Media Item",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/{{test_media_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "{{test_media_id}}"]
+                        },
+                        "description": "Get details of a specific media item by its ID."
+                    }
+                },
+                {
+                    "name": "Get All Media",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/media?limit=20",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media"],
+                            "query": [
+                                {
+                                    "key": "contentType",
+                                    "value": "image",
+                                    "description": "Filter by content type (image, video, document)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "20",
+                                    "description": "Maximum number of results"
+                                },
+                                {
+                                    "key": "contentId",
+                                    "value": "{{test_slug}}",
+                                    "description": "Filter by associated content ID",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Get all media items with optional filtering."
+                    }
+                },
+                {
+                    "name": "Get Media by Content ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/content/{{test_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "content", "{{test_slug}}"]
+                        },
+                        "description": "Get all media associated with a specific content item."
+                    }
+                },
+                {
+                    "name": "Delete Media Item",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/{{test_media_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "{{test_media_id}}"]
+                        },
+                        "description": "Delete a specific media item by its ID."
+                    }
+                },
+                {
+                    "name": "Media Ping Test",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/ping",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "ping"]
+                        },
+                        "description": "Simple ping test to check media service availability."
+                    }
+                }
+            ]
+        }
+    ]
+}
