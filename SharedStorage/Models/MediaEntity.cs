@@ -31,6 +31,12 @@ public class MediaEntity : ITableEntity
 
   public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
+  // External platform support
+  public bool IsExternal { get; set; } = false; // True if this media is from an external platform
+  public string Platform { get; set; } = string.Empty; // Platform name (TikTok, Instagram, YouTube, Facebook, LinkedIn, Pinterest, BlobStorage)
+  public string ExternalId { get; set; } = string.Empty; // Platform-specific ID for the media
+  public string ExternalUrl { get; set; } = string.Empty; // Original URL on the external platform
+
   public MediaEntity()
   {
     PartitionKey = AuthorId;

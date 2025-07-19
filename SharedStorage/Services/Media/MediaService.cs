@@ -13,6 +13,7 @@ public interface IMediaService
   Task<MediaEntity?> GetMediaAsync(string mediaId);
   Task<IEnumerable<MediaEntity>> GetMediaByAuthorAsync(string authorId, string? mediaType = null, int? limit = null);
   Task<IEnumerable<MediaEntity>> GetMediaByTypeAsync(string mediaType, int? limit = null);
+  Task<IEnumerable<MediaEntity>> GetMediaByTypeAsync(string mediaType, int? limit, int offset);
   Task<IEnumerable<MediaEntity>> GetMediaByContentIdAsync(string contentId, string? relatedContentType = null, int? limit = null);
   Task<bool> DeleteMediaAsync(string mediaId);
 
@@ -23,6 +24,10 @@ public interface IMediaService
   // Specialized operations
   Task<MediaEntity> UploadImageAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? altText = null, string? purpose = "coverImage", string? contentId = null, string? relatedContentType = null);
   Task<MediaEntity> UploadVideoAsync(Stream stream, string fileName, string? authorId = null, string? description = null, string? purpose = "introVideo", string? contentId = null, string? relatedContentType = null);
+
+  // New methods for media gallery functionality
+  Task<IEnumerable<MediaEntity>> GetAllMediaAsync(int? limit = null, int offset = 0);
+  Task<IEnumerable<MediaEntity>> GetMediaByPlatformAsync(string platform, int? limit = null, int offset = 0);
 }
 
 public partial class MediaService : IMediaService
@@ -177,6 +182,11 @@ public partial class MediaService : IMediaService
 
   public async Task<IEnumerable<MediaEntity>> GetMediaByTypeAsync(string mediaType, int? limit = null)
   {
+    return await GetMediaByTypeAsync(mediaType, limit, 0);
+  }
+
+  public async Task<IEnumerable<MediaEntity>> GetMediaByTypeAsync(string mediaType, int? limit = null, int offset = 0)
+  {
     if (string.IsNullOrWhiteSpace(mediaType))
       throw new ArgumentException("Media type is required", nameof(mediaType));
 
@@ -185,8 +195,9 @@ public partial class MediaService : IMediaService
       var filter = $"MediaType eq '{mediaType.ToLowerInvariant()}'";
       var pageSize = Math.Min(limit ?? 50, 100);
 
-      var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, pageSize);
-      var entities = result.Entities.Select(ConvertToMediaEntity).ToList();
+      // Get entities with offset support
+      var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, pageSize + offset);
+      var entities = result.Entities.Skip(offset).Take(pageSize).Select(ConvertToMediaEntity).ToList();
 
       _appLogger.LogInformation("Retrieved {Count} media items of type {MediaType}",
         entities.Count, mediaType);
@@ -357,5 +368,51 @@ public partial class MediaService : IMediaService
       ".wmv" => "video/x-ms-wmv",
       _ => "application/octet-stream"
     };
+  }
+
+  public async Task<IEnumerable<MediaEntity>> GetAllMediaAsync(int? limit = null, int offset = 0)
+  {
+    try
+    {
+      // Get all media from table storage with pagination
+      var pageSize = Math.Min(limit ?? 50, 100); // Cap at 100 for performance
+      
+      // For now, we'll get all entities and then apply offset/limit
+      // In a production scenario, you'd want proper pagination at the storage level
+      var result = await _tableStorageService.GetEntitiesAsync(_tableName, null, pageSize + offset);
+      var entities = result.Entities.Skip(offset).Take(pageSize).Select(ConvertToMediaEntity).ToList();
+
+      _appLogger.LogInformation("Retrieved {Count} total media entities", entities.Count);
+      return entities;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to get all media: {Error}", ex, ex.Message);
+      throw;
+    }
+  }
+
+  public async Task<IEnumerable<MediaEntity>> GetMediaByPlatformAsync(string platform, int? limit = null, int offset = 0)
+  {
+    if (string.IsNullOrWhiteSpace(platform))
+      throw new ArgumentException("Platform is required", nameof(platform));
+
+    try
+    {
+      var filter = $"Platform eq '{platform}'";
+      var pageSize = Math.Min(limit ?? 50, 100);
+
+      // For now, we'll get all matching entities and then apply offset/limit
+      var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, pageSize + offset);
+      var entities = result.Entities.Skip(offset).Take(pageSize).Select(ConvertToMediaEntity).ToList();
+
+      _appLogger.LogInformation("Retrieved {Count} media entities from platform {Platform}", entities.Count, platform);
+      return entities;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Failed to get media by platform {Platform}: {Error}", ex, platform, ex.Message);
+      throw;
+    }
   }
 }

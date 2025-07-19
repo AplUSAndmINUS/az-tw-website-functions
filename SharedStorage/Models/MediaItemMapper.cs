@@ -34,7 +34,13 @@ public static class MediaItemMapper
       Width = entity.Width,
       Height = entity.Height,
       UploadedAt = entity.UploadedAt.EnsureUtc(),
-      LastModified = DateTime.UtcNow
+      LastModified = DateTime.UtcNow,
+      ContentId = entity.ContentId ?? string.Empty,
+      RelatedContentType = entity.RelatedContentType ?? string.Empty,
+      IsExternal = entity.IsExternal,
+      Platform = entity.Platform,
+      ExternalId = entity.ExternalId,
+      ExternalUrl = entity.ExternalUrl
     };
 
     // Ensure valid CDN URLs
@@ -104,6 +110,12 @@ public static class MediaItemMapper
     entity.Width = model.Width;
     entity.Height = model.Height;
     entity.UploadedAt = model.UploadedAt.EnsureUtc();
+    entity.ContentId = model.ContentId;
+    entity.RelatedContentType = model.RelatedContentType;
+    entity.IsExternal = model.IsExternal;
+    entity.Platform = model.Platform;
+    entity.ExternalId = model.ExternalId;
+    entity.ExternalUrl = model.ExternalUrl;
 
     // Set partition and row keys
     entity.PartitionKey = model.AuthorId;
@@ -162,7 +174,11 @@ public static class MediaItemMapper
       Duration = model.Duration,
       VideoQuality = model.VideoQuality,
       AudioDuration = model.AudioDuration,
-      AudioBitrate = model.AudioBitrate
+      AudioBitrate = model.AudioBitrate,
+      IsExternal = model.IsExternal,
+      Platform = model.Platform,
+      ExternalId = model.ExternalId,
+      ExternalUrl = model.ExternalUrl
     };
 
     // Double check that DTO has valid CDN URLs
@@ -203,7 +219,11 @@ public static class MediaItemMapper
       Duration = dto.Duration,
       VideoQuality = dto.VideoQuality,
       AudioDuration = dto.AudioDuration,
-      AudioBitrate = dto.AudioBitrate
+      AudioBitrate = dto.AudioBitrate,
+      IsExternal = dto.IsExternal,
+      Platform = dto.Platform,
+      ExternalId = dto.ExternalId,
+      ExternalUrl = dto.ExternalUrl
     };
 
     // Double check that model has valid CDN URLs

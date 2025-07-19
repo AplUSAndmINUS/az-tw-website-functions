@@ -46,4 +46,10 @@ public class MediaItemDTO
   // For audio
   public int AudioDuration { get; set; } // In seconds
   public string AudioBitrate { get; set; } = string.Empty;
+
+  // External platform support
+  public bool IsExternal { get; set; } = false; // True if this media is from an external platform
+  public string Platform { get; set; } = string.Empty; // Platform name (TikTok, Instagram, YouTube, Facebook, LinkedIn, Pinterest, BlobStorage)
+  public string ExternalId { get; set; } = string.Empty; // Platform-specific ID for the media
+  public string ExternalUrl { get; set; } = string.Empty; // Original URL on the external platform
 }

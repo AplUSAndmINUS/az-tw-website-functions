@@ -12,7 +12,18 @@ public static class MediaExtensions
   /// </summary>
   public static MediaItemModel EnsureValidCdnUrls(this MediaItemModel model)
   {
-    // If URL is missing or doesn't contain the CDN domain, log a warning
+    // For external media, don't require CDN URLs - they use external URLs
+    if (model.IsExternal)
+    {
+      // For external media, ensure ExternalUrl is set
+      if (string.IsNullOrWhiteSpace(model.ExternalUrl))
+      {
+        Console.WriteLine($"Warning: External MediaItemModel {model.Id} from {model.Platform} has no ExternalUrl");
+      }
+      return model;
+    }
+
+    // For blob storage media, ensure CDN URLs are set
     if (string.IsNullOrWhiteSpace(model.Url) ||
         !model.Url.Contains("azureedge.net", StringComparison.OrdinalIgnoreCase))
     {
@@ -34,7 +45,18 @@ public static class MediaExtensions
   /// </summary>
   public static MediaItemDTO EnsureValidCdnUrls(this MediaItemDTO dto)
   {
-    // If URL is missing or doesn't contain the CDN domain, log a warning
+    // For external media, don't require CDN URLs - they use external URLs
+    if (dto.IsExternal)
+    {
+      // For external media, ensure ExternalUrl is set
+      if (string.IsNullOrWhiteSpace(dto.ExternalUrl))
+      {
+        Console.WriteLine($"Warning: External MediaItemDTO {dto.Id} from {dto.Platform} has no ExternalUrl");
+      }
+      return dto;
+    }
+
+    // For blob storage media, ensure CDN URLs are set
     if (string.IsNullOrWhiteSpace(dto.Url) ||
         !dto.Url.Contains("azureedge.net", StringComparison.OrdinalIgnoreCase))
     {

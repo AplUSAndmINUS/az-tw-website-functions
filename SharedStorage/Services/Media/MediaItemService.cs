@@ -205,6 +205,100 @@ public class MediaItemService : IMediaItemService
       throw;
     }
   }
+
+  /// <summary>
+  /// Retrieves all media items with optional pagination
+  /// </summary>
+  /// <param name="limit">Maximum number of items to return</param>
+  /// <param name="offset">Number of items to skip</param>
+  /// <returns>A collection of MediaItemModel objects</returns>
+  public async Task<IEnumerable<MediaItemModel>> GetAllMediaAsync(int? limit = null, int offset = 0)
+  {
+    _appLogger.LogInformation("Getting all media items with limit {Limit}, offset {Offset}", limit, offset);
+
+    try
+    {
+      // Get all media entities from the underlying media service
+      var allMediaEntities = await _mediaService.GetAllMediaAsync(limit, offset);
+
+      // Convert to MediaItemModel objects
+      var mediaItems = MediaItemMapper.ToModels(allMediaEntities).ToList();
+
+      _appLogger.LogInformation("Retrieved {Count} total media items", mediaItems.Count);
+      return mediaItems;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Error retrieving all media items", ex);
+      throw;
+    }
+  }
+
+  /// <summary>
+  /// Retrieves media items filtered by medium type (image, video, audio)
+  /// </summary>
+  /// <param name="mediumType">Type of medium to filter by</param>
+  /// <param name="limit">Maximum number of items to return</param>
+  /// <param name="offset">Number of items to skip</param>
+  /// <returns>A collection of MediaItemModel objects</returns>
+  public async Task<IEnumerable<MediaItemModel>> GetMediaByMediumAsync(string mediumType, int? limit = null, int offset = 0)
+  {
+    if (string.IsNullOrWhiteSpace(mediumType))
+      throw new ArgumentException("Medium type is required", nameof(mediumType));
+
+    _appLogger.LogInformation("Getting media items by medium type {MediumType} with limit {Limit}, offset {Offset}", 
+      mediumType, limit, offset);
+
+    try
+    {
+      // Get media entities filtered by type from the underlying media service
+      var mediaEntities = await _mediaService.GetMediaByTypeAsync(mediumType, limit, offset);
+
+      // Convert to MediaItemModel objects
+      var mediaItems = MediaItemMapper.ToModels(mediaEntities).ToList();
+
+      _appLogger.LogInformation("Retrieved {Count} {MediumType} media items", mediaItems.Count, mediumType);
+      return mediaItems;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Error retrieving media items by medium type {MediumType}", ex, mediumType);
+      throw;
+    }
+  }
+
+  /// <summary>
+  /// Retrieves media items filtered by platform (TikTok, Instagram, YouTube, etc.)
+  /// </summary>
+  /// <param name="platform">Platform to filter by</param>
+  /// <param name="limit">Maximum number of items to return</param>
+  /// <param name="offset">Number of items to skip</param>
+  /// <returns>A collection of MediaItemModel objects</returns>
+  public async Task<IEnumerable<MediaItemModel>> GetMediaByPlatformAsync(string platform, int? limit = null, int offset = 0)
+  {
+    if (string.IsNullOrWhiteSpace(platform))
+      throw new ArgumentException("Platform is required", nameof(platform));
+
+    _appLogger.LogInformation("Getting media items by platform {Platform} with limit {Limit}, offset {Offset}", 
+      platform, limit, offset);
+
+    try
+    {
+      // Get media entities filtered by platform from the underlying media service
+      var mediaEntities = await _mediaService.GetMediaByPlatformAsync(platform, limit, offset);
+
+      // Convert to MediaItemModel objects
+      var mediaItems = MediaItemMapper.ToModels(mediaEntities).ToList();
+
+      _appLogger.LogInformation("Retrieved {Count} media items from {Platform}", mediaItems.Count, platform);
+      return mediaItems;
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogError("Error retrieving media items by platform {Platform}", ex, platform);
+      throw;
+    }
+  }
 }
 
 /// <summary>
@@ -225,4 +319,9 @@ public interface IMediaItemService
       string description = "",
       string altText = "");
   Task<bool> DeleteMediaAsync(string mediaId);
+  
+  // New methods for media gallery functionality
+  Task<IEnumerable<MediaItemModel>> GetAllMediaAsync(int? limit = null, int offset = 0);
+  Task<IEnumerable<MediaItemModel>> GetMediaByMediumAsync(string mediumType, int? limit = null, int offset = 0);
+  Task<IEnumerable<MediaItemModel>> GetMediaByPlatformAsync(string platform, int? limit = null, int offset = 0);
 }
