@@ -350,17 +350,26 @@ jobs:
             - name: "Check Function App Plan and Handle Trigger Sync"
               run: |
                   echo "📝 Checking Function App plan type..."
-                  # Get a more robust detection of Flex Consumption plans by looking at both kind and plan
-                  IS_FLEX=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                  # Check multiple properties individually instead of using join to avoid null errors
+                  APP_KIND=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
-                    --query "join(' ', [kind, plan.name, plan.sku.name])" -o tsv | grep -i flex || echo "")
+                    --query "kind" -o tsv 2>/dev/null || echo "")
+                  
+                  PLAN_NAME=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --query "plan.name" -o tsv 2>/dev/null || echo "")
+                    
+                  SKU_NAME=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --query "plan.sku.name" -o tsv 2>/dev/null || echo "")
 
                   # Also check for 'flex' in the hosting plan name
                   HOSTING_PLAN=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
                     --query "hostingEnvironmentProfile.name" -o tsv || echo "")
 
-                  if [ -n "$IS_FLEX" ] || [[ "$HOSTING_PLAN" == *"flex"* ]]; then
+                  # Check all properties for flex indicators
+                  if [[ "$APP_KIND" == *"flex"* ]] || [[ "$PLAN_NAME" == *"flex"* ]] || [[ "$SKU_NAME" == *"flex"* ]] || [[ "$HOSTING_PLAN" == *"flex"* ]]; then
                     echo "✅ Flex Consumption plan detected - trigger sync NOT NEEDED"
                     echo "⏳ Waiting for function app to initialize completely..."
                     echo "📝 Flex plans handle trigger sync automatically"
@@ -384,18 +393,26 @@ jobs:
                   echo "======== DEPLOYMENT VALIDATION ========"
                   echo "📝 Checking deployment status..."
 
-                  # Check if function app is on Flex Consumption plan with improved detection
-                  IS_FLEX=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                  # Check multiple properties individually instead of using join to avoid null errors
+                  APP_KIND=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
-                    --query "join(' ', [kind, plan.name, plan.sku.name])" -o tsv | grep -i flex || echo "")
+                    --query "kind" -o tsv 2>/dev/null || echo "")
+                  
+                  PLAN_NAME=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --query "plan.name" -o tsv 2>/dev/null || echo "")
+                    
+                  SKU_NAME=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --query "plan.sku.name" -o tsv 2>/dev/null || echo "")
 
                   # Also check for 'flex' in the hosting plan name
                   HOSTING_PLAN=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
-                    --query "hostingEnvironmentProfile.name" -o tsv || echo "")
+                    --query "hostingEnvironmentProfile.name" -o tsv 2>/dev/null || echo "")
 
                   # Combine detection methods
-                  if [[ -n "$IS_FLEX" || "$HOSTING_PLAN" == *"flex"* ]]; then
+                  if [[ "$APP_KIND" == *"flex"* ]] || [[ "$PLAN_NAME" == *"flex"* ]] || [[ "$SKU_NAME" == *"flex"* ]] || [[ "$HOSTING_PLAN" == *"flex"* ]]; then
                     IS_FLEX="true"
                     echo "✅ Flex Consumption plan detected"
                   else
