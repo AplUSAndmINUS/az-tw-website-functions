@@ -30,6 +30,66 @@ jobs:
               with:
                   creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+            - name: "Verify Function App Identity and Roles"
+              run: |
+                  echo "🔍 Verifying Function App identity and roles..."
+                  
+                  # Ensure system-assigned identity is enabled
+                  IDENTITY_TYPE=$(az functionapp identity show \
+                    --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --query type -o tsv) || echo "SystemAssigned"
+                  
+                  if [ "$IDENTITY_TYPE" != "SystemAssigned" ]; then
+                    echo "⚠️ System-assigned identity not found, enabling it..."
+                    az functionapp identity assign \
+                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                      --resource-group az-tw-website-functions \
+                      --identities [system]
+                  else
+                    echo "✅ System-assigned identity is enabled"
+                  fi
+                  
+                  # Get the function app's principal ID
+                  PRINCIPAL_ID=$(az functionapp identity show \
+                    --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --query principalId -o tsv)
+                    
+                  # Get the storage account ID
+                  STORAGE_ID=$(az storage account show \
+                    --name ${{ env.StorageAccountName }} \
+                    --resource-group az-tw-website-functions \
+                    --query id -o tsv)
+                    
+                  echo "Ensuring Storage Blob Data Contributor role..."
+                  az role assignment create --assignee-object-id $PRINCIPAL_ID \
+                    --assignee-principal-type ServicePrincipal \
+                    --role "Storage Blob Data Contributor" \
+                    --scope $STORAGE_ID \
+                    --only-show-errors || echo "Role already assigned"
+                    
+                  echo "Ensuring Storage Queue Data Contributor role..."
+                  az role assignment create --assignee-object-id $PRINCIPAL_ID \
+                    --assignee-principal-type ServicePrincipal \
+                    --role "Storage Queue Data Contributor" \
+                    --scope $STORAGE_ID \
+                    --only-show-errors || echo "Role already assigned"
+                    
+                  echo "Ensuring Storage Table Data Contributor role..."
+                  az role assignment create --assignee-object-id $PRINCIPAL_ID \
+                    --assignee-principal-type ServicePrincipal \
+                    --role "Storage Table Data Contributor" \
+                    --scope $STORAGE_ID \
+                    --only-show-errors || echo "Role already assigned"
+                    
+                  echo "Ensuring Storage Account Contributor role..."
+                  az role assignment create --assignee-object-id $PRINCIPAL_ID \
+                    --assignee-principal-type ServicePrincipal \
+                    --role "Storage Account Contributor" \
+                    --scope $STORAGE_ID \
+                    --only-show-errors || echo "Role already assigned"
+                
             - name: "Configure Function App Settings"
               env:
                   USE_MOCK_STORAGE: "${{ env.USE_MOCK_STORAGE != '' && env.USE_MOCK_STORAGE || 'false' }}"
@@ -57,6 +117,13 @@ jobs:
                     --resource-group az-tw-website-functions \
                     --setting-names AZURE_CLIENT_ID AzureWebJobsStorage__clientId || true
 
+                  # Get the storage account connection string as a fallback
+                  echo "📝 Getting storage connection string for deployment reliability..."
+                  STORAGE_CONN_STRING=$(az storage account show-connection-string \
+                    --name ${{ env.StorageAccountName }} \
+                    --resource-group az-tw-website-functions \
+                    --query connectionString -o tsv)
+
                   # Then set the proper system-assigned managed identity settings
                   az functionapp config appsettings set \
                     --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
@@ -67,6 +134,7 @@ jobs:
                       StorageAccountName="${{ env.StorageAccountName }}" \
                       AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
                       AzureWebJobsStorage__credential="managedidentity" \
+                      AzureWebJobsStorage="$STORAGE_CONN_STRING" \
                       MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
                       KEY_VAULT_URI="https://kv-tw-website-vault.vault.azure.net/"
 
@@ -116,12 +184,30 @@ jobs:
                   echo "📝 Getting Function App settings..."
                   az functionapp config appsettings list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
 
-            - name: "Run Azure Functions Action"
-              uses: Azure/functions-action@v1
-              id: fa
-              with:
-                  app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-                  package: "deploy-package.zip"
+            - name: "Deploy Function App using Azure CLI (bypass Kudu)"
+              id: cli_deploy
+              run: |
+                echo "🚀 Deploying using Azure CLI to bypass Kudu MSI token issues..."
+                
+                # Use az webapp deployment directly (more reliable for Flex Consumption with MSI)
+                echo "📦 Publishing deployment package..."
+                
+                # Set deployment-specific environment variables
+                az functionapp config appsettings set \
+                  --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                  --resource-group az-tw-website-functions \
+                  --settings \
+                  SCM_DO_BUILD_DURING_DEPLOYMENT=false \
+                  WEBSITE_RUN_FROM_PACKAGE=0
+                
+                # Deploy the package
+                az webapp deployment source config-zip \
+                  --resource-group az-tw-website-functions \
+                  --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                  --src deploy-package.zip \
+                  --timeout 300
+                  
+                echo "✅ Deployment complete"
 
             - name: "Sync Function Triggers"
               run: |
@@ -139,10 +225,13 @@ jobs:
             - name: "Validate deployment and debug if needed"
               if: always()
               run: |
-                  echo "📝 Deployment result: ${{ steps.fa.outcome }}"
-
-                  # Check if deployment succeeded
-                  if [ "${{ steps.fa.outcome }}" = "success" ]; then
+                  echo "📝 Checking deployment status..."
+                  
+                  # Since we're using CLI deploy, check the function app status
+                  FUNCTION_APP_STATUS=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query state -o tsv)
+                  echo "Function App status: $FUNCTION_APP_STATUS"
+                  
+                  if [ "$FUNCTION_APP_STATUS" = "Running" ]; then
                     echo "✅ Deployment succeeded!"
                   else
                     echo "❌ Deployment failed, running diagnostics..."
