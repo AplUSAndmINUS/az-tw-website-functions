@@ -7,7 +7,7 @@ on:
 env:
     AZURE_FUNCTIONAPP_NAME: az-tw-website-${{ github.ref_name == 'master' && 'production' || github.ref_name }}
     AZURE_FUNCTIONAPP_PACKAGE_PATH: "./output"
-    StorageAccountName: ${{ secrets.STORAGEACCOUNTNAME}} 
+    StorageAccountName: ${{ secrets.STORAGEACCOUNTNAME}}
     X_API_ENVIRONMENT_KEY: ${{ secrets.X_API_ENVIRONMENT_KEY }}
     USE_MOCK_STORAGE: ${{ vars.USE_MOCK_STORAGE }}
     DOTNET_VERSION: "8.0.x"
@@ -17,9 +17,26 @@ jobs:
         runs-on: ubuntu-latest
         environment: ${{ github.ref_name }}
         steps:
-            # Print out the environment we're deploying to'
-            - name: Print Deployment Target
-              run: 'echo "🔁 Deploying to environment: ${{ github.ref_name }}"'
+            # Print detailed environment information
+            - name: Print Deployment Target and Variables
+              run: |
+                  echo "======== DEPLOYMENT CONFIGURATION ========"
+                  echo "🔁 Deploying to environment: ${{ github.ref_name }}"
+                  echo "🔧 Function App name: ${{ env.AZURE_FUNCTIONAPP_NAME }}"
+                  echo "📦 Package path: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
+                  echo "🔑 Storage account name: ${{ env.StorageAccountName }}"
+                  if [[ -z "${{ env.StorageAccountName }}" ]]; then
+                    echo "⚠️ WARNING: StorageAccountName is empty - check your GitHub secrets"
+                    exit 1
+                  fi
+                  if [ "${{ env.X_API_ENVIRONMENT_KEY }}" != '' ]; then
+                    echo "🌐 API key exists"
+                  else
+                    echo "⚠️ WARNING: X_API_ENVIRONMENT_KEY is empty - check your GitHub secrets"
+                  fi
+                  echo "🧪 Use mock storage: ${{ env.USE_MOCK_STORAGE || 'false' }}"
+                  echo "🔧 .NET version: ${{ env.DOTNET_VERSION }}"
+                  echo "======== END CONFIGURATION ========"
 
             - name: "Checkout GitHub Action"
               uses: actions/checkout@v4
@@ -32,7 +49,24 @@ jobs:
 
             - name: "Verify Function App Identity and Roles"
               run: |
+                  echo "======== IDENTITY & RBAC VERIFICATION ========"
                   echo "🔍 Verifying Function App identity and roles..."
+
+                  # Check if function app exists first
+                  if ! az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query name -o tsv > /dev/null 2>&1; then
+                    echo "❌ ERROR: Function App ${{ env.AZURE_FUNCTIONAPP_NAME }} does not exist in resource group az-tw-website-functions"
+                    exit 1
+                  else
+                    echo "✅ Function App ${{ env.AZURE_FUNCTIONAPP_NAME }} exists"
+                  fi
+
+                  # Check if storage account exists first
+                  if ! az storage account show --name ${{ env.StorageAccountName }} --resource-group az-tw-website-functions --query name -o tsv > /dev/null 2>&1; then
+                    echo "❌ ERROR: Storage Account ${{ env.StorageAccountName }} does not exist in resource group az-tw-website-functions"
+                    exit 1
+                  else
+                    echo "✅ Storage Account ${{ env.StorageAccountName }} exists"
+                  fi
 
                   # Ensure system-assigned identity is enabled
                   IDENTITY_TYPE=$(az functionapp identity show \
@@ -62,38 +96,39 @@ jobs:
                     --resource-group az-tw-website-functions \
                     --query id -o tsv)
                     
-                  echo "Ensuring Storage Blob Data Contributor role..."
-                  az role assignment create --assignee-object-id $PRINCIPAL_ID \
-                    --assignee-principal-type ServicePrincipal \
-                    --role "Storage Blob Data Contributor" \
-                    --scope $STORAGE_ID \
-                    --only-show-errors || echo "Role already assigned"
+                  # Check current role assignments
+                  echo "🔍 Checking current RBAC role assignments..."
+
+                  # Function to check and assign role if needed
+                  check_and_assign_role() {
+                    local role_name="$1"
+                    local role_exists=$(az role assignment list --assignee "$PRINCIPAL_ID" --role "$role_name" --scope "$STORAGE_ID" --query "[].roleDefinitionName" -o tsv)
                     
-                  echo "Ensuring Storage Queue Data Contributor role..."
-                  az role assignment create --assignee-object-id $PRINCIPAL_ID \
-                    --assignee-principal-type ServicePrincipal \
-                    --role "Storage Queue Data Contributor" \
-                    --scope $STORAGE_ID \
-                    --only-show-errors || echo "Role already assigned"
-                    
-                  echo "Ensuring Storage Table Data Contributor role..."
-                  az role assignment create --assignee-object-id $PRINCIPAL_ID \
-                    --assignee-principal-type ServicePrincipal \
-                    --role "Storage Table Data Contributor" \
-                    --scope $STORAGE_ID \
-                    --only-show-errors || echo "Role already assigned"
-                    
-                  echo "Ensuring Storage Account Contributor role..."
-                  az role assignment create --assignee-object-id $PRINCIPAL_ID \
-                    --assignee-principal-type ServicePrincipal \
-                    --role "Storage Account Contributor" \
-                    --scope $STORAGE_ID \
-                    --only-show-errors || echo "Role already assigned"
+                    if [ -z "$role_exists" ]; then
+                      echo "➕ Assigning $role_name role..."
+                      az role assignment create --assignee-object-id $PRINCIPAL_ID \
+                        --assignee-principal-type ServicePrincipal \
+                        --role "$role_name" \
+                        --scope $STORAGE_ID \
+                        --only-show-errors || echo "⚠️ Failed to assign $role_name role"
+                    else
+                      echo "✅ $role_name role already assigned"
+                    fi
+                  }
+
+                  # Check and assign all required roles
+                  check_and_assign_role "Storage Blob Data Contributor"
+                  check_and_assign_role "Storage Queue Data Contributor"
+                  check_and_assign_role "Storage Table Data Contributor" 
+                  check_and_assign_role "Storage Account Contributor"
+
+                  echo "✅ RBAC roles verification complete"
 
             - name: "Configure Function App Settings"
               env:
                   USE_MOCK_STORAGE: "${{ env.USE_MOCK_STORAGE != '' && env.USE_MOCK_STORAGE || 'false' }}"
               run: |
+                  echo "======== APP SETTINGS CONFIGURATION ========"
                   echo "🧹 Cleaning up unsupported settings for Flex Consumption"
                   az functionapp config appsettings delete --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
@@ -102,13 +137,17 @@ jobs:
                   # Determine Key Vault secret name based on environment
                   if [ "${{ github.ref_name }}" = "master" ]; then
                     SECRET_NAME="PROD-X-API-ENVIRONMENT-KEY"
-                    echo "🔒 Configuring production environment"
+                    echo "🔒 Configuring production environment with secret: $SECRET_NAME"
                   elif [ "${{ github.ref_name }}" = "develop" ]; then
                     SECRET_NAME="DEV-X-API-ENVIRONMENT-KEY"
-                    echo "✅ Configuring develop environment"
+                    echo "✅ Configuring develop environment with secret: $SECRET_NAME"
                   elif [ "${{ github.ref_name }}" = "test" ]; then
                     SECRET_NAME="STAGING-X-API-ENVIRONMENT-KEY"
-                    echo "✅ Configuring test environment"
+                    echo "✅ Configuring test environment with secret: $SECRET_NAME"
+                  else
+                    echo "⚠️ WARNING: Unrecognized branch name: ${{ github.ref_name }}"
+                    SECRET_NAME="DEV-X-API-ENVIRONMENT-KEY"
+                    echo "⚠️ Using default secret name: $SECRET_NAME"
                   fi
 
                   echo "📝 Setting up app settings with system-assigned managed identity"
@@ -117,14 +156,28 @@ jobs:
                     --resource-group az-tw-website-functions \
                     --setting-names AZURE_CLIENT_ID AzureWebJobsStorage__clientId || true
 
-                  # Get the storage account connection string as a fallback
-                  echo "📝 Getting storage connection string for deployment reliability..."
-                  STORAGE_CONN_STRING=$(az storage account show-connection-string \
+                  # Verify the storage account is accessible with managed identity
+                  echo "📝 Verifying storage account access with managed identity..."
+                  if ! az storage account show \
                     --name ${{ env.StorageAccountName }} \
                     --resource-group az-tw-website-functions \
-                    --query connectionString -o tsv)
+                    --query name -o tsv > /dev/null; then
+                    echo "❌ ERROR: Could not access storage account ${{ env.StorageAccountName }} with managed identity"
+                    echo "⚠️ Ensure the GitHub workflow identity has proper RBAC roles assigned"
+                    exit 1
+                  else
+                    echo "✅ Storage account is accessible with managed identity"
+                  fi
 
-                  # Then set the proper system-assigned managed identity settings
+                  # Check if Key Vault exists
+                  if ! az keyvault show --name kv-tw-website-vault --query name -o tsv > /dev/null 2>&1; then
+                    echo "⚠️ WARNING: Key Vault kv-tw-website-vault does not exist, secrets may not work"
+                  else
+                    echo "✅ Key Vault kv-tw-website-vault exists"
+                  fi
+
+                  echo "📝 Updating Function App settings..."
+                  # Then set the proper system-assigned managed identity settings - no connection strings
                   az functionapp config appsettings set \
                     --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
@@ -134,9 +187,10 @@ jobs:
                       StorageAccountName="${{ env.StorageAccountName }}" \
                       AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
                       AzureWebJobsStorage__credential="managedidentity" \
-                      AzureWebJobsStorage="$STORAGE_CONN_STRING" \
                       MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
                       KEY_VAULT_URI="https://kv-tw-website-vault.vault.azure.net/"
+                      
+                  echo "✅ Function App settings updated"
 
             - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
               uses: actions/setup-dotnet@v4
@@ -178,42 +232,64 @@ jobs:
 
             - name: "Get Function App details for debugging"
               run: |
-                  echo "📝 Getting Function App details for debugging..."
-                  az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
+                  echo "======== FUNCTION APP VERIFICATION ========"
+                  echo "📝 Getting Function App details..."
+                  echo "  - Name: ${{ env.AZURE_FUNCTIONAPP_NAME }}"
+                  echo "  - Resource Group: az-tw-website-functions"
 
-                  echo "📝 Getting Function App settings..."
-                  az functionapp config appsettings list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
+                  # Get and format status details
+                  APP_STATUS=$(az functionapp show \
+                    --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --query "{name:name,state:state,defaultHostName:defaultHostName,kind:kind}" -o json)
+                    
+                  echo "📝 Function App Status:"
+                  echo "$APP_STATUS" | jq .
+
+                  echo "📝 Verifying critical settings..."
+                  SETTINGS=$(az functionapp config appsettings list \
+                    --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --query "[?name=='AzureWebJobsStorage__credential' || name=='StorageAccountName' || name=='AzureWebJobsStorage__accountName'].{name:name,value:value}" -o json)
+
+                  echo "$SETTINGS" | jq .
 
             - name: "Deploy Function App using Azure CLI (Flex Consumption compatible)"
               id: cli_deploy
               run: |
+                  echo "======== DEPLOYMENT PROCESS ========"
                   echo "🚀 Deploying using Azure CLI approach for Flex Consumption plan..."
 
                   # Use existing storage account for deployment packages
                   echo "📦 Using existing storage account ${{ env.StorageAccountName }}..."
                   DEPLOY_CONTAINER="function-deployments"
-                  DEPLOY_BLOB="deploy-package-${{ github.run_id }}.zip"
+                  DEPLOY_BLOB="deploy-package-${{ github.run_id }}-$(date +%Y%m%d%H%M%S).zip"
 
-                  # Get connection string for the existing storage account
-                  STORAGE_CONN_STRING=$(az storage account show-connection-string \
-                    --name ${{ env.StorageAccountName }} \
-                    --resource-group az-tw-website-functions \
-                    --query connectionString -o tsv)
+                  echo "📊 Deployment details:"
+                  echo "  - Container: $DEPLOY_CONTAINER"
+                  echo "  - Blob: $DEPLOY_BLOB"
+                  echo "  - Function App: ${{ env.AZURE_FUNCTIONAPP_NAME }}"
+
+                  # Use managed identity for storage operations
+                  echo "🔑 Using managed identity for storage operations..."
+
+                  # Check if container exists using managed identity
+                  echo "🔍 Checking if deployment container exists..."
+                  if ! az storage container exists --auth-mode login --account-name ${{ env.StorageAccountName }} --name $DEPLOY_CONTAINER --query exists -o tsv | grep -q true; then
+                    echo "❌ ERROR: Deployment container '$DEPLOY_CONTAINER' does not exist in storage account '${{ env.StorageAccountName }}'. Please create it before deploying."
+                    exit 1
+                  else
+                    echo "✅ Container '$DEPLOY_CONTAINER' exists"
+                  fi
                     
-                  # Create container if it doesn't exist
-                  az storage container create \
-                    --name $DEPLOY_CONTAINER \
-                    --connection-string "$STORAGE_CONN_STRING" \
-                    --public-access off \
-                    --fail-on-exist false
-                    
-                  # Upload the package to blob storage
-                  echo "� Uploading package to blob storage..."
+                  # Upload the package to blob storage using managed identity
+                  echo "📤 Uploading package to blob storage..."
                   az storage blob upload \
+                    --auth-mode login \
+                    --account-name ${{ env.StorageAccountName }} \
                     --container-name $DEPLOY_CONTAINER \
                     --name $DEPLOY_BLOB \
                     --file deploy-package.zip \
-                    --connection-string "$STORAGE_CONN_STRING" \
                     --overwrite
                     
                   # Generate a SAS token for the blob with 1 hour expiry
@@ -221,9 +297,10 @@ jobs:
                   # Ubuntu-compatible way to get a date 1 hour in the future
                   SAS_END_DATE=$(date -u -d "$(date -u) + 1 hour" '+%Y-%m-%dT%H:%MZ' 2>/dev/null || date -u -v+1H '+%Y-%m-%dT%H:%MZ')
                   SAS_TOKEN=$(az storage blob generate-sas \
+                    --auth-mode login \
+                    --account-name ${{ env.StorageAccountName }} \
                     --container-name $DEPLOY_CONTAINER \
                     --name $DEPLOY_BLOB \
-                    --connection-string "$STORAGE_CONN_STRING" \
                     --permissions r \
                     --expiry $SAS_END_DATE \
                     --https-only \
@@ -231,9 +308,10 @@ jobs:
                     
                   # Get the blob URL
                   BLOB_URL=$(az storage blob url \
+                    --auth-mode login \
+                    --account-name ${{ env.StorageAccountName }} \
                     --container-name $DEPLOY_CONTAINER \
                     --name $DEPLOY_BLOB \
-                    --connection-string "$STORAGE_CONN_STRING" \
                     --output tsv)
                     
                   # Create the full URL with SAS token
@@ -276,6 +354,7 @@ jobs:
             - name: "Validate deployment and debug if needed"
               if: always()
               run: |
+                  echo "======== DEPLOYMENT VALIDATION ========"
                   echo "📝 Checking deployment status..."
 
                   # Since we're using CLI deploy, check the function app status
@@ -284,24 +363,42 @@ jobs:
 
                   if [ "$FUNCTION_APP_STATUS" = "Running" ]; then
                     echo "✅ Deployment succeeded!"
+                    
+                    echo "📝 Function list:"
+                    az functionapp function list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query "[].{name:name,config_href:invokeUrlTemplate}" -o table || echo "Function list failed"
+                    
+                    echo "📝 Testing function app health..."
+                    HEALTH_URL="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net"
+                    echo "🌐 Health URL: $HEALTH_URL"
+                    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL")
+                    echo "🔍 HTTP Status: $HTTP_CODE"
+                    
+                    if [[ "$HTTP_CODE" == "200" ]]; then
+                      echo "✅ Health check succeeded!"
+                    else
+                      echo "⚠️ Health check returned non-200 status: $HTTP_CODE (This might be expected if no root endpoint exists)"
+                    fi
                   else
                     echo "❌ Deployment failed, running diagnostics..."
                     
                     echo "📝 Checking function app settings..."
-                    az functionapp config appsettings list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
+                    SETTINGS=$(az functionapp config appsettings list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                      --resource-group az-tw-website-functions \
+                      --query "[?name=='WEBSITE_RUN_FROM_PACKAGE' || name=='AzureWebJobsStorage__credential' || name=='AzureWebJobsStorage__accountName' || name=='StorageAccountName'].{name:name,value:value}" -o json)
+                    echo "$SETTINGS" | jq .
                     
-                    echo "📝 Getting Function status..."
-                    az functionapp function list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "Function list failed"
+                    echo "📝 Checking deployment state..."
+                    DEPLOYMENT=$(az functionapp deployment list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query "[0]" -o json) || echo "Deployment list failed"
+                    if [[ ! -z "$DEPLOYMENT" ]]; then
+                      echo "$DEPLOYMENT" | jq .
+                    fi
                     
                     echo "📝 Getting Function App logs..."
                     az webapp log download --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --log-file app_logs.zip || echo "Log download failed"
 
                     if [ -f app_logs.zip ]; then
+                      echo "📄 Extracting and showing recent logs..."
                       unzip -q app_logs.zip || echo "Unzip failed"
-                      find . -name "*.log" -type f | xargs tail -n 30 || echo "Log reading failed"
+                      find . -name "*.log" -type f | sort | xargs tail -n 50 || echo "Log reading failed"
                     fi
                   fi
-
-                  echo "📝 Testing function app health..."
-                  HEALTH_URL="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net"
-                  curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" "$HEALTH_URL" || echo "Health check failed"
