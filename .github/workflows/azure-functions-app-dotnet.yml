@@ -184,48 +184,80 @@ jobs:
                   echo "📝 Getting Function App settings..."
                   az functionapp config appsettings list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
 
-            - name: "Deploy Function App using publish URL (bypass Kudu MSI)"
+            - name: "Deploy Function App using Azure CLI (Flex Consumption compatible)"
               id: cli_deploy
               run: |
-                  echo "🚀 Deploying using direct publish approach to bypass MSI token issues..."
+                  echo "🚀 Deploying using Azure CLI approach for Flex Consumption plan..."
 
-                  # Set deployment-specific environment variables
+                  # Create a storage blob for the deployment package
+                  echo "📦 Creating storage container for deployment..."
+                  DEPLOY_CONTAINER="function-deployments"
+                  DEPLOY_BLOB="deploy-package-${{ github.run_id }}.zip"
+                  
+                  # Use the storage account connection string to create a container and upload the zip
+                  STORAGE_CONN_STRING=$(az storage account show-connection-string \
+                    --name ${{ env.StorageAccountName }} \
+                    --resource-group az-tw-website-functions \
+                    --query connectionString -o tsv)
+                    
+                  # Create container if it doesn't exist
+                  az storage container create \
+                    --name $DEPLOY_CONTAINER \
+                    --connection-string "$STORAGE_CONN_STRING" \
+                    --public-access off \
+                    --fail-on-exist false
+                    
+                  # Upload the package to blob storage
+                  echo "� Uploading package to blob storage..."
+                  az storage blob upload \
+                    --container-name $DEPLOY_CONTAINER \
+                    --name $DEPLOY_BLOB \
+                    --file deploy-package.zip \
+                    --connection-string "$STORAGE_CONN_STRING" \
+                    --overwrite
+                    
+                  # Generate a SAS token for the blob with 1 hour expiry
+                  echo "🔑 Generating SAS token for the deployment package..."
+                  # Ubuntu-compatible way to get a date 1 hour in the future
+                  SAS_END_DATE=$(date -u -d "$(date -u) + 1 hour" '+%Y-%m-%dT%H:%MZ' 2>/dev/null || date -u -v+1H '+%Y-%m-%dT%H:%MZ')
+                  SAS_TOKEN=$(az storage blob generate-sas \
+                    --container-name $DEPLOY_CONTAINER \
+                    --name $DEPLOY_BLOB \
+                    --connection-string "$STORAGE_CONN_STRING" \
+                    --permissions r \
+                    --expiry $SAS_END_DATE \
+                    --https-only \
+                    --output tsv)
+                    
+                  # Get the blob URL
+                  BLOB_URL=$(az storage blob url \
+                    --container-name $DEPLOY_CONTAINER \
+                    --name $DEPLOY_BLOB \
+                    --connection-string "$STORAGE_CONN_STRING" \
+                    --output tsv)
+                    
+                  # Create the full URL with SAS token
+                  PACKAGE_URL="$BLOB_URL?$SAS_TOKEN"
+                  
+                  # Set WEBSITE_RUN_FROM_PACKAGE to the URL with SAS token
+                  echo "⚙️ Setting WEBSITE_RUN_FROM_PACKAGE to blob URL..."
                   az functionapp config appsettings set \
                     --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
                     --settings \
-                    WEBSITE_RUN_FROM_PACKAGE=1
-
-                  # Get function app publishing credentials
-                  echo "📦 Getting function app publishing profile..."
-                  PUBLISH_CREDS=$(az functionapp deployment list-publishing-profiles \
+                    WEBSITE_RUN_FROM_PACKAGE="$PACKAGE_URL" \
+                    SCM_DO_BUILD_DURING_DEPLOYMENT=false
+                  
+                  # Restart the function app to apply the changes
+                  echo "� Restarting function app to apply changes..."
+                  az functionapp restart \
                     --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-                    --resource-group az-tw-website-functions \
-                    --xml)
-
-                  # Extract username and password
-                  PUBLISH_USER=$(echo "$PUBLISH_CREDS" | grep -o '<publishData><publishProfile[^>]*userName="[^"]*"' | grep -o 'userName="[^"]*"' | cut -d'"' -f2)
-                  PUBLISH_PASS=$(echo "$PUBLISH_CREDS" | grep -o '<publishData><publishProfile[^>]*userPWD="[^"]*"' | grep -o 'userPWD="[^"]*"' | cut -d'"' -f2)
-                  PUBLISH_URL=$(echo "$PUBLISH_CREDS" | grep -o '<publishData><publishProfile[^>]*publishUrl="[^"]*"' | grep -o 'publishUrl="[^"]*"' | head -1 | cut -d'"' -f2)
-
-                  # Ensure we have a proper URL for ZIP deployment
-                  if [[ ! "$PUBLISH_URL" == *scm* ]]; then
-                    echo "Transforming publishUrl to SCM URL..."
-                    PUBLISH_URL="https://${PUBLISH_URL//./-}.scm.azurewebsites.net"
-                  fi
-
-                  # Create full URL for ZIP deployment
-                  DEPLOY_URL="https://$PUBLISH_URL/api/zipdeploy"
-                  echo "📤 Deploying to: $DEPLOY_URL"
-
-                  # Upload ZIP package using cURL
-                  echo "📦 Uploading package..."
-                  curl -X POST -u "$PUBLISH_USER:$PUBLISH_PASS" \
-                    --fail \
-                    -H "Content-Type: application/zip" \
-                    --data-binary @deploy-package.zip \
-                    "$DEPLOY_URL"
-                    
+                    --resource-group az-tw-website-functions
+                  
+                  # Wait for the restart to complete
+                  echo "⏳ Waiting for function app to start up..."
+                  sleep 30
+                  
                   echo "✅ Deployment complete"
 
             - name: "Sync Function Triggers"
