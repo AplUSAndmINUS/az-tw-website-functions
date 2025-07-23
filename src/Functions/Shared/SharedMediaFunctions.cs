@@ -432,25 +432,21 @@ public class SharedMediaFunctions
 
   [Function("Ping")]
   public async Task<HttpResponseData> Ping(
-    [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "media/ping")] HttpRequestData req)
+    [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "/ping")] HttpRequestData req)
   {
     _appLogger.LogInformation("SharedMediaFunctions.Ping function triggered");
 
+    // Validate API key using helper method
+    var apiValidationResult = await _apiKeyValidator.ValidateApiKeyAsync(req, _appLogger, "Ping");
+    if (apiValidationResult != null)
+    {
+      return apiValidationResult;
+    }
+
+    // Create a simple OK response
     var response = req.CreateResponse(HttpStatusCode.OK);
-    response.Headers.Add("Content-Type", "application/json");
-
-    var pingResponse = new
-    {
-      status = "healthy",
-      timestamp = DateTime.UtcNow,
-      service = "SharedMediaFunctions",
-      version = "1.0.0"
-    };
-
-    await response.WriteStringAsync(JsonSerializer.Serialize(pingResponse, new JsonSerializerOptions
-    {
-      PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    }));
+    response.Headers.Add("Content-Type", "text/plain");
+    await response.WriteStringAsync("OK");
 
     return response;
   }
