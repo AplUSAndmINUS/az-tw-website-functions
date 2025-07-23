@@ -30,69 +30,39 @@ jobs:
               with:
                   creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-            - name: "Clean up and inject Function App Settings"
+            - name: "Configure Function App Settings"
               env:
                   USE_MOCK_STORAGE: "${{ env.USE_MOCK_STORAGE != '' && env.USE_MOCK_STORAGE || 'false' }}"
               run: |
-                  echo "🧹 Removing unsupported app settings for Flex Consumption"
+                  echo "🧹 Cleaning up unsupported settings for Flex Consumption"
                   az functionapp config appsettings delete --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
-                    --setting-names WEBSITE_RUN_FROM_PACKAGE FUNCTIONS_WORKER_RUNTIME FUNCTIONS_WORKER_PROCESS_COUNT || echo "No settings to delete or settings don't exist"
-                    
-                  echo "📝 Getting current app settings to diagnose..."
-                  az functionapp config appsettings list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
+                    --setting-names WEBSITE_RUN_FROM_PACKAGE FUNCTIONS_WORKER_RUNTIME FUNCTIONS_WORKER_PROCESS_COUNT || true
 
-                  echo "📝 Setting up app settings for Flex Consumption"
+                  # Determine Key Vault secret name based on environment
                   if [ "${{ github.ref_name }}" = "master" ]; then
-                    echo "🔒 Production build: using user-assigned managed identity and Key Vault"
-                    az functionapp config appsettings set \
-                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-                      --resource-group az-tw-website-functions \
-                      --settings X_API_ENVIRONMENT_KEY="@Microsoft.KeyVault(VaultName=kv-tw-website-vault;SecretName=PROD-X-API-ENVIRONMENT-KEY)" \
-                                USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
-                                StorageAccountName="${{ env.StorageAccountName }}" \
-                                AZURE_CLIENT_ID="{{your-production-managed-identity-client-id}}" \
-                                AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
-                                AzureWebJobsStorage__credential="managedidentity" \
-                                AzureWebJobsStorage__clientId="{{your-production-managed-identity-client-id}}" \
-                                AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
-                                AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
-                                AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
-                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
-                                KEY_VAULT_URI="https://kv-tw-website-vault.vault.azure.net/"
+                    SECRET_NAME="PROD-X-API-ENVIRONMENT-KEY"
+                    echo "🔒 Configuring production environment"
                   elif [ "${{ github.ref_name }}" = "develop" ]; then
-                    echo "✅ Develop build: configuring with develop-uami managed identity and Key Vault"
-                    az functionapp config appsettings set \
-                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-                      --resource-group az-tw-website-functions \
-                      --settings X_API_ENVIRONMENT_KEY="@Microsoft.KeyVault(VaultName=kv-tw-website-vault;SecretName=DEV-X-API-ENVIRONMENT-KEY)" \
-                                USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
-                                StorageAccountName="${{ env.StorageAccountName }}" \
-                                AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
-                                AzureWebJobsStorage__credential="managedidentity" \
-                                AzureWebJobsStorage__clientId="{{your-develop-managed-identity-client-id}}" \
-                                AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
-                                AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
-                                AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
-                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
-                                KEY_VAULT_URI="https://kv-tw-website-vault.vault.azure.net/"
+                    SECRET_NAME="DEV-X-API-ENVIRONMENT-KEY"
+                    echo "✅ Configuring develop environment"
                   elif [ "${{ github.ref_name }}" = "test" ]; then
-                    echo "✅ Test build: configuring with test-uami managed identity and Key Vault"
-                    az functionapp config appsettings set \
-                      --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-                      --resource-group az-tw-website-functions \
-                      --settings X_API_ENVIRONMENT_KEY="@Microsoft.KeyVault(VaultName=kv-tw-website-vault;SecretName=STAGING-X-API-ENVIRONMENT-KEY)" \
-                                USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
-                                StorageAccountName="${{ env.StorageAccountName }}" \
-                                AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
-                                AzureWebJobsStorage__credential="managedidentity" \
-                                AzureWebJobsStorage__clientId="{{your-test-managed-identity-client-id}}" \
-                                AzureWebJobsStorage__blobServiceUri="https://${{ env.StorageAccountName }}.blob.core.windows.net" \
-                                AzureWebJobsStorage__queueServiceUri="https://${{ env.StorageAccountName }}.queue.core.windows.net" \
-                                AzureWebJobsStorage__tableServiceUri="https://${{ env.StorageAccountName }}.table.core.windows.net" \
-                                MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
-                                KEY_VAULT_URI="https://kv-tw-website-vault.vault.azure.net/"
+                    SECRET_NAME="STAGING-X-API-ENVIRONMENT-KEY"
+                    echo "✅ Configuring test environment"
                   fi
+
+                  echo "📝 Setting up app settings with system-assigned managed identity"
+                  az functionapp config appsettings set \
+                    --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --settings \
+                      X_API_ENVIRONMENT_KEY="@Microsoft.KeyVault(VaultName=kv-tw-website-vault;SecretName=${SECRET_NAME})" \
+                      USE_MOCK_STORAGE="${USE_MOCK_STORAGE}" \
+                      StorageAccountName="${{ env.StorageAccountName }}" \
+                      AzureWebJobsStorage__accountName="${{ env.StorageAccountName }}" \
+                      AzureWebJobsStorage__credential="managedidentity" \
+                      MEDIA_DOCUMENTS_CONTAINER_NAME="documents" \
+                      KEY_VAULT_URI="https://kv-tw-website-vault.vault.azure.net/"
 
             - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
               uses: actions/setup-dotnet@v4
@@ -110,40 +80,22 @@ jobs:
                   echo -e "User-agent: *\nDisallow: /" > ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/robots.txt
 
             # Using the original host.json from the project
-            - name: "Verify host.json for deployment"
+            - name: "Validate Package Contents"
               run: |
-                  echo "📄 Verifying host.json file from project"
-                  if [ -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json" ]; then
-                    echo "✅ Using original host.json from project"
-                    cat ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json
-                  else
-                    echo "❌ host.json not found in output, this is unexpected"
+                  echo "� Validating deployment package..."
+
+                  # Check for critical files
+                  if [ ! -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json" ]; then
+                    echo "❌ ERROR: host.json missing from package!"
                     exit 1
                   fi
 
-            - name: List and validate output package contents
-              run: |
-                  echo "Showing contents of output folder..."
-                  find ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }} -type f | grep -v -E '\.git|\.vs|obj'
-
-                  echo "Checking for critical files..."
-                  if [ ! -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json" ]; then
-                    echo "⚠️ WARNING: host.json missing from package!"
-                  else
-                    echo "✅ host.json found in package"
-                  fi
-
                   if [ ! -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/Functions.dll" ]; then
-                    echo "⚠️ WARNING: Functions.dll missing from package!"
-                  else
-                    echo "✅ Functions.dll found in package"
+                    echo "❌ ERROR: Functions.dll missing from package!"
+                    exit 1
                   fi
 
-                  # Print host.json content for validation
-                  if [ -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json" ]; then
-                    echo "host.json content:"
-                    cat ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json
-                  fi
+                  echo "✅ Package validation passed"
 
             - name: "Create deployment zip package"
               run: |
