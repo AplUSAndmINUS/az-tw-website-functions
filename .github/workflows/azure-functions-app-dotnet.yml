@@ -347,16 +347,23 @@ jobs:
 
                   echo "✅ Deployment complete"
 
-            - name: "Sync Function Triggers (Skip for Flex Consumption)"
+            - name: "Check Function App Plan and Handle Trigger Sync"
               run: |
-                  echo "📝 Checking if function app is on Flex Consumption plan..."
+                  echo "📝 Checking Function App plan type..."
+                  # Get a more robust detection of Flex Consumption plans by looking at both kind and plan
                   IS_FLEX=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
-                    --query kind -o tsv | grep -i flex || echo "")
-                    
-                  if [ -n "$IS_FLEX" ]; then
-                    echo "ℹ️ Flex Consumption plan detected - skipping trigger sync (not needed)"
+                    --query "join(' ', [kind, plan.name, plan.sku.name])" -o tsv | grep -i flex || echo "")
+
+                  # Also check for 'flex' in the hosting plan name
+                  HOSTING_PLAN=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --query "hostingEnvironmentProfile.name" -o tsv || echo "")
+
+                  if [ -n "$IS_FLEX" ] || [[ "$HOSTING_PLAN" == *"flex"* ]]; then
+                    echo "✅ Flex Consumption plan detected - trigger sync NOT NEEDED"
                     echo "⏳ Waiting for function app to initialize completely..."
+                    echo "📝 Flex plans handle trigger sync automatically"
                     sleep 60  # Give the app more time to initialize on Flex Consumption
                   else
                     echo "📝 Traditional plan detected - syncing function triggers..."
@@ -377,10 +384,23 @@ jobs:
                   echo "======== DEPLOYMENT VALIDATION ========"
                   echo "📝 Checking deployment status..."
 
-                  # Check if function app is on Flex Consumption plan
+                  # Check if function app is on Flex Consumption plan with improved detection
                   IS_FLEX=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions \
-                    --query kind -o tsv | grep -i flex || echo "")
+                    --query "join(' ', [kind, plan.name, plan.sku.name])" -o tsv | grep -i flex || echo "")
+
+                  # Also check for 'flex' in the hosting plan name
+                  HOSTING_PLAN=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+                    --resource-group az-tw-website-functions \
+                    --query "hostingEnvironmentProfile.name" -o tsv || echo "")
+
+                  # Combine detection methods
+                  if [[ -n "$IS_FLEX" || "$HOSTING_PLAN" == *"flex"* ]]; then
+                    IS_FLEX="true"
+                    echo "✅ Flex Consumption plan detected"
+                  else
+                    IS_FLEX=""
+                  fi
                     
                   # Since we're using CLI deploy, check the function app status
                   echo "📝 Getting detailed Function App status..."
