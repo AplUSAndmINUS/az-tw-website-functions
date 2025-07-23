@@ -184,28 +184,47 @@ jobs:
                   echo "📝 Getting Function App settings..."
                   az functionapp config appsettings list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions
 
-            - name: "Deploy Function App using Azure CLI (bypass Kudu)"
+            - name: "Deploy Function App using publish URL (bypass Kudu MSI)"
               id: cli_deploy
               run: |
-                echo "🚀 Deploying using Azure CLI to bypass Kudu MSI token issues..."
-                
-                # Use az webapp deployment directly (more reliable for Flex Consumption with MSI)
-                echo "📦 Publishing deployment package..."
+                echo "🚀 Deploying using direct publish approach to bypass MSI token issues..."
                 
                 # Set deployment-specific environment variables
                 az functionapp config appsettings set \
                   --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                   --resource-group az-tw-website-functions \
                   --settings \
-                  SCM_DO_BUILD_DURING_DEPLOYMENT=false \
-                  WEBSITE_RUN_FROM_PACKAGE=0
+                  WEBSITE_RUN_FROM_PACKAGE=1
                 
-                # Deploy the package
-                az webapp deployment source config-zip \
-                  --resource-group az-tw-website-functions \
+                # Get function app publishing credentials
+                echo "📦 Getting function app publishing profile..."
+                PUBLISH_CREDS=$(az functionapp deployment list-publishing-profiles \
                   --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-                  --src deploy-package.zip \
-                  --timeout 300
+                  --resource-group az-tw-website-functions \
+                  --xml)
+                
+                # Extract username and password
+                PUBLISH_USER=$(echo "$PUBLISH_CREDS" | grep -o '<publishData><publishProfile[^>]*userName="[^"]*"' | grep -o 'userName="[^"]*"' | cut -d'"' -f2)
+                PUBLISH_PASS=$(echo "$PUBLISH_CREDS" | grep -o '<publishData><publishProfile[^>]*userPWD="[^"]*"' | grep -o 'userPWD="[^"]*"' | cut -d'"' -f2)
+                PUBLISH_URL=$(echo "$PUBLISH_CREDS" | grep -o '<publishData><publishProfile[^>]*publishUrl="[^"]*"' | grep -o 'publishUrl="[^"]*"' | head -1 | cut -d'"' -f2)
+                
+                # Ensure we have a proper URL for ZIP deployment
+                if [[ ! "$PUBLISH_URL" == *scm* ]]; then
+                  echo "Transforming publishUrl to SCM URL..."
+                  PUBLISH_URL="https://${PUBLISH_URL//./-}.scm.azurewebsites.net"
+                fi
+                
+                # Create full URL for ZIP deployment
+                DEPLOY_URL="https://$PUBLISH_URL/api/zipdeploy"
+                echo "📤 Deploying to: $DEPLOY_URL"
+                
+                # Upload ZIP package using cURL
+                echo "📦 Uploading package..."
+                curl -X POST -u "$PUBLISH_USER:$PUBLISH_PASS" \
+                  --fail \
+                  -H "Content-Type: application/zip" \
+                  --data-binary @deploy-package.zip \
+                  "$DEPLOY_URL"
                   
                 echo "✅ Deployment complete"
 
