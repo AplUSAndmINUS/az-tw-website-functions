@@ -189,12 +189,12 @@ jobs:
               run: |
                   echo "🚀 Deploying using Azure CLI approach for Flex Consumption plan..."
 
-                  # Create a storage blob for the deployment package
-                  echo "📦 Creating storage container for deployment..."
+                  # Use existing storage account for deployment packages
+                  echo "📦 Using existing storage account ${{ env.StorageAccountName }}..."
                   DEPLOY_CONTAINER="function-deployments"
                   DEPLOY_BLOB="deploy-package-${{ github.run_id }}.zip"
 
-                  # Use the storage account connection string to create a container and upload the zip
+                  # Get connection string for the existing storage account
                   STORAGE_CONN_STRING=$(az storage account show-connection-string \
                     --name ${{ env.StorageAccountName }} \
                     --resource-group az-tw-website-functions \
