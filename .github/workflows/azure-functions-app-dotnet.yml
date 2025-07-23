@@ -193,7 +193,7 @@ jobs:
                   echo "📦 Creating storage container for deployment..."
                   DEPLOY_CONTAINER="function-deployments"
                   DEPLOY_BLOB="deploy-package-${{ github.run_id }}.zip"
-                  
+
                   # Use the storage account connection string to create a container and upload the zip
                   STORAGE_CONN_STRING=$(az storage account show-connection-string \
                     --name ${{ env.StorageAccountName }} \
@@ -238,7 +238,7 @@ jobs:
                     
                   # Create the full URL with SAS token
                   PACKAGE_URL="$BLOB_URL?$SAS_TOKEN"
-                  
+
                   # Set WEBSITE_RUN_FROM_PACKAGE to the URL with SAS token
                   echo "⚙️ Setting WEBSITE_RUN_FROM_PACKAGE to blob URL..."
                   az functionapp config appsettings set \
@@ -247,17 +247,17 @@ jobs:
                     --settings \
                     WEBSITE_RUN_FROM_PACKAGE="$PACKAGE_URL" \
                     SCM_DO_BUILD_DURING_DEPLOYMENT=false
-                  
+
                   # Restart the function app to apply the changes
                   echo "� Restarting function app to apply changes..."
                   az functionapp restart \
                     --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
                     --resource-group az-tw-website-functions
-                  
+
                   # Wait for the restart to complete
                   echo "⏳ Waiting for function app to start up..."
                   sleep 30
-                  
+
                   echo "✅ Deployment complete"
 
             - name: "Sync Function Triggers"
