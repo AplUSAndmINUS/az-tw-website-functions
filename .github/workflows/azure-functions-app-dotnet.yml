@@ -296,9 +296,17 @@ jobs:
                   echo "🔑 Generating SAS token for the deployment package..."
                   # Ubuntu-compatible way to get a date 1 hour in the future
                   SAS_END_DATE=$(date -u -d "$(date -u) + 1 hour" '+%Y-%m-%dT%H:%MZ' 2>/dev/null || date -u -v+1H '+%Y-%m-%dT%H:%MZ')
+
+                  # Fall back to connection string method for SAS token generation if managed identity method fails
+                  echo "⚠️ Note: Using connection string method for SAS token as managed identity requires --as-user"
+                  # Get connection string for this specific operation
+                  TEMP_CONN_STRING=$(az storage account show-connection-string \
+                    --name ${{ env.StorageAccountName }} \
+                    --resource-group az-tw-website-functions \
+                    --query connectionString -o tsv)
+                    
                   SAS_TOKEN=$(az storage blob generate-sas \
-                    --auth-mode login \
-                    --account-name ${{ env.StorageAccountName }} \
+                    --connection-string "$TEMP_CONN_STRING" \
                     --container-name $DEPLOY_CONTAINER \
                     --name $DEPLOY_BLOB \
                     --permissions r \
@@ -308,14 +316,15 @@ jobs:
                     
                   # Get the blob URL
                   BLOB_URL=$(az storage blob url \
-                    --auth-mode login \
-                    --account-name ${{ env.StorageAccountName }} \
+                    --connection-string "$TEMP_CONN_STRING" \
                     --container-name $DEPLOY_CONTAINER \
                     --name $DEPLOY_BLOB \
                     --output tsv)
                     
                   # Create the full URL with SAS token
                   PACKAGE_URL="$BLOB_URL?$SAS_TOKEN"
+
+                  echo "📝 SAS URL generated for package: $(echo $PACKAGE_URL | cut -c1-60)..."
 
                   # Set WEBSITE_RUN_FROM_PACKAGE to the URL with SAS token
                   echo "⚙️ Setting WEBSITE_RUN_FROM_PACKAGE to blob URL..."
@@ -358,8 +367,11 @@ jobs:
                   echo "📝 Checking deployment status..."
 
                   # Since we're using CLI deploy, check the function app status
-                  FUNCTION_APP_STATUS=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query state -o tsv)
-                  echo "Function App status: $FUNCTION_APP_STATUS"
+                  echo "📝 Getting detailed Function App status..."
+                  APP_DETAILS=$(az functionapp show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query "{state:state,hostNames:hostNames,defaultHostName:defaultHostName,usageState:usageState,enabled:enabled}" -o json)
+                  echo "$APP_DETAILS" | jq .
+
+                  FUNCTION_APP_STATUS=$(echo "$APP_DETAILS" | jq -r .state)
 
                   if [ "$FUNCTION_APP_STATUS" = "Running" ]; then
                     echo "✅ Deployment succeeded!"
@@ -388,10 +400,11 @@ jobs:
                     echo "$SETTINGS" | jq .
                     
                     echo "📝 Checking deployment state..."
-                    DEPLOYMENT=$(az functionapp deployment list --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query "[0]" -o json) || echo "Deployment list failed"
-                    if [[ ! -z "$DEPLOYMENT" ]]; then
-                      echo "$DEPLOYMENT" | jq .
-                    fi
+                    echo "📝 Checking deployment configuration..."
+                    az functionapp config show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --query "{linuxFxVersion:linuxFxVersion,alwaysOn:alwaysOn,use32BitWorkerProcess:use32BitWorkerProcess,http20Enabled:http20Enabled}" -o json || echo "Config show failed"
+                    
+                    echo "📝 Getting deployment source info..."
+                    az functionapp deployment source show --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions || echo "Deployment source show failed"
                     
                     echo "📝 Getting Function App logs..."
                     az webapp log download --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group az-tw-website-functions --log-file app_logs.zip || echo "Log download failed"
