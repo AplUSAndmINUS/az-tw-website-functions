@@ -91,6 +91,10 @@ public class ContactMeFunction
                 Name = contactDto.Name.Trim(),
                 Email = contactDto.Email.Trim(),
                 Message = contactDto.Message.Trim(),
+                Subject = contactDto.Subject?.Trim() ?? string.Empty,   // Added subject field
+                Phone = contactDto.Phone?.Trim(),                       // Added phone field
+                Company = contactDto.Company?.Trim(),                   // Added company field
+                Website = contactDto.Website?.Trim(),                   // Added website field
                 SubmittedAt = DateTime.UtcNow,
                 UserAgent = req.Headers.TryGetValues("User-Agent", out var userAgentValues) ? userAgentValues.FirstOrDefault() ?? "" : "",
                 IpAddress = GetClientIpAddress(req)
