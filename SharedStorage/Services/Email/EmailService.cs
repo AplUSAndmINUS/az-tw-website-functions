@@ -22,27 +22,67 @@ public class EmailService : IEmailService
     public EmailService(IAppInsightsLogger<EmailService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        
-        // Get SMTP configuration from environment variables
-        _smtpHost = System.Environment.GetEnvironmentVariable("SMTP_HOST") ?? "smtp.gmail.com";
-        _smtpPort = int.Parse(System.Environment.GetEnvironmentVariable("SMTP_PORT") ?? "587");
-        _smtpUsername = System.Environment.GetEnvironmentVariable("SMTP_USERNAME") ?? throw new InvalidOperationException("SMTP_USERNAME environment variable is required");
-        _smtpPassword = System.Environment.GetEnvironmentVariable("SMTP_PASSWORD") ?? throw new InvalidOperationException("SMTP_PASSWORD environment variable is required");
-        _fromEmail = System.Environment.GetEnvironmentVariable("FROM_EMAIL") ?? _smtpUsername;
-        _fromName = System.Environment.GetEnvironmentVariable("FROM_NAME") ?? "TerenceWaters.com";
-        _toEmail = System.Environment.GetEnvironmentVariable("TO_EMAIL") ?? _smtpUsername;
+
+        try
+        {
+            // Get SMTP configuration from environment variables
+            _smtpHost = System.Environment.GetEnvironmentVariable("SMTP_SERVER") ??
+                       System.Environment.GetEnvironmentVariable("SMTP_HOST") ??
+                       "smtp.office365.com";
+
+            string portStr = System.Environment.GetEnvironmentVariable("SMTP_PORT") ?? "587";
+            if (!int.TryParse(portStr, out int smtpPort))
+            {
+                _logger.LogWarning("Invalid SMTP_PORT value: {PortValue}. Using default port 587.", portStr);
+                smtpPort = 587;
+            }
+            _smtpPort = smtpPort;
+
+            // Check for required environment variables
+            var usernameEnv = System.Environment.GetEnvironmentVariable("SMTP_USERNAME");
+            if (string.IsNullOrEmpty(usernameEnv))
+            {
+                _logger.LogWarning("SMTP_USERNAME environment variable is missing. Email functionality will be disabled.");
+                throw new InvalidOperationException("SMTP_USERNAME environment variable is required");
+            }
+            _smtpUsername = usernameEnv; // Now we know it's not null
+
+            var passwordEnv = System.Environment.GetEnvironmentVariable("SMTP_PASSWORD");
+            if (string.IsNullOrEmpty(passwordEnv))
+            {
+                _logger.LogWarning("SMTP_PASSWORD environment variable is missing. Email functionality will be disabled.");
+                throw new InvalidOperationException("SMTP_PASSWORD environment variable is required");
+            }
+            _smtpPassword = passwordEnv; // Now we know it's not null
+
+            _fromEmail = System.Environment.GetEnvironmentVariable("FROM_EMAIL") ?? _smtpUsername;
+            _fromName = System.Environment.GetEnvironmentVariable("FROM_NAME") ?? "TerenceWaters.com";
+            _toEmail = System.Environment.GetEnvironmentVariable("TO_EMAIL") ?? _smtpUsername;
+
+            _logger.LogInformation("Email service initialized successfully with SMTP server: {SmtpHost}:{SmtpPort}, Username: {Username}",
+                _smtpHost, _smtpPort, _smtpUsername);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to initialize email service: {ErrorMessage}. Email functionality will be disabled.", ex.Message);
+            throw; // Re-throw to allow proper handling upstream
+        }
     }
 
     public async Task SendEmailAsync(string to, string subject, string body, bool isHtml = false)
     {
         try
         {
-            _logger.LogInformation("Sending email to {To} with subject: {Subject}", to, subject);
+            _logger.LogInformation("Preparing to send email to {To} with subject: {Subject} via {SmtpServer}:{SmtpPort}",
+                to, subject, _smtpHost, _smtpPort);
 
             using var client = new SmtpClient(_smtpHost, _smtpPort)
             {
                 EnableSsl = true,
-                Credentials = new NetworkCredential(_smtpUsername, _smtpPassword)
+                UseDefaultCredentials = false, // Explicitly disable default credentials for Office 365
+                Credentials = new NetworkCredential(_smtpUsername, _smtpPassword),
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                Timeout = 30000 // 30 seconds timeout
             };
 
             using var message = new MailMessage
@@ -54,6 +94,9 @@ public class EmailService : IEmailService
             };
 
             message.To.Add(to);
+
+            _logger.LogInformation("Attempting to send email from {FromEmail} to {ToEmail} via {SmtpServer}",
+                _fromEmail, to, _smtpHost);
 
             await client.SendMailAsync(message);
             _logger.LogInformation("Email sent successfully to {To}", to);
@@ -68,39 +111,39 @@ public class EmailService : IEmailService
     public string FormatContactEmail(string name, string email, string message, DateTime submittedAt, string userAgent = "", string ipAddress = "")
     {
         var sb = new StringBuilder();
-        
+
         sb.AppendLine("=".PadRight(60, '='));
         sb.AppendLine("CONTACT FORM SUBMISSION");
         sb.AppendLine("=".PadRight(60, '='));
         sb.AppendLine();
-        
+
         sb.AppendLine($"From: {name}");
         sb.AppendLine($"Email: {email}");
         sb.AppendLine($"Submitted: {submittedAt:yyyy-MM-dd HH:mm:ss} UTC");
         sb.AppendLine();
-        
+
         sb.AppendLine("MESSAGE:");
         sb.AppendLine("-".PadRight(60, '-'));
         sb.AppendLine(message);
         sb.AppendLine("-".PadRight(60, '-'));
         sb.AppendLine();
-        
+
         if (!string.IsNullOrWhiteSpace(userAgent))
         {
             sb.AppendLine("TECHNICAL DETAILS:");
             sb.AppendLine($"User Agent: {userAgent}");
         }
-        
+
         if (!string.IsNullOrWhiteSpace(ipAddress))
         {
             sb.AppendLine($"IP Address: {ipAddress}");
         }
-        
+
         sb.AppendLine();
         sb.AppendLine("=".PadRight(60, '='));
         sb.AppendLine("End of submission");
         sb.AppendLine("=".PadRight(60, '='));
-        
+
         return sb.ToString();
     }
 }

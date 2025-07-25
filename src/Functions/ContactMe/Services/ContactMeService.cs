@@ -27,7 +27,22 @@ public class ContactMeService : IContactMeService
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _appMode = appMode ?? throw new ArgumentNullException(nameof(appMode));
-        _toEmail = System.Environment.GetEnvironmentVariable("TO_EMAIL") ?? System.Environment.GetEnvironmentVariable("SMTP_USERNAME") ?? throw new InvalidOperationException("TO_EMAIL or SMTP_USERNAME environment variable is required");
+
+        try
+        {
+            var toEmail = System.Environment.GetEnvironmentVariable("TO_EMAIL") ?? System.Environment.GetEnvironmentVariable("SMTP_USERNAME");
+            if (string.IsNullOrEmpty(toEmail))
+            {
+                _logger.LogWarning("TO_EMAIL and SMTP_USERNAME environment variables are missing. Email notifications will be disabled.");
+                throw new InvalidOperationException("TO_EMAIL or SMTP_USERNAME environment variable is required");
+            }
+            _toEmail = toEmail;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Email recipient configuration error: {ErrorMessage}. Email notifications will be disabled.", ex.Message);
+            throw; // Re-throw to allow proper handling upstream
+        }
     }
 
     public async Task ProcessContactSubmissionAsync(ContactMeModel model)
@@ -36,11 +51,19 @@ public class ContactMeService : IContactMeService
         {
             _logger.LogInformation("Processing contact submission from {Name} ({Email})", model.Name, model.Email);
 
-            // Store and send email concurrently
-            var storeTask = StoreContactSubmissionAsync(model);
-            var emailTask = SendContactEmailAsync(model);
+            // Always store the contact data
+            await StoreContactSubmissionAsync(model);
 
-            await Task.WhenAll(storeTask, emailTask);
+            try
+            {
+                // Try to send email, but don't fail the entire process if it fails
+                await SendContactEmailAsync(model);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("SMTP") || ex.Message.Contains("environment variable"))
+            {
+                // Log the error but don't re-throw as we've already stored the contact data
+                _logger.LogWarning("Email configuration error: {ErrorMessage}. Contact data was saved but email notification was not sent.", ex.Message);
+            }
 
             _logger.LogInformation("Successfully processed contact submission for {Name}", model.Name);
         }
@@ -57,11 +80,11 @@ public class ContactMeService : IContactMeService
         {
             var tableName = GetTableName();
             var entity = new ContactMeEntity(model);
-            
+
             _logger.LogInformation("Storing contact submission in table {TableName} for {Name}", tableName, model.Name);
-            
+
             await _tableStorageService.UpsertEntityAsync(tableName, entity);
-            
+
             _logger.LogInformation("Successfully stored contact submission for {Name}", model.Name);
         }
         catch (Exception ex)
@@ -86,9 +109,9 @@ public class ContactMeService : IContactMeService
             );
 
             _logger.LogInformation("Sending contact email for {Name} to {ToEmail}", model.Name, _toEmail);
-            
+
             await _emailService.SendEmailAsync(_toEmail, subject, body, isHtml: false);
-            
+
             _logger.LogInformation("Successfully sent contact email for {Name}", model.Name);
         }
         catch (Exception ex)
