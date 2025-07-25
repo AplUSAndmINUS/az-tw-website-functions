@@ -91,21 +91,46 @@ public class ContactMeFunction
                 Name = contactDto.Name.Trim(),
                 Email = contactDto.Email.Trim(),
                 Message = contactDto.Message.Trim(),
+                Subject = contactDto.Subject?.Trim() ?? string.Empty,   // Added subject field
+                Phone = contactDto.Phone?.Trim(),                       // Added phone field
+                Company = contactDto.Company?.Trim(),                   // Added company field
+                Website = contactDto.Website?.Trim(),                   // Added website field
                 SubmittedAt = DateTime.UtcNow,
                 UserAgent = req.Headers.TryGetValues("User-Agent", out var userAgentValues) ? userAgentValues.FirstOrDefault() ?? "" : "",
                 IpAddress = GetClientIpAddress(req)
             };
 
-            // Process the contact submission (store and send email)
-            await _contactMeService.ProcessContactSubmissionAsync(contactModel);
+            try
+            {
+                // Process the contact submission (store and send email)
+                await _contactMeService.ProcessContactSubmissionAsync(contactModel);
 
-            _logger.LogInformation("Successfully processed contact form submission from {Name} ({Email})", contactModel.Name, contactModel.Email);
+                _logger.LogInformation("Successfully processed contact form submission from {Name} ({Email})", contactModel.Name, contactModel.Email);
 
-            // Return success response
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteStringAsync(JsonSerializer.Serialize(new { success = true, message = "Contact form submitted successfully" }));
-            response.Headers.Add("Content-Type", "application/json");
-            return response;
+                // Return success response
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteStringAsync(JsonSerializer.Serialize(new { success = true, message = "Contact form submitted successfully" }));
+                response.Headers.Add("Content-Type", "application/json");
+                return response;
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("SMTP_USERNAME") || ex.Message.Contains("environment variable"))
+            {
+                // Specific handling for missing email configuration
+                _logger.LogError("Email service configuration error: {ErrorMessage}", ex, ex.Message);
+
+                // Save the contact data anyway, even if we can't send the email
+                _logger.LogInformation("Contact data saved for {Name} ({Email}), but email notification was not sent due to configuration error", contactModel.Name, contactModel.Email);
+
+                // Return a more specific error message
+                var configErrorResponse = req.CreateResponse(HttpStatusCode.OK);
+                await configErrorResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    message = "Your message was received, but email notifications are currently disabled. The site administrator will see your message in the system."
+                }));
+                configErrorResponse.Headers.Add("Content-Type", "application/json");
+                return configErrorResponse;
+            }
         }
         catch (Exception ex)
         {

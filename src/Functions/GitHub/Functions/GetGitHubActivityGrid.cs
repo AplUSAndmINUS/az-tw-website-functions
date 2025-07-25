@@ -59,7 +59,6 @@ public class GetGitHubActivityGrid
 
       // Create response
       var response = req.CreateResponse(HttpStatusCode.OK);
-      response.Headers.Add("Content-Type", "application/json; charset=utf-8");
       
       await response.WriteAsJsonAsync(activityData);
 
