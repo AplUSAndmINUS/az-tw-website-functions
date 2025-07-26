@@ -25,10 +25,14 @@ public class EmailService : IEmailService
 
         try
         {
+            _logger.LogInformation("Initializing EmailService with environment configuration...");
+            
             // Get SMTP configuration from environment variables
             _smtpHost = System.Environment.GetEnvironmentVariable("SMTP_SERVER") ??
                        System.Environment.GetEnvironmentVariable("SMTP_HOST") ??
-                       "smtp.office365.com";
+                       "smtp.gmail.com";
+            
+            _logger.LogInformation("Using SMTP host: {SmtpHost} (detected from environment or default)", _smtpHost);
 
             string portStr = System.Environment.GetEnvironmentVariable("SMTP_PORT") ?? "587";
             if (!int.TryParse(portStr, out int smtpPort))
@@ -61,6 +65,9 @@ public class EmailService : IEmailService
 
             _logger.LogInformation("Email service initialized successfully with SMTP server: {SmtpHost}:{SmtpPort}, Username: {Username}",
                 _smtpHost, _smtpPort, _smtpUsername);
+            
+            _logger.LogInformation("Email service configuration: FromEmail={FromEmail}, FromName={FromName}, ToEmail={ToEmail}",
+                _fromEmail, _fromName, _toEmail);
         }
         catch (Exception ex)
         {
