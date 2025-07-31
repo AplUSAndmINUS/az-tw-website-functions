@@ -59,6 +59,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
         string finalMessage = SafeFormat(message, args);
         _appLogger.LogInformation(finalMessage);
         _telemetryClient.TrackTrace(finalMessage);
+        _telemetryClient.Flush(); // Ensure telemetry is sent immediately
     }
 
     public void LogError(string message, Exception ex, params object[] args)
@@ -66,6 +67,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
         string finalMessage = SafeFormat(message, args);
         _appLogger.LogError(ex, finalMessage);
         _telemetryClient.TrackException(ex, new Dictionary<string, string> { { "Message", finalMessage } });
+        _telemetryClient.Flush(); // Ensure telemetry is sent immediately
     }
 
     public void LogWarning(string message, params object[] args)
@@ -73,6 +75,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
         string finalMessage = SafeFormat(message, args);
         _appLogger.LogWarning(finalMessage);
         _telemetryClient.TrackTrace(finalMessage, SeverityLevel.Warning, new Dictionary<string, string> { { "Message", finalMessage } });
+        _telemetryClient.Flush(); // Ensure telemetry is sent immediately
     }
 
     public void LogBlobQuery(string containerName, string functionName, string? prefix, int pageSize, string? continuationToken)
@@ -88,6 +91,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
             { "PageSize", pageSize.ToString() },
             { "ContinuationToken", continuationToken ?? "<null>" }
         });
+        _telemetryClient.Flush(); // Ensure telemetry is sent immediately
     }
 
     public void LogTableQuery(string tableName, string functionName, string? filter, int pageSize, string? continuationToken)
@@ -103,6 +107,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
             { "PageSize", pageSize.ToString() },
             { "ContinuationToken", continuationToken ?? "<null>" }
         });
+        _telemetryClient.Flush(); // Ensure telemetry is sent immediately
     }
 
     public void LogTableEntryUpsert(string tableName, string functionName, string partitionKey, string rowKey)
@@ -117,6 +122,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
             { "PartitionKey", partitionKey },
             { "RowKey", rowKey }
         });
+        _telemetryClient.Flush(); // Ensure telemetry is sent immediately
     }
 
     public void LogTableEntryDelete(string tableName, string functionName, string partitionKey, string rowKey)
@@ -131,6 +137,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
             { "PartitionKey", partitionKey },
             { "RowKey", rowKey }
         });
+        _telemetryClient.Flush(); // Ensure telemetry is sent immediately
     }
 
     public void LogBlobDownload(string containerName, string functionName, string blobName)
@@ -142,6 +149,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
             { "FunctionName", functionName },
             { "BlobName", blobName }
         });
+        _telemetryClient.Flush(); // Ensure telemetry is sent immediately
     }
 
     public void LogBlobUpload(string containerName, string functionName, string blobName, long size)
@@ -154,5 +162,6 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
             { "BlobName", blobName },
             { "Size", size.ToString() }
         });
+        _telemetryClient.Flush(); // Ensure telemetry is sent immediately
     }
 }
