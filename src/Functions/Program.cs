@@ -24,8 +24,22 @@ public class Program
             {
                 var configuration = context.Configuration;
 
-                // Register Application Insights telemetry
-                services.AddApplicationInsightsTelemetryWorkerService();
+                // Register Application Insights telemetry with explicit configuration
+                services.AddApplicationInsightsTelemetryWorkerService(options => {
+                    // Use connection string from environment variable or app settings
+                    var connectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
+                    if (!string.IsNullOrEmpty(connectionString))
+                    {
+                        options.ConnectionString = connectionString;
+                    }
+                    
+                    // Disable adaptive sampling
+                    options.EnableAdaptiveSampling = false;
+                    // Enable dependencies tracking
+                    options.EnableDependencyTrackingTelemetryModule = true;
+                    // Enable performance counter collection
+                    options.EnablePerformanceCounterCollectionModule = true;
+                });
 
                 // Register AppInsightsLogger
                 services.AddSingleton(typeof(IAppInsightsLogger<>), typeof(AppInsightsLogger<>));
