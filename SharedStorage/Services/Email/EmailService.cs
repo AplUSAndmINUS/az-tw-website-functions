@@ -25,18 +25,16 @@ public class EmailService : IEmailService
 
         try
         {
+            _logger.LogInformation("Initializing EmailService with environment configuration...");
+            
             // Get SMTP configuration from environment variables
             _smtpHost = System.Environment.GetEnvironmentVariable("SMTP_SERVER") ??
                        System.Environment.GetEnvironmentVariable("SMTP_HOST") ??
-                       "smtp.office365.com";
+                       "smtp.gmail.com";
+            
+            _logger.LogInformation("Using SMTP host: {SmtpHost} (detected from environment or default)", _smtpHost);
 
-            string portStr = System.Environment.GetEnvironmentVariable("SMTP_PORT") ?? "587";
-            if (!int.TryParse(portStr, out int smtpPort))
-            {
-                _logger.LogWarning("Invalid SMTP_PORT value: {PortValue}. Using default port 587.", portStr);
-                smtpPort = 587;
-            }
-            _smtpPort = smtpPort;
+            _smtpPort = int.TryParse(System.Environment.GetEnvironmentVariable("SMTP_PORT"), out int port) ? port : 587;
 
             // Check for required environment variables
             var usernameEnv = System.Environment.GetEnvironmentVariable("SMTP_USERNAME");
@@ -61,6 +59,9 @@ public class EmailService : IEmailService
 
             _logger.LogInformation("Email service initialized successfully with SMTP server: {SmtpHost}:{SmtpPort}, Username: {Username}",
                 _smtpHost, _smtpPort, _smtpUsername);
+            
+            _logger.LogInformation("Email service configuration: FromEmail={FromEmail}, FromName={FromName}, ToEmail={ToEmail}",
+                _fromEmail, _fromName, _toEmail);
         }
         catch (Exception ex)
         {
@@ -71,6 +72,20 @@ public class EmailService : IEmailService
 
     public async Task SendEmailAsync(string to, string subject, string body, bool isHtml = false)
     {
+        // Validate input parameters
+        if (string.IsNullOrWhiteSpace(to))
+            throw new ArgumentException("Recipient email address cannot be null or empty", nameof(to));
+        
+        if (string.IsNullOrWhiteSpace(subject))
+            throw new ArgumentException("Email subject cannot be null or empty", nameof(subject));
+        
+        if (string.IsNullOrWhiteSpace(body))
+            throw new ArgumentException("Email body cannot be null or empty", nameof(body));
+
+        // Validate email format
+        if (!IsValidEmailAddress(to))
+            throw new ArgumentException($"Invalid email address format: {to}", nameof(to));
+
         try
         {
             _logger.LogInformation("Preparing to send email to {To} with subject: {Subject} via {SmtpServer}:{SmtpPort}",
@@ -145,5 +160,23 @@ public class EmailService : IEmailService
         sb.AppendLine("=".PadRight(60, '='));
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Validates if the provided email address has a valid format
+    /// </summary>
+    /// <param name="email">Email address to validate</param>
+    /// <returns>True if email format is valid, false otherwise</returns>
+    private static bool IsValidEmailAddress(string email)
+    {
+        try
+        {
+            var addr = new MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

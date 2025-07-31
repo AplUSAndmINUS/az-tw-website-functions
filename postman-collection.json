@@ -1,0 +1,1054 @@
+{
+    "info": {
+        "name": "Azure Functions Website API",
+        "description": "Complete API collection for testing Azure Functions endpoints with Key Vault integration",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "version": "1.0.0"
+    },
+    "auth": {
+        "type": "apikey",
+        "apikey": [
+            {
+                "key": "key",
+                "value": "x-api-key",
+                "type": "string"
+            },
+            {
+                "key": "value",
+                "value": "{{API_KEY}}",
+                "type": "string"
+            },
+            {
+                "key": "in",
+                "value": "header",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "BASE_URL",
+            "value": "https://{{ENVIRONMENT}}-api.terencewaters.com",
+            "type": "string",
+            "description": "API URL - use ENVIRONMENT variable to switch between mock-dev, mock-tst, or api (prod)"
+        },
+        {
+            "key": "LOCAL_URL",
+            "value": "http://localhost:7071",
+            "type": "string",
+            "description": "Local development URL - use this value in BASE_URL for local testing"
+        },
+        {
+            "key": "ENVIRONMENT",
+            "value": "mock-dev",
+            "type": "string",
+            "description": "Environment prefix: mock-dev, mock-tst, or api (for production)"
+        },
+        {
+            "key": "API_KEY",
+            "value": "your-api-key-here",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "👤 Authors",
+            "item": [
+                {
+                    "name": "Get Author",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{author_slug}}?includeMedia=false",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["authors", "{{author_slug}}"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "false",
+                                    "description": "Include media in response"
+                                }
+                            ]
+                        },
+                        "description": "Get an author by slug. Set includeMedia=true to include media assets."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Author with Media",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{author_slug}}?includeMedia=true",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["authors", "{{author_slug}}"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "true"
+                                }
+                            ]
+                        },
+                        "description": "Get an author by slug with all associated media."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create/Update Author",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"displayName\": \"John Doe\",\n  \"username\": \"johndoe\",\n  \"authorSlug\": \"john-doe\",\n  \"bio\": \"Software developer and writer\",\n  \"email\": \"john.doe@example.com\",\n  \"website\": \"https://johndoe.com\",\n  \"linkedIn\": \"https://linkedin.com/in/johndoe\",\n  \"twitter\": \"@johndoe\",\n  \"github\": \"johndoe\",\n  \"isActive\": true,\n  \"profileImageUrl\": null,\n  \"backgroundImageUrl\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{author_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["authors", "{{author_slug}}"]
+                        },
+                        "description": "Create or update an author. The slug in the URL will be used if not provided in the body."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Author",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{author_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["authors", "{{author_slug}}"]
+                        },
+                        "description": "Delete an author by slug."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upload Author Profile Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{author_slug}}/profile-image",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "authors",
+                                "{{author_slug}}",
+                                "profile-image"
+                            ]
+                        },
+                        "description": "Upload a profile image for an author."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upload Author Background Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{author_slug}}/background-image",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "authors",
+                                "{{author_slug}}",
+                                "background-image"
+                            ]
+                        },
+                        "description": "Upload a background image for an author."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upload Author Media",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{author_slug}}/media",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["authors", "{{author_slug}}", "media"]
+                        },
+                        "description": "Upload general media for an author."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Author Media",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/authors/{{author_slug}}/media/{{media_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "authors",
+                                "{{author_slug}}",
+                                "media",
+                                "{{media_id}}"
+                            ]
+                        },
+                        "description": "Delete specific media associated with an author."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "📝 Blog Posts",
+            "item": [
+                {
+                    "name": "Get All Posts",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts?includeMedia=false&page=1&pageSize=10",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "false",
+                                    "description": "Include media in response"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Page number"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "10",
+                                    "description": "Number of posts per page"
+                                }
+                            ]
+                        },
+                        "description": "Get all blog posts with pagination."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Single Post",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{post_slug}}?includeMedia=true",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{post_slug}}"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "true"
+                                }
+                            ]
+                        },
+                        "description": "Get a specific blog post by slug."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create/Update Post",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Sample Blog Post\",\n  \"slug\": \"sample-blog-post\",\n  \"content\": \"This is the content of the blog post...\",\n  \"excerpt\": \"A short excerpt of the post\",\n  \"authorSlug\": \"john-doe\",\n  \"publishDate\": \"2024-01-15T10:00:00Z\",\n  \"isPublished\": true,\n  \"tags\": [\"technology\", \"programming\"],\n  \"category\": \"Tech\",\n  \"featuredImageUrl\": null,\n  \"seoTitle\": \"Sample Blog Post - Tech Blog\",\n  \"seoDescription\": \"A sample blog post about technology\",\n  \"readingTimeMinutes\": 5\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{post_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{post_slug}}"]
+                        },
+                        "description": "Create or update a blog post."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Post",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{post_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{post_slug}}"]
+                        },
+                        "description": "Delete a blog post by slug."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upload Post Featured Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{post_slug}}/featured-image",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{post_slug}}", "featured-image"]
+                        },
+                        "description": "Upload a featured image for a blog post."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upload Post Featured Video",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/posts/{{post_slug}}/featured-video",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["posts", "{{post_slug}}", "featured-video"]
+                        },
+                        "description": "Upload a featured video for a blog post."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "📚 Books",
+            "item": [
+                {
+                    "name": "Get All Books",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/books?includeMedia=false&page=1&pageSize=10",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "false"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Get all books with pagination."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Single Book",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{book_slug}}?includeMedia=true",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{book_slug}}"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "true"
+                                }
+                            ]
+                        },
+                        "description": "Get a specific book by slug."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create/Update Book",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"My Amazing Book\",\n  \"slug\": \"my-amazing-book\",\n  \"description\": \"A comprehensive guide to amazing things\",\n  \"authorName\": \"John Doe\",\n  \"isbn\": \"978-0123456789\",\n  \"publishDate\": \"2024-01-01T00:00:00Z\",\n  \"genre\": \"Technology\",\n  \"pages\": 350,\n  \"publisher\": \"Tech Books Publishing\",\n  \"language\": \"English\",\n  \"isPublished\": true,\n  \"rating\": 4.5,\n  \"price\": 29.99,\n  \"currency\": \"USD\",\n  \"amazonUrl\": \"https://amazon.com/book-link\",\n  \"goodreadsUrl\": \"https://goodreads.com/book-link\",\n  \"featuredImageUrl\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{book_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{book_slug}}"]
+                        },
+                        "description": "Create or update a book."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Book",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{book_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{book_slug}}"]
+                        },
+                        "description": "Delete a book by slug."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upload Book Featured Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/books/{{book_slug}}/featured-image",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["books", "{{book_slug}}", "featured-image"]
+                        },
+                        "description": "Upload a featured image for a book."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "💼 Portfolio",
+            "item": [
+                {
+                    "name": "Get All Portfolio Pieces",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio?includeMedia=false&page=1&pageSize=10",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["portfolio"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "false"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Get all portfolio pieces with pagination."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Single Portfolio Piece",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{portfolio_slug}}?includeMedia=true",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["portfolio", "{{portfolio_slug}}"],
+                            "query": [
+                                {
+                                    "key": "includeMedia",
+                                    "value": "true"
+                                }
+                            ]
+                        },
+                        "description": "Get a specific portfolio piece by slug."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create/Update Portfolio Piece",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Amazing Web Application\",\n  \"slug\": \"amazing-web-application\",\n  \"description\": \"A full-stack web application built with modern technologies\",\n  \"shortDescription\": \"Modern web app\",\n  \"category\": \"Web Development\",\n  \"technologies\": [\"React\", \"Node.js\", \"Azure\"],\n  \"projectUrl\": \"https://myapp.com\",\n  \"githubUrl\": \"https://github.com/username/project\",\n  \"isPublished\": true,\n  \"isFeatured\": false,\n  \"startDate\": \"2024-01-01T00:00:00Z\",\n  \"endDate\": \"2024-03-01T00:00:00Z\",\n  \"client\": \"Tech Company Inc\",\n  \"role\": \"Full Stack Developer\",\n  \"featuredImageUrl\": null,\n  \"orderIndex\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{portfolio_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["portfolio", "{{portfolio_slug}}"]
+                        },
+                        "description": "Create or update a portfolio piece."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Portfolio Piece",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/portfolio/{{portfolio_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["portfolio", "{{portfolio_slug}}"]
+                        },
+                        "description": "Delete a portfolio piece by slug."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "📧 Contact",
+            "item": [
+                {
+                    "name": "Submit Contact Form",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"subject\": \"Inquiry about your services\",\n  \"message\": \"Hello, I would like to know more about your services...\",\n  \"phone\": \"+1234567890\",\n  \"company\": \"Tech Corp\",\n  \"website\": \"https://techcorp.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/contact",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["contact"]
+                        },
+                        "description": "Submit a contact form message."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "🐙 GitHub",
+            "item": [
+                {
+                    "name": "Get GitHub Activity Grid",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/github/activity",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["github", "activity"]
+                        },
+                        "description": "Get GitHub activity grid data."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get All GitHub Repos",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/github/repos",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["github", "repos"]
+                        },
+                        "description": "Get all GitHub repositories."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get GitHub Repo by Slug",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/github/repos/{{repo_slug}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["github", "repos", "{{repo_slug}}"]
+                        },
+                        "description": "Get a specific GitHub repository by slug."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get GitHub Repo by GitHub ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/github/repos/githubid/{{github_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "github",
+                                "repos",
+                                "githubid",
+                                "{{github_id}}"
+                            ]
+                        },
+                        "description": "Get a specific GitHub repository by GitHub ID."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "🖼️ Media",
+            "item": [
+                {
+                    "name": "Upload Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/images",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "images"]
+                        },
+                        "description": "Upload an image file."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upload Video",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/videos",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "videos"]
+                        },
+                        "description": "Upload a video file."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upload Document",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/documents",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "documents"]
+                        },
+                        "description": "Upload a document file."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Media by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/{{media_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "{{media_id}}"]
+                        },
+                        "description": "Get a specific media item by ID."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get All Media",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/media?page=1&pageSize=10&mediaType=image",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media"],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "mediaType",
+                                    "value": "image",
+                                    "description": "Filter by media type (image, video, document)"
+                                }
+                            ]
+                        },
+                        "description": "Get all media items with pagination and filtering."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Media by Content ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/content/{{content_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "content", "{{content_id}}"]
+                        },
+                        "description": "Get all media associated with a specific content item."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Media",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/{{media_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "{{media_id}}"]
+                        },
+                        "description": "Delete a media item by ID."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Media Ping",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-api-key",
+                                "value": "{{API_KEY}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/ping",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "ping"]
+                        },
+                        "description": "Ping endpoint to test media service availability."
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}

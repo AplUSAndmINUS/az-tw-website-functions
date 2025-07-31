@@ -36,6 +36,10 @@ public class ContactMeFunction
         try
         {
             _logger.LogInformation("Processing contact form submission");
+            
+            _logger.LogInformation("Contact form request received from IP: {IpAddress}, UserAgent: {UserAgent}",
+                GetClientIpAddress(req),
+                req.Headers.TryGetValues("User-Agent", out var userAgentHeaders) ? userAgentHeaders.FirstOrDefault() ?? "Unknown" : "Unknown");
 
             // Validate API key
             var apiKeyValidationResponse = await _apiKeyValidator.ValidateApiKeyAsync(req, _logger, "ContactMe");
@@ -118,15 +122,13 @@ public class ContactMeFunction
                 // Specific handling for missing email configuration
                 _logger.LogError("Email service configuration error: {ErrorMessage}", ex, ex.Message);
 
-                // Save the contact data anyway, even if we can't send the email
-                _logger.LogInformation("Contact data saved for {Name} ({Email}), but email notification was not sent due to configuration error", contactModel.Name, contactModel.Email);
-
-                // Return a more specific error message
-                var configErrorResponse = req.CreateResponse(HttpStatusCode.OK);
+                // Return a proper error response instead of misleading success
+                var configErrorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
                 await configErrorResponse.WriteStringAsync(JsonSerializer.Serialize(new
                 {
-                    success = true,
-                    message = "Your message was received, but email notifications are currently disabled. The site administrator will see your message in the system."
+                    success = false,
+                    message = "Contact form could not be processed due to server configuration issues. Please try again later or contact the administrator directly.",
+                    error = "Email configuration unavailable"
                 }));
                 configErrorResponse.Headers.Add("Content-Type", "application/json");
                 return configErrorResponse;

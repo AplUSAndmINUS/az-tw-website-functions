@@ -14,7 +14,9 @@
             "Host.Aggregator": "Information",
             "Utils.Validation": "Trace",
             "Functions.Authors": "Trace",
-            "Functions.GitHub": "Trace"
+            "Functions.GitHub": "Trace",
+            "Functions.ContactMe": "Trace",
+            "SharedStorage.Services.Email": "Trace"
         }
     },
     "extensions": {

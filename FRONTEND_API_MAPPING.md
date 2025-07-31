@@ -43,7 +43,7 @@ This document provides a comprehensive mapping of API endpoints required for the
 
 ## Authentication & Authorization
 
-All API endpoints require proper authentication via the `x-api-key` header. This API key validation is implemented at the function level through the `IAPIKeyValidator` interface with Azure Key Vault integration.
+All API endpoints require proper authentication via the `X-API-Key` header. This API key validation is implemented at the function level through the `IAPIKeyValidator` interface.
 
 ### Authentication Implementation
 
@@ -59,8 +59,6 @@ const apiClient = axios.create({
         "x-api-key": process.env.REACT_APP_API_KEY || ""
     }
 });
-
-// Note: No /api prefix is used as the Function App has routePrefix set to empty string
 
 // Add response interceptor for error handling
 apiClient.interceptors.response.use(
