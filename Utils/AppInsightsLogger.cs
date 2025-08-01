@@ -26,11 +26,50 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
 {
     private readonly ILogger<T> _appLogger;
     private readonly TelemetryClient _telemetryClient;
+    private readonly bool _telemetryEnabled;
+    private bool _configurationWarningLogged = false;
 
     public AppInsightsLogger(ILogger<T> logger, TelemetryClient telemetryClient)
     {
         _appLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
+        
+        // Check if telemetry is properly configured
+        _telemetryEnabled = IsTelemetryConfigured();
+        
+        if (!_telemetryEnabled && !_configurationWarningLogged)
+        {
+            _appLogger.LogWarning("AppInsights telemetry is not properly configured. Falling back to standard logging only.");
+            _configurationWarningLogged = true;
+        }
+    }
+
+    private bool IsTelemetryConfigured()
+    {
+        try
+        {
+            // Check if we have a valid instrumentation key or connection string
+            var connectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
+            var instrumentationKey = Environment.GetEnvironmentVariable("APPINSIGHTS_INSTRUMENTATIONKEY");
+            
+            if (!string.IsNullOrEmpty(connectionString) || !string.IsNullOrEmpty(instrumentationKey))
+            {
+                return true;
+            }
+            
+            // Alternative check: see if TelemetryClient has valid configuration
+            if (_telemetryClient?.InstrumentationKey != null && !string.IsNullOrEmpty(_telemetryClient.InstrumentationKey))
+            {
+                return true;
+            }
+            
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _appLogger.LogWarning("Failed to check telemetry configuration: {Exception}", ex.Message);
+            return false;
+        }
     }
 
     private string SafeFormat(string message, params object[] args)
@@ -58,21 +97,54 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
     {
         string finalMessage = SafeFormat(message, args);
         _appLogger.LogInformation(finalMessage);
-        _telemetryClient.TrackTrace(finalMessage);
+        
+        if (_telemetryEnabled)
+        {
+            try
+            {
+                _telemetryClient.TrackTrace(finalMessage);
+            }
+            catch (Exception ex)
+            {
+                _appLogger.LogWarning("Failed to send telemetry trace: {Exception}", ex.Message);
+            }
+        }
     }
 
     public void LogError(string message, Exception ex, params object[] args)
     {
         string finalMessage = SafeFormat(message, args);
         _appLogger.LogError(ex, finalMessage);
-        _telemetryClient.TrackException(ex, new Dictionary<string, string> { { "Message", finalMessage } });
+        
+        if (_telemetryEnabled)
+        {
+            try
+            {
+                _telemetryClient.TrackException(ex, new Dictionary<string, string> { { "Message", finalMessage } });
+            }
+            catch (Exception telemetryEx)
+            {
+                _appLogger.LogWarning("Failed to send telemetry exception: {Exception}", telemetryEx.Message);
+            }
+        }
     }
 
     public void LogWarning(string message, params object[] args)
     {
         string finalMessage = SafeFormat(message, args);
         _appLogger.LogWarning(finalMessage);
-        _telemetryClient.TrackTrace(finalMessage, SeverityLevel.Warning, new Dictionary<string, string> { { "Message", finalMessage } });
+        
+        if (_telemetryEnabled)
+        {
+            try
+            {
+                _telemetryClient.TrackTrace(finalMessage, SeverityLevel.Warning, new Dictionary<string, string> { { "Message", finalMessage } });
+            }
+            catch (Exception ex)
+            {
+                _appLogger.LogWarning("Failed to send telemetry trace: {Exception}", ex.Message);
+            }
+        }
     }
 
     public void LogBlobQuery(string containerName, string functionName, string? prefix, int pageSize, string? continuationToken)
@@ -80,14 +152,24 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
         _appLogger.LogInformation("Blob query issued: Container={Container}, Function={Function}, Prefix={Prefix}, PageSize={PageSize}, ContinuationToken={Token}",
         containerName, functionName, prefix ?? "<null>", pageSize, continuationToken ?? "<null>");
 
-        _telemetryClient.TrackTrace("Blob query executed", new Dictionary<string, string>
+        if (_telemetryEnabled)
         {
-            { "ContainerName", containerName },
-            { "FunctionName", functionName },
-            { "Prefix", prefix ?? "<null>" },
-            { "PageSize", pageSize.ToString() },
-            { "ContinuationToken", continuationToken ?? "<null>" }
-        });
+            try
+            {
+                _telemetryClient.TrackTrace("Blob query executed", new Dictionary<string, string>
+                {
+                    { "ContainerName", containerName },
+                    { "FunctionName", functionName },
+                    { "Prefix", prefix ?? "<null>" },
+                    { "PageSize", pageSize.ToString() },
+                    { "ContinuationToken", continuationToken ?? "<null>" }
+                });
+            }
+            catch (Exception ex)
+            {
+                _appLogger.LogWarning("Failed to send blob query telemetry: {Exception}", ex.Message);
+            }
+        }
     }
 
     public void LogTableQuery(string tableName, string functionName, string? filter, int pageSize, string? continuationToken)
@@ -95,14 +177,24 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
         _appLogger.LogInformation("Table query issued: Table={Table}, Function={Function}, Filter={Filter}, PageSize={PageSize}, ContinuationToken={Token}",
             tableName, functionName, filter ?? "<null>", pageSize, continuationToken ?? "<null>");
 
-        _telemetryClient.TrackTrace("Table query executed", new Dictionary<string, string>
+        if (_telemetryEnabled)
         {
-            { "TableName", tableName },
-            { "FunctionName", functionName },
-            { "Filter", filter ?? "<null>" },
-            { "PageSize", pageSize.ToString() },
-            { "ContinuationToken", continuationToken ?? "<null>" }
-        });
+            try
+            {
+                _telemetryClient.TrackTrace("Table query executed", new Dictionary<string, string>
+                {
+                    { "TableName", tableName },
+                    { "FunctionName", functionName },
+                    { "Filter", filter ?? "<null>" },
+                    { "PageSize", pageSize.ToString() },
+                    { "ContinuationToken", continuationToken ?? "<null>" }
+                });
+            }
+            catch (Exception ex)
+            {
+                _appLogger.LogWarning("Failed to send table query telemetry: {Exception}", ex.Message);
+            }
+        }
     }
 
     public void LogTableEntryUpsert(string tableName, string functionName, string partitionKey, string rowKey)
@@ -110,13 +202,23 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
         _appLogger.LogInformation("Table upsert initiated: Table={Table}, Function={Function}, PartitionKey={PartitionKey}, RowKey={RowKey}",
             tableName, functionName, partitionKey, rowKey);
 
-        _telemetryClient.TrackTrace("Table upsert initiated", new Dictionary<string, string>
+        if (_telemetryEnabled)
         {
-            { "TableName", tableName },
-            { "FunctionName", functionName },
-            { "PartitionKey", partitionKey },
-            { "RowKey", rowKey }
-        });
+            try
+            {
+                _telemetryClient.TrackTrace("Table upsert initiated", new Dictionary<string, string>
+                {
+                    { "TableName", tableName },
+                    { "FunctionName", functionName },
+                    { "PartitionKey", partitionKey },
+                    { "RowKey", rowKey }
+                });
+            }
+            catch (Exception ex)
+            {
+                _appLogger.LogWarning("Failed to send table upsert telemetry: {Exception}", ex.Message);
+            }
+        }
     }
 
     public void LogTableEntryDelete(string tableName, string functionName, string partitionKey, string rowKey)
@@ -124,35 +226,67 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
         _appLogger.LogInformation("Table delete initiated: Table={Table}, Function={Function}, PartitionKey={PartitionKey}, RowKey={RowKey}",
             tableName, functionName, partitionKey, rowKey);
 
-        _telemetryClient.TrackTrace("Table delete initiated", new Dictionary<string, string>
+        if (_telemetryEnabled)
         {
-            { "TableName", tableName },
-            { "FunctionName", functionName },
-            { "PartitionKey", partitionKey },
-            { "RowKey", rowKey }
-        });
+            try
+            {
+                _telemetryClient.TrackTrace("Table delete initiated", new Dictionary<string, string>
+                {
+                    { "TableName", tableName },
+                    { "FunctionName", functionName },
+                    { "PartitionKey", partitionKey },
+                    { "RowKey", rowKey }
+                });
+            }
+            catch (Exception ex)
+            {
+                _appLogger.LogWarning("Failed to send table delete telemetry: {Exception}", ex.Message);
+            }
+        }
     }
 
     public void LogBlobDownload(string containerName, string functionName, string blobName)
     {
         _appLogger.LogInformation("Blob download initiated: Container={Container}, Function={Function}, Blob={Blob}", containerName, functionName, blobName);
-        _telemetryClient.TrackTrace("Blob download initiated", new Dictionary<string, string>
+        
+        if (_telemetryEnabled)
         {
-            { "ContainerName", containerName },
-            { "FunctionName", functionName },
-            { "BlobName", blobName }
-        });
+            try
+            {
+                _telemetryClient.TrackTrace("Blob download initiated", new Dictionary<string, string>
+                {
+                    { "ContainerName", containerName },
+                    { "FunctionName", functionName },
+                    { "BlobName", blobName }
+                });
+            }
+            catch (Exception ex)
+            {
+                _appLogger.LogWarning("Failed to send blob download telemetry: {Exception}", ex.Message);
+            }
+        }
     }
 
     public void LogBlobUpload(string containerName, string functionName, string blobName, long size)
     {
         _appLogger.LogInformation("Blob upload initiated: Container={Container}, Function={Function}, Blob={Blob}, Size={Size} bytes", containerName, functionName, blobName, size);
-        _telemetryClient.TrackTrace("Blob upload initiated", new Dictionary<string, string>
+        
+        if (_telemetryEnabled)
         {
-            { "ContainerName", containerName },
-            { "FunctionName", functionName },
-            { "BlobName", blobName },
-            { "Size", size.ToString() }
-        });
+            try
+            {
+                _telemetryClient.TrackTrace("Blob upload initiated", new Dictionary<string, string>
+                {
+                    { "ContainerName", containerName },
+                    { "FunctionName", functionName },
+                    { "BlobName", blobName },
+                    { "Size", size.ToString() }
+                });
+            }
+            catch (Exception ex)
+            {
+                _appLogger.LogWarning("Failed to send blob upload telemetry: {Exception}", ex.Message);
+            }
+        }
     }
 }
