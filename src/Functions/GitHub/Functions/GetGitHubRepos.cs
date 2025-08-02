@@ -20,7 +20,11 @@ public class GetGitHubRepos
   [Function("GetGitHubRepos")]
   public async Task Run([TimerTrigger("0 0 */4 * * *", RunOnStartup = false)] TimerInfo myTimer)
   {
-    _logger.LogInformation("GetGitHubRepos timer trigger function started at: {DateTime}", DateTime.UtcNow);
+    var useMockStorage = Environment.GetEnvironmentVariable("USE_MOCK_STORAGE");
+    var expectedTableName = useMockStorage?.ToLowerInvariant() == "true" ? "mockgithub" : "github";
+    
+    _logger.LogInformation("GetGitHubRepos timer trigger function started at: {DateTime}. USE_MOCK_STORAGE='{UseMockStorage}', Expected table: '{TableName}'", 
+      DateTime.UtcNow, useMockStorage ?? "null", expectedTableName);
 
     try
     {

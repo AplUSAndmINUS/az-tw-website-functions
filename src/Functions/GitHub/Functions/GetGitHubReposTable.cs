@@ -48,7 +48,11 @@ public class GetGitHubReposTable : BaseContentFunctions<IGitHubRepoService, GitH
   [Function("GetGitHubReposTable")]
   public async Task<HttpResponseData> GetRepos([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "github/repos")] HttpRequestData req)
   {
-    _appLogger.LogInformation("GetGitHubReposTable function triggered");
+    var useMockStorage = Environment.GetEnvironmentVariable("USE_MOCK_STORAGE");
+    var expectedTableName = useMockStorage?.ToLowerInvariant() == "true" ? "mockgithub" : "github";
+    
+    _appLogger.LogInformation("GetGitHubReposTable function triggered. USE_MOCK_STORAGE='{UseMockStorage}', Expected table: '{TableName}'", 
+      useMockStorage ?? "null", expectedTableName);
 
     // Validate API key using base class helper method
     var apiValidationResult = await ValidateApiKeyAsync(req, "GetGitHubReposTable");
