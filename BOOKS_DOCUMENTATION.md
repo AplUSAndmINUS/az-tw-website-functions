@@ -279,7 +279,7 @@ Error responses include descriptive messages:
 
 ## Authentication
 
-All endpoints require API key authentication via the `X-API-Key` header. The API key is validated using the `IAPIKeyValidator` service.
+All endpoints require API key authentication via the `x-api-key` header. The API key is validated using the `IAPIKeyValidator` service.
 
 ## Validation
 

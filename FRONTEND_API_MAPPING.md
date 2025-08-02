@@ -43,7 +43,7 @@ This document provides a comprehensive mapping of API endpoints required for the
 
 ## Authentication & Authorization
 
-All API endpoints require proper authentication via the `X-API-Key` header. This API key validation is implemented at the function level through the `IAPIKeyValidator` interface.
+All API endpoints require proper authentication via the `x-api-key` header. This API key validation is implemented at the function level through the `IAPIKeyValidator` interface.
 
 ### Authentication Implementation
 

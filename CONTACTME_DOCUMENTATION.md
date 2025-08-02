@@ -38,7 +38,7 @@ POST /contact
 
 ### Headers
 
-- `X-API-Key`: Required API key for authentication
+- `x-api-key`: Required API key for authentication
 - `Content-Type`: application/json
 
 ### Request Body
@@ -231,7 +231,7 @@ You can test the function using curl:
 ```bash
 curl -X POST "https://your-function-app.azurewebsites.net/contact" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-api-key" \
+  -H "x-api-key: your-api-key" \
   -d '{
     "name": "Test User",
     "email": "test@example.com",
