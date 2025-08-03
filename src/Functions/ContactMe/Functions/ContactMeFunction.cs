@@ -30,7 +30,7 @@ public class ContactMeFunction
 
     [Function("ContactMe")]
     public async Task<HttpResponseData> SubmitContactForm(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "contact")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "contact")] HttpRequestData req,
         FunctionContext executionContext)
     {
         try

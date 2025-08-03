@@ -79,7 +79,7 @@ public class UpsertBook : BaseContentFunctions<IBookService, BookModel, BookDTO,
 
   [Function("UpsertBook")]
   public async Task<HttpResponseData> UpsertBookAsync(
-    [HttpTrigger(AuthorizationLevel.Function, "post", "put", Route = "books/{slug}")] HttpRequestData req)
+    [HttpTrigger(AuthorizationLevel.Anonymous, "post", "put", Route = "books/{slug}")] HttpRequestData req)
   {
     _appLogger.LogInformation("UpsertBook function triggered");
 
