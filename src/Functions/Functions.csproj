@@ -1,52 +1,54 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-        <AzureFunctionsVersion>v4</AzureFunctionsVersion>
-        <OutputType>Exe</OutputType>
-        <RootNamespace>Functions</RootNamespace>
-        <!-- this tells MSBuild to import the Worker SDK targets -->
-        <UseWorkerSdk>true</UseWorkerSdk>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
-    <ItemGroup>
-        <!-- Core Worker SDK -->
-        <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk"
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AzureFunctionsVersion>v4</AzureFunctionsVersion>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Functions</RootNamespace>
+    <!-- this tells MSBuild to import the Worker SDK targets -->
+    <UseWorkerSdk>true</UseWorkerSdk>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Ensure we don't get duplicate attributes -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Core Worker SDK -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk"
                       Version="1.*"
                       OutputItemType="Analyzer" />
-        <PackageReference Include="Microsoft.Azure.Functions.Worker"
+    <PackageReference Include="Microsoft.Azure.Functions.Worker"
                       Version="1.*" />
-        <!-- Bindings you use -->
-        <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http"
+    <!-- Bindings you use -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http"
                       Version="3.*" />
-        <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Blobs"
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Blobs"
                       Version="5.*" />
-        <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Tables"
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Tables"
                       Version="1.4.3" />
-        <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer"
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer"
                       Version="4.*" />
-        <!-- App Insights for isolated worker -->
-        <PackageReference Include="Microsoft.ApplicationInsights.WorkerService"
+    <!-- App Insights for isolated worker -->
+    <PackageReference Include="Microsoft.ApplicationInsights.WorkerService"
                       Version="2.*" />
-        <!-- Add this line: brings in IServiceCollection.AddSingleton, etc. -->
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection"
+    <!-- Add this line: brings in IServiceCollection.AddSingleton, etc. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection"
                     Version="8.*" />
-        <!-- For logging -->
-        <PackageReference Include="Microsoft.ApplicationInsights" Version="2.*" />
-        <!-- Azure Key Vault packages -->
-        <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.*" />
-        <PackageReference Include="Azure.Identity" Version="1.*" />
-        <PackageReference Include="Microsoft.Extensions.Azure" Version="1.*" />
-    </ItemGroup>
-    <ItemGroup>
-        <!-- Your shared‑lib projects -->
-        <ProjectReference Include="..\..\SharedStorage\SharedStorage.csproj" />
-        <ProjectReference Include="..\..\Utils\Utils.csproj" />
-    </ItemGroup>
-    <!-- Ensure host.json goes to publish -->
-    <ItemGroup>
-        <None Include="host.json">
-            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-        </None>
-    </ItemGroup>
+    <!-- For logging -->
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.*" />
+    <!-- Azure Key Vault packages -->
+    <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.*" />
+    <PackageReference Include="Azure.Identity" Version="1.*" />
+    <PackageReference Include="Microsoft.Extensions.Azure" Version="1.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Your shared‑lib projects -->
+    <ProjectReference Include="..\..\SharedStorage\SharedStorage.csproj" />
+    <ProjectReference Include="..\..\Utils\Utils.csproj" />
+  </ItemGroup>
+  <!-- Ensure host.json goes to publish -->
+  <ItemGroup>
+    <None Include="host.json">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
 </Project>

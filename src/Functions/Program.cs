@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Functions.Worker;
 using System;
 using System.Linq;
+using Microsoft.ApplicationInsights.Extensibility;
 
 public class Program
 {
@@ -24,8 +25,38 @@ public class Program
             {
                 var configuration = context.Configuration;
 
-                // Register Application Insights telemetry
-                services.AddApplicationInsightsTelemetryWorkerService();
+                // Register Application Insights telemetry with explicit configuration
+                services.AddApplicationInsightsTelemetryWorkerService(options => {
+                    // Use connection string from environment variable or app settings
+                    var connectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
+                    if (!string.IsNullOrEmpty(connectionString))
+                    {
+                        options.ConnectionString = connectionString;
+                    }
+                    
+                    // Disable adaptive sampling
+                    options.EnableAdaptiveSampling = false;
+                    // Enable dependencies tracking
+                    options.EnableDependencyTrackingTelemetryModule = true;
+                    // Enable performance counter collection
+                    options.EnablePerformanceCounterCollectionModule = true;
+                });
+                
+                // Add our custom telemetry initializer
+                services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
+                
+                // Explicitly configure TelemetryClient
+                services.AddSingleton<TelemetryClient>(sp => {
+                    var telemetryConfiguration = sp.GetRequiredService<TelemetryConfiguration>();
+                    
+                    // Ensure the client is set up for immediate transmission
+                    if (telemetryConfiguration.TelemetryChannel != null)
+                    {
+                        telemetryConfiguration.TelemetryChannel.DeveloperMode = true;
+                    }
+                    
+                    return new TelemetryClient(telemetryConfiguration);
+                });
 
                 // Register AppInsightsLogger
                 services.AddSingleton(typeof(IAppInsightsLogger<>), typeof(AppInsightsLogger<>));
@@ -76,7 +107,10 @@ public class Program
                     return new ApiKeyValidator(validApiKey, appLogger);
                 });
             })
-            .ConfigureFunctionsWorkerDefaults()
+            .ConfigureFunctionsWorkerDefaults(builder => {
+                // Register our telemetry middleware
+                builder.UseMiddleware<Utils.Middleware.TelemetryMiddleware>();
+            })
             .Build();
 
         Console.WriteLine("az_tw_website_functions function app is starting...");

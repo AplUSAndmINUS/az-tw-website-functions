@@ -3,9 +3,11 @@
     "logging": {
         "applicationInsights": {
             "samplingSettings": {
-                "isEnabled": true,
-                "excludedTypes": "Request"
-            }
+                "isEnabled": false
+            },
+            "enableLiveMetrics": true,
+            "enableDependencyTracking": true,
+            "enablePerformanceCountersCollection": true
         },
         "logLevel": {
             "default": "Information",
@@ -14,7 +16,9 @@
             "Host.Aggregator": "Information",
             "Utils.Validation": "Trace",
             "Functions.Authors": "Trace",
-            "Functions.GitHub": "Trace"
+            "Functions.GitHub": "Trace",
+            "Functions.ContactMe": "Trace",
+            "SharedStorage.Services.Email": "Trace"
         }
     },
     "extensions": {
