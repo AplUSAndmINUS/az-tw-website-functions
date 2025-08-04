@@ -103,6 +103,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
             try
             {
                 _telemetryClient.TrackTrace(finalMessage);
+                _telemetryClient.Flush(); // Ensure telemetry is sent immediately
             }
             catch (Exception ex)
             {
@@ -121,6 +122,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
             try
             {
                 _telemetryClient.TrackException(ex, new Dictionary<string, string> { { "Message", finalMessage } });
+                _telemetryClient.Flush(); // Ensure telemetry is sent immediately
             }
             catch (Exception telemetryEx)
             {
@@ -139,6 +141,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
             try
             {
                 _telemetryClient.TrackTrace(finalMessage, SeverityLevel.Warning, new Dictionary<string, string> { { "Message", finalMessage } });
+                _telemetryClient.Flush(); // Ensure telemetry is sent immediately
             }
             catch (Exception ex)
             {
@@ -164,6 +167,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
                     { "PageSize", pageSize.ToString() },
                     { "ContinuationToken", continuationToken ?? "<null>" }
                 });
+                _telemetryClient.Flush(); // Ensure telemetry is sent immediately
             }
             catch (Exception ex)
             {
@@ -189,6 +193,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
                     { "PageSize", pageSize.ToString() },
                     { "ContinuationToken", continuationToken ?? "<null>" }
                 });
+                _telemetryClient.Flush(); // Ensure telemetry is sent immediately
             }
             catch (Exception ex)
             {
@@ -213,6 +218,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
                     { "PartitionKey", partitionKey },
                     { "RowKey", rowKey }
                 });
+                _telemetryClient.Flush(); // Ensure telemetry is sent immediately
             }
             catch (Exception ex)
             {
@@ -237,6 +243,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
                     { "PartitionKey", partitionKey },
                     { "RowKey", rowKey }
                 });
+                _telemetryClient.Flush(); // Ensure telemetry is sent immediately
             }
             catch (Exception ex)
             {
@@ -259,6 +266,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
                     { "FunctionName", functionName },
                     { "BlobName", blobName }
                 });
+                _telemetryClient.Flush(); // Ensure telemetry is sent immediately
             }
             catch (Exception ex)
             {
@@ -282,6 +290,7 @@ public class AppInsightsLogger<T> : IAppInsightsLogger<T>
                     { "BlobName", blobName },
                     { "Size", size.ToString() }
                 });
+                _telemetryClient.Flush(); // Ensure telemetry is sent immediately
             }
             catch (Exception ex)
             {

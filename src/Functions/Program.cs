@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Functions.Worker;
 using System;
 using System.Linq;
+using Microsoft.ApplicationInsights.Extensibility;
 
 public class Program
 {
@@ -91,7 +92,10 @@ public class Program
                     return new ApiKeyValidator(validApiKey, appLogger);
                 });
             })
-            .ConfigureFunctionsWorkerDefaults()
+            .ConfigureFunctionsWorkerDefaults(builder => {
+                // Register our telemetry middleware
+                builder.UseMiddleware<Utils.Middleware.TelemetryMiddleware>();
+            })
             .Build();
 
         Console.WriteLine("az_tw_website_functions function app is starting...");

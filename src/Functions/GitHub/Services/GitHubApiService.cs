@@ -66,7 +66,7 @@ public class GitHubApiService : IGitHubApiService
     }
   }
 
-  public Task<IEnumerable<GitHubActivityGridDTO>> GetActivityGridAsync(string username)
+  public async Task<IEnumerable<GitHubActivityGridDTO>> GetActivityGridAsync(string username)
   {
     if (string.IsNullOrWhiteSpace(username))
       throw new ArgumentException("Username cannot be null or empty", nameof(username));
@@ -75,17 +75,99 @@ public class GitHubApiService : IGitHubApiService
     {
       _logger.LogInformation("Fetching activity grid for user: {Username}", username);
 
-      // Note: GitHub's contribution graph is not available via REST API
-      // This would typically require GraphQL API or scraping
-      // For now, returning empty data with a logged message
-      _logger.LogWarning("GitHub activity grid fetching is not implemented yet - requires GraphQL API");
+      // Try to get basic user info to validate the username exists
+      var userResponse = await _httpClient.GetAsync($"https://api.github.com/users/{username}");
       
-      return Task.FromResult<IEnumerable<GitHubActivityGridDTO>>([]);
+      if (!userResponse.IsSuccessStatusCode)
+      {
+        _logger.LogWarning("GitHub user {Username} not found or API request failed with status: {StatusCode}", username, userResponse.StatusCode);
+        
+        // Return a valid empty activity grid instead of empty array to avoid 500 errors
+        return GenerateEmptyActivityGrid();
+      }
+
+      // Generate activity grid data based on available public repositories
+      // This is a simplified approach since GitHub's contribution graph requires GraphQL API
+      var activityData = await GenerateActivityGridFromReposAsync(username);
+      
+      _logger.LogInformation("Successfully generated activity grid for user: {Username} with {Count} data points", username, activityData.Count());
+      return activityData;
     }
     catch (Exception ex)
     {
       _logger.LogError("Error fetching activity grid for user {Username}", ex, username);
-      return Task.FromResult<IEnumerable<GitHubActivityGridDTO>>([]);
+      
+      // Return a valid empty activity grid instead of empty array to avoid 500 errors
+      return GenerateEmptyActivityGrid();
+    }
+  }
+
+  private IEnumerable<GitHubActivityGridDTO> GenerateEmptyActivityGrid()
+  {
+    var activityData = new List<GitHubActivityGridDTO>();
+    var today = DateTime.UtcNow.Date;
+    
+    // Generate the last 365 days with no activity
+    for (int i = 364; i >= 0; i--)
+    {
+      var date = today.AddDays(-i);
+      activityData.Add(new GitHubActivityGridDTO
+      {
+        Date = date.ToString("yyyy-MM-dd"),
+        ContributionCount = 0,
+        ContributionLevel = "NONE"
+      });
+    }
+    
+    return activityData;
+  }
+
+  private async Task<IEnumerable<GitHubActivityGridDTO>> GenerateActivityGridFromReposAsync(string username)
+  {
+    try
+    {
+      // Get repositories to analyze activity
+      var repos = await GetRepositoriesAsync(username);
+      var activityData = new List<GitHubActivityGridDTO>();
+      
+      // Generate the last 365 days of activity data
+      var today = DateTime.UtcNow.Date;
+      for (int i = 364; i >= 0; i--)
+      {
+        var date = today.AddDays(-i);
+        var dateStr = date.ToString("yyyy-MM-dd");
+        
+        // Simple heuristic: check if any repos were updated on this date
+        var contributionCount = repos.Count(r => 
+          r.GitHubUpdatedAt.Date == date || 
+          (r.GitHubPushedAt?.Date == date) ||
+          r.GitHubCreatedAt.Date == date);
+        
+        var level = contributionCount switch
+        {
+          0 => "NONE",
+          1 => "FIRST_QUARTILE", 
+          2 => "SECOND_QUARTILE",
+          3 => "THIRD_QUARTILE",
+          _ => "FOURTH_QUARTILE"
+        };
+        
+        activityData.Add(new GitHubActivityGridDTO
+        {
+          Date = dateStr,
+          ContributionCount = contributionCount,
+          ContributionLevel = level
+        });
+      }
+      
+      return activityData;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError("Error generating activity grid data", ex);
+      
+      // Return a valid activity grid to avoid 500 errors
+      return GenerateEmptyActivityGrid();
     }
   }
 

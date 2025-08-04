@@ -42,9 +42,31 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
 
     try
     {
-      _appLogger.LogInformation("Getting GitHub repository with slug: {Slug}", slug);
+      var currentTableName = GetTableName();
+      _appLogger.LogInformation("Getting GitHub repository with slug: {Slug} from table '{TableName}'", slug, currentTableName);
 
       var entity = await GetEntityBySlugAsync(slug);
+      
+      // If no entity found, try fallback table (handles environment variable mismatch)
+      if (entity == null)
+      {
+        var fallbackTableName = GetFallbackTableName();
+        if (!string.Equals(currentTableName, fallbackTableName, StringComparison.OrdinalIgnoreCase))
+        {
+          _appLogger.LogInformation("Repository with slug '{Slug}' not found in table '{CurrentTable}', trying fallback table '{FallbackTable}'", 
+            slug, currentTableName, fallbackTableName);
+          
+          entity = await GetEntityBySlugFromTableAsync(fallbackTableName, slug);
+          
+          if (entity != null)
+          {
+            _appLogger.LogWarning("Found repository with slug '{Slug}' in fallback table '{FallbackTable}' instead of expected table '{CurrentTable}'. " +
+              "This indicates a possible environment variable mismatch between sync and read operations.", 
+              slug, fallbackTableName, currentTableName);
+          }
+        }
+      }
+      
       if (entity == null || (isPublished == true && !entity.IsPublished))
       {
         _appLogger.LogInformation("GitHub repository with slug {Slug} not found or not published", slug);
@@ -68,11 +90,33 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
   {
     try
     {
-      _appLogger.LogInformation("Getting GitHub repository with GitHub ID: {GitHubId}", gitHubId);
+      var currentTableName = GetTableName();
+      _appLogger.LogInformation("Getting GitHub repository with GitHub ID: {GitHubId} from table '{TableName}'", gitHubId, currentTableName);
 
       // Query by GitHubId (this requires scanning the table since GitHubId is not a key)
       var entities = await GetAllEntitiesAsync();
       var entity = entities.FirstOrDefault(e => e.GitHubId == gitHubId);
+
+      // If no entity found, try fallback table (handles environment variable mismatch)
+      if (entity == null)
+      {
+        var fallbackTableName = GetFallbackTableName();
+        if (!string.Equals(currentTableName, fallbackTableName, StringComparison.OrdinalIgnoreCase))
+        {
+          _appLogger.LogInformation("Repository with GitHub ID '{GitHubId}' not found in table '{CurrentTable}', trying fallback table '{FallbackTable}'", 
+            gitHubId, currentTableName, fallbackTableName);
+          
+          var fallbackEntities = await GetAllEntitiesFromTableAsync(fallbackTableName);
+          entity = fallbackEntities.FirstOrDefault(e => e.GitHubId == gitHubId);
+          
+          if (entity != null)
+          {
+            _appLogger.LogWarning("Found repository with GitHub ID '{GitHubId}' in fallback table '{FallbackTable}' instead of expected table '{CurrentTable}'. " +
+              "This indicates a possible environment variable mismatch between sync and read operations.", 
+              gitHubId, fallbackTableName, currentTableName);
+          }
+        }
+      }
 
       if (entity == null)
       {
@@ -97,10 +141,32 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
   {
     try
     {
-      _appLogger.LogInformation("Getting GitHub repositories with category: {Category}, isPublished: {IsPublished}, limit: {Limit}",
-        category ?? "all", isPublished ?? false, limit ?? 0);
+      var currentTableName = GetTableName();
+      _appLogger.LogInformation("Getting GitHub repositories from table '{TableName}' with category: {Category}, isPublished: {IsPublished}, limit: {Limit}",
+        currentTableName, category ?? "all", isPublished ?? false, limit ?? 0);
 
       var entities = await GetEntitiesAsync(category, isPublished, limit);
+      
+      // If no entities found, try fallback table (handles environment variable mismatch)
+      if (!entities.Any())
+      {
+        var fallbackTableName = GetFallbackTableName();
+        if (!string.Equals(currentTableName, fallbackTableName, StringComparison.OrdinalIgnoreCase))
+        {
+          _appLogger.LogInformation("No repositories found in table '{CurrentTable}', trying fallback table '{FallbackTable}'", 
+            currentTableName, fallbackTableName);
+          
+          entities = await GetEntitiesFromTableAsync(fallbackTableName, category, isPublished, limit);
+          
+          if (entities.Any())
+          {
+            _appLogger.LogWarning("Found repositories in fallback table '{FallbackTable}' instead of expected table '{CurrentTable}'. " +
+              "This indicates a possible environment variable mismatch between sync and read operations.", 
+              fallbackTableName, currentTableName);
+          }
+        }
+      }
+      
       var models = entities.Select(e => e.ToModel<GitHubRepoModel>());
       var dtos = GitHubRepoMapper.ToDTOs(models);
 
@@ -211,6 +277,15 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
     var useMockStorage = Environment.GetEnvironmentVariable("USE_MOCK_STORAGE");
     var prefix = useMockStorage?.ToLowerInvariant() == "true" ? "mock" : string.Empty;
     return $"{prefix}github";
+  }
+
+  private static string GetFallbackTableName()
+  {
+    // Return the opposite table name for fallback scenarios
+    var useMockStorage = Environment.GetEnvironmentVariable("USE_MOCK_STORAGE");
+    var currentlyUsingMock = useMockStorage?.ToLowerInvariant() == "true";
+    var fallbackPrefix = currentlyUsingMock ? string.Empty : "mock";
+    return $"{fallbackPrefix}github";
   }
 
   protected override GitHubRepoDTO EntityToDto(GitHubRepoEntity entity)
@@ -351,6 +426,11 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
     return await _tableStorageService.GetEntityAsync<GitHubRepoEntity>(_tableName, GetPartitionKey(slug), GetRowKey(slug));
   }
 
+  protected async Task<GitHubRepoEntity?> GetEntityBySlugFromTableAsync(string tableName, string slug)
+  {
+    return await _tableStorageService.GetEntityAsync<GitHubRepoEntity>(tableName, GetPartitionKey(slug), GetRowKey(slug));
+  }
+
   protected async Task<IEnumerable<GitHubRepoEntity>> GetAllEntitiesAsync()
   {
     var result = await _tableStorageService.GetEntitiesAsync(_tableName);
@@ -366,6 +446,57 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
     }
 
     return entities;
+  }
+
+  protected async Task<IEnumerable<GitHubRepoEntity>> GetAllEntitiesFromTableAsync(string tableName)
+  {
+    var result = await _tableStorageService.GetEntitiesAsync(tableName);
+    var entities = new List<GitHubRepoEntity>();
+
+    foreach (var tableEntity in result.Entities)
+    {
+      var entity = ConvertTableEntityToTEntity(tableEntity);
+      if (entity != null)
+      {
+        entities.Add(entity);
+      }
+    }
+
+    return entities;
+  }
+
+  protected async Task<IEnumerable<GitHubRepoEntity>> GetEntitiesFromTableAsync(string tableName, string? category = null, bool? isPublished = true, int? limit = null)
+  {
+    var result = await _tableStorageService.GetEntitiesAsync(tableName);
+    var entities = new List<GitHubRepoEntity>();
+
+    foreach (var tableEntity in result.Entities)
+    {
+      var entity = ConvertTableEntityToTEntity(tableEntity);
+      if (entity != null)
+      {
+        entities.Add(entity);
+      }
+    }
+
+    var query = entities.AsQueryable();
+
+    if (isPublished.HasValue)
+    {
+      query = query.Where(e => IsPublished(e) == isPublished.Value);
+    }
+
+    if (!string.IsNullOrWhiteSpace(category))
+    {
+      query = query.Where(e => GetCategory(e) == category);
+    }
+
+    if (limit.HasValue)
+    {
+      query = query.Take(limit.Value);
+    }
+
+    return query.ToList();
   }
 
   protected async Task<IEnumerable<GitHubRepoEntity>> GetEntitiesAsync(string? category = null, bool? isPublished = true, int? limit = null)
