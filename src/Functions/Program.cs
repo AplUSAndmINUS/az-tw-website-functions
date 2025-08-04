@@ -25,38 +25,23 @@ public class Program
             {
                 var configuration = context.Configuration;
 
-                // Register Application Insights telemetry with explicit configuration
-                services.AddApplicationInsightsTelemetryWorkerService(options => {
-                    // Use connection string from environment variable or app settings
-                    var connectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
-                    if (!string.IsNullOrEmpty(connectionString))
-                    {
-                        options.ConnectionString = connectionString;
-                    }
-                    
-                    // Disable adaptive sampling
-                    options.EnableAdaptiveSampling = false;
-                    // Enable dependencies tracking
-                    options.EnableDependencyTrackingTelemetryModule = true;
-                    // Enable performance counter collection
-                    options.EnablePerformanceCounterCollectionModule = true;
-                });
+                // Register Application Insights telemetry
+                services.AddApplicationInsightsTelemetryWorkerService();
+
+                // Log configuration diagnostic info at startup
+                var connectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
+                var instrumentationKey = Environment.GetEnvironmentVariable("APPINSIGHTS_INSTRUMENTATIONKEY");
                 
-                // Add our custom telemetry initializer
-                services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
-                
-                // Explicitly configure TelemetryClient
-                services.AddSingleton<TelemetryClient>(sp => {
-                    var telemetryConfiguration = sp.GetRequiredService<TelemetryConfiguration>();
-                    
-                    // Ensure the client is set up for immediate transmission
-                    if (telemetryConfiguration.TelemetryChannel != null)
-                    {
-                        telemetryConfiguration.TelemetryChannel.DeveloperMode = true;
-                    }
-                    
-                    return new TelemetryClient(telemetryConfiguration);
-                });
+                if (string.IsNullOrEmpty(connectionString) && string.IsNullOrEmpty(instrumentationKey))
+                {
+                    Console.WriteLine("WARNING: APPINSIGHTS CONFIGURATION MISSING - Neither APPLICATIONINSIGHTS_CONNECTION_STRING nor APPINSIGHTS_INSTRUMENTATIONKEY environment variables are set.");
+                    Console.WriteLine($"Current environment: {Utils.Configuration.EnvironmentHelper.GetCurrentEnvironment()}");
+                    Console.WriteLine("To fix this issue, set the APPLICATIONINSIGHTS_CONNECTION_STRING environment variable in your Azure Function App settings.");
+                }
+                else
+                {
+                    Console.WriteLine($"AppInsights configuration found - ConnectionString: {!string.IsNullOrEmpty(connectionString)}, InstrumentationKey: {!string.IsNullOrEmpty(instrumentationKey)}");
+                }
 
                 // Register AppInsightsLogger
                 services.AddSingleton(typeof(IAppInsightsLogger<>), typeof(AppInsightsLogger<>));
