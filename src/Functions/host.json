@@ -23,7 +23,10 @@
     },
     "extensions": {
         "http": {
-            "routePrefix": ""
+            "routePrefix": "",
+            "maxOutstandingRequests": 100,
+            "maxConcurrentRequests": 100,
+            "dynamicThrottlesEnabled": true
         }
     }
 }
