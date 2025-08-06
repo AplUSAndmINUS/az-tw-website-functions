@@ -98,16 +98,44 @@ public class UpsertBlogPost : BaseContentFunctions<IBlogPostService, BlogPostMod
       _appLogger.LogInformation("Deserialized blog post: Title={Title}, Slug={Slug}", blogPost!.Title, blogPost.Slug);
 
       // Extract slug from route or use the one from the model
-      var slug = req.FunctionContext.BindingContext.BindingData.ContainsKey("slug")
+      var routeSlug = req.FunctionContext.BindingContext.BindingData.ContainsKey("slug")
           ? req.FunctionContext.BindingContext.BindingData["slug"]?.ToString()
-          : blogPost.Slug;
+          : null;
+      
+      var modelSlug = blogPost.Slug;
+      
+      _appLogger.LogInformation("Route slug: {RouteSlug}, Model slug: {ModelSlug}", routeSlug ?? "null", modelSlug ?? "null");
 
-      _appLogger.LogInformation("Using slug: {Slug}", slug ?? "null");
-
-      if (string.IsNullOrWhiteSpace(slug))
+      // Determine final slug with validation
+      string slug;
+      if (!string.IsNullOrWhiteSpace(routeSlug))
+      {
+        // Route slug takes priority
+        slug = routeSlug;
+        _appLogger.LogInformation("Using route slug: {Slug}", slug);
+      }
+      else if (!string.IsNullOrWhiteSpace(modelSlug))
+      {
+        // Validate model slug is not a placeholder value
+        if (IsPlaceholderSlug(modelSlug))
+        {
+          _appLogger.LogWarning("Model slug appears to be a placeholder value: {Slug}", modelSlug);
+          return CreateBadRequestResponse(req, $"Invalid slug '{modelSlug}'. Please provide a unique, meaningful slug for your blog post.");
+        }
+        slug = modelSlug;
+        _appLogger.LogInformation("Using model slug: {Slug}", slug);
+      }
+      else
       {
         _appLogger.LogWarning("Slug is missing from both route and model");
-        return CreateBadRequestResponse(req, "Slug is required");
+        return CreateBadRequestResponse(req, "Slug is required. Please provide a slug in the URL path (e.g., /posts/my-blog-post) or in the request body.");
+      }
+
+      // Additional slug validation
+      if (!IsValidSlug(slug))
+      {
+        _appLogger.LogWarning("Invalid slug format: {Slug}", slug);
+        return CreateBadRequestResponse(req, $"Invalid slug format '{slug}'. Slug must contain only lowercase letters, numbers, and hyphens.");
       }
 
       blogPost.Slug = slug;
@@ -188,5 +216,48 @@ public class UpsertBlogPost : BaseContentFunctions<IBlogPostService, BlogPostMod
 
     Console.WriteLine($"DEBUG: EnsureDateTimeFieldsAreUtc - Final PublishDate={blogPost.PublishDate} (Kind={blogPost.PublishDate.Kind})");
     Console.WriteLine($"DEBUG: EnsureDateTimeFieldsAreUtc - Final LastModified={blogPost.LastModified} (Kind={blogPost.LastModified.Kind})");
+  }
+
+  /// <summary>
+  /// Checks if a slug appears to be a placeholder or sample value that should be rejected
+  /// </summary>
+  private static bool IsPlaceholderSlug(string slug)
+  {
+    if (string.IsNullOrWhiteSpace(slug))
+      return true;
+
+    var lowerSlug = slug.ToLowerInvariant();
+    
+    // Common placeholder patterns to reject
+    var placeholderPatterns = new[]
+    {
+      "sample-blog-post",
+      "test-blog-post", 
+      "example-blog-post",
+      "placeholder-blog-post",
+      "default-blog-post",
+      "sample-post",
+      "test-post",
+      "example-post",
+      "demo-post",
+      "template-post"
+    };
+
+    return placeholderPatterns.Contains(lowerSlug);
+  }
+
+  /// <summary>
+  /// Validates that a slug follows proper URL-safe format
+  /// </summary>
+  private static bool IsValidSlug(string slug)
+  {
+    if (string.IsNullOrWhiteSpace(slug))
+      return false;
+
+    // Basic validation: only lowercase letters, numbers, and hyphens
+    // Must start and end with alphanumeric character
+    // No consecutive hyphens
+    var pattern = @"^[a-z0-9]+(?:-[a-z0-9]+)*$";
+    return System.Text.RegularExpressions.Regex.IsMatch(slug, pattern);
   }
 }
