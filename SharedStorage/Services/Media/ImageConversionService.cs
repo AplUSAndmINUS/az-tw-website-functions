@@ -37,14 +37,36 @@ public class ImageConversionService : IImageService
   {
     _appLogger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-    // Explicitly ensure all decoders are registered
-    Configuration.Default.ImageFormatsManager.SetEncoder(WebpFormat.Instance, new WebpEncoder());
-    Configuration.Default.ImageFormatsManager.SetEncoder(JpegFormat.Instance, new JpegEncoder());
-    Configuration.Default.ImageFormatsManager.SetEncoder(PngFormat.Instance, new PngEncoder());
-    Configuration.Default.ImageFormatsManager.SetEncoder(GifFormat.Instance, new GifEncoder());
-    Configuration.Default.ImageFormatsManager.SetEncoder(BmpFormat.Instance, new BmpEncoder());
+    // In ImageSharp 3.x, encoders and decoders are automatically registered
+    // We'll just log the initialization
+    _appLogger.LogInformation("ImageConversionService initialized - using ImageSharp v3.1.11");
 
-    _appLogger.LogInformation("ImageConversionService initialized with all encoders registered");
+    // Add additional logging for diagnostic purposes
+    try
+    {
+      // List the supported formats by checking which encoders are registered
+      var formats = new[] { "webp", "jpeg", "png", "gif", "bmp" };
+      _appLogger.LogInformation("Checking for supported image formats...");
+
+      foreach (var format in formats)
+      {
+        var isSupported = format switch
+        {
+          "webp" => Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension(".webp", out _),
+          "jpeg" => Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension(".jpg", out _),
+          "png" => Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension(".png", out _),
+          "gif" => Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension(".gif", out _),
+          "bmp" => Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension(".bmp", out _),
+          _ => false
+        };
+
+        _appLogger.LogInformation("Format {Format} is {Status}", format, isSupported ? "supported" : "NOT supported");
+      }
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogWarning("Error checking supported formats: {Error}", ex.Message);
+    }
   }
 
   public async Task<ImageConversionResult> ConvertToWebPAsync(Stream input, int? maxWidth = null, int? maxHeight = null, int quality = 85)
@@ -121,31 +143,58 @@ public class ImageConversionService : IImageService
         TargetSize = new Size(4000, 4000) // Reasonable max size limit to prevent decompression bombs
       };
 
-      // Alternative approach: try loading from byte array directly
+      // Try multiple loading approaches to ensure compatibility
       Image image;
+
+      // First check if we have a valid image format
+      var detectedFormat = Image.DetectFormat(cleanStream);
+      if (detectedFormat == null)
+      {
+        _appLogger.LogWarning("Could not detect image format from stream data");
+        throw new InvalidOperationException("Unsupported image format. Could not detect valid image format signature.");
+      }
+
+      _appLogger.LogInformation("Detected image format: {Format}", detectedFormat.Name);
+      cleanStream.Position = 0;
+
       try
       {
-        _appLogger.LogInformation("Attempting to load image with explicit decoder options...");
+        // Try simplified loading approach first - most reliable in v3
+        _appLogger.LogInformation("Attempting to load image with standard method...");
         cleanStream.Position = 0;
-        image = await Image.LoadAsync(decoderOptions, cleanStream);
-        _appLogger.LogInformation("Successfully loaded image from stream with decoder options");
+        image = Image.Load(cleanStream);
+        _appLogger.LogInformation("Successfully loaded image using standard method");
       }
-      catch (Exception streamEx)
+      catch (Exception standardEx)
       {
-        _appLogger.LogWarning("Failed to load from stream, trying byte array approach: {Error}", streamEx.Message);
+        _appLogger.LogWarning("Failed to load with standard method: {Error}", standardEx.Message);
 
-        // Fallback: try loading directly from byte array
         try
         {
-          image = Image.Load(decoderOptions, streamData);
-          _appLogger.LogInformation("Successfully loaded image from byte array");
+          // Try with decoder options
+          _appLogger.LogInformation("Attempting to load image with explicit decoder options...");
+          cleanStream.Position = 0;
+          image = await Image.LoadAsync(decoderOptions, cleanStream);
+          _appLogger.LogInformation("Successfully loaded image with decoder options");
         }
-        catch (Exception byteEx)
+        catch (Exception streamEx)
         {
-          _appLogger.LogError("Failed to load image from both stream and byte array. Stream error: {StreamError}, Byte array error: {ByteError}",
-            byteEx, streamEx.Message, byteEx.Message);
+          _appLogger.LogWarning("Failed to load from stream with options, trying byte array approach: {Error}", streamEx.Message);
 
-          throw new InvalidOperationException($"Unable to load image. Stream error: {streamEx.Message}, Byte array error: {byteEx.Message}");
+          // Final fallback: try loading directly from byte array
+          try
+          {
+            _appLogger.LogInformation("Attempting to load from byte array directly...");
+            image = Image.Load(streamData);
+            _appLogger.LogInformation("Successfully loaded image from byte array");
+          }
+          catch (Exception byteEx)
+          {
+            _appLogger.LogError("All image loading approaches failed. Errors: {Error1}, {Error2}, {Error3}",
+              byteEx, standardEx.Message, streamEx.Message, byteEx.Message);
+
+            throw new InvalidOperationException($"Unable to load image. The file may be corrupted or in an unsupported format. Error: {byteEx.Message}");
+          }
         }
       }
 
