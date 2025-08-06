@@ -3,6 +3,11 @@ using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
 using Microsoft.Extensions.Logging;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Gif;
+using SixLabors.ImageSharp.Formats.Bmp;
+using SixLabors.ImageSharp.Formats.Tga;
 using Utils;
 
 namespace SharedStorage.Services.Media;
@@ -31,6 +36,15 @@ public class ImageConversionService : IImageService
   public ImageConversionService(IAppInsightsLogger<ImageConversionService> logger)
   {
     _appLogger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+    // Explicitly ensure all decoders are registered
+    Configuration.Default.ImageFormatsManager.SetEncoder(WebpFormat.Instance, new WebpEncoder());
+    Configuration.Default.ImageFormatsManager.SetEncoder(JpegFormat.Instance, new JpegEncoder());
+    Configuration.Default.ImageFormatsManager.SetEncoder(PngFormat.Instance, new PngEncoder());
+    Configuration.Default.ImageFormatsManager.SetEncoder(GifFormat.Instance, new GifEncoder());
+    Configuration.Default.ImageFormatsManager.SetEncoder(BmpFormat.Instance, new BmpEncoder());
+
+    _appLogger.LogInformation("ImageConversionService initialized with all encoders registered");
   }
 
   public async Task<ImageConversionResult> ConvertToWebPAsync(Stream input, int? maxWidth = null, int? maxHeight = null, int quality = 85)
@@ -100,13 +114,21 @@ public class ImageConversionService : IImageService
       _appLogger.LogInformation("Created clean stream - Length: {Length}, Position: {Position}, CanRead: {CanRead}, CanSeek: {CanSeek}",
         cleanStream.Length, cleanStream.Position, cleanStream.CanRead, cleanStream.CanSeek);
 
+      // Create decoder options with more relaxed settings
+      var decoderOptions = new DecoderOptions
+      {
+        MaxFrames = 1, // Only need first frame
+        TargetSize = new Size(4000, 4000) // Reasonable max size limit to prevent decompression bombs
+      };
+
       // Alternative approach: try loading from byte array directly
       Image image;
       try
       {
-        _appLogger.LogInformation("Attempting to load image from clean stream...");
-        image = await Image.LoadAsync(cleanStream);
-        _appLogger.LogInformation("Successfully loaded image from stream");
+        _appLogger.LogInformation("Attempting to load image with explicit decoder options...");
+        cleanStream.Position = 0;
+        image = await Image.LoadAsync(decoderOptions, cleanStream);
+        _appLogger.LogInformation("Successfully loaded image from stream with decoder options");
       }
       catch (Exception streamEx)
       {
@@ -115,13 +137,14 @@ public class ImageConversionService : IImageService
         // Fallback: try loading directly from byte array
         try
         {
-          image = Image.Load(streamData);
+          image = Image.Load(decoderOptions, streamData);
           _appLogger.LogInformation("Successfully loaded image from byte array");
         }
         catch (Exception byteEx)
         {
-          _appLogger.LogError("Failed to load image from both stream and byte array. Stream error: {StreamError}, Byte error: {ByteError}",
+          _appLogger.LogError("Failed to load image from both stream and byte array. Stream error: {StreamError}, Byte array error: {ByteError}",
             byteEx, streamEx.Message, byteEx.Message);
+
           throw new InvalidOperationException($"Unable to load image. Stream error: {streamEx.Message}, Byte array error: {byteEx.Message}");
         }
       }
