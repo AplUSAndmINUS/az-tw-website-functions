@@ -76,6 +76,27 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
         throw new ArgumentException($"Stream too small to be a valid image ({originalStreamData.Length} bytes)", nameof(stream));
       }
 
+      // Add extra safety checks before conversion
+      _logger.LogInformation("Checking image data integrity before conversion");
+
+      // Perform basic image header validation to ensure data integrity
+      bool isValidImage = false;
+      if (originalStreamData.Length >= 4)
+      {
+        // Check for common image file signatures
+        if ((originalStreamData[0] == 0xFF && originalStreamData[1] == 0xD8 && originalStreamData[2] == 0xFF) || // JPEG
+            (originalStreamData[0] == 0x89 && originalStreamData[1] == 0x50 && originalStreamData[2] == 0x4E && originalStreamData[3] == 0x47) || // PNG
+            (originalStreamData[0] == 0x47 && originalStreamData[1] == 0x49 && originalStreamData[2] == 0x46 && originalStreamData[3] == 0x38)) // GIF
+        {
+          isValidImage = true;
+        }
+      }
+
+      if (!isValidImage)
+      {
+        _logger.LogWarning("Image data doesn't have a valid header signature. This may cause conversion issues.");
+      }
+
       // Convert and optimize the image using a fresh, clean stream
       _logger.LogInformation("Converting image to optimized WebP format");
       using var conversionStream = new MemoryStream(originalStreamData);
@@ -89,7 +110,28 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
       _logger.LogInformation("Conversion stream created - Length: {Length}, Position: {Position}, CanRead: {CanRead}, CanSeek: {CanSeek}",
         conversionStream.Length, conversionStream.Position, conversionStream.CanRead, conversionStream.CanSeek);
 
-      var conversionResult = await _imageService.ConvertToWebPAsync(conversionStream, maxWidth: 2048, maxHeight: 2048, quality: 85);
+      // Use a more conservative approach for conversion with error handling
+      ImageConversionResult conversionResult;
+      try
+      {
+        conversionResult = await _imageService.ConvertToWebPAsync(conversionStream, maxWidth: 2048, maxHeight: 2048, quality: 85);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError("Image conversion failed with standard parameters, trying fallback approach with lower quality", ex);
+
+        // Reset the stream and try again with more conservative parameters
+        conversionStream.Position = 0;
+        try
+        {
+          conversionResult = await _imageService.ConvertToWebPAsync(conversionStream, maxWidth: 1024, maxHeight: 1024, quality: 70);
+        }
+        catch (Exception fallbackEx)
+        {
+          _logger.LogError("Fallback image conversion also failed", fallbackEx);
+          throw new InvalidOperationException("Unable to process image file. The image may be corrupted or in an unsupported format.", fallbackEx);
+        }
+      }
 
       // Upload optimized image to blob storage with content relationship if provided
       _logger.LogInformation("Uploading optimized image to blob storage: {BlobName}", originalBlobName);
@@ -102,14 +144,24 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
 
       var mediaReference = await _blobStorageService.UploadBlobAsync(containerName, originalBlobName, conversionResult.Content, safeContentId, safeRelatedContentType);
 
-      // Generate thumbnail from the original stream data
-      using var thumbnailStream = new MemoryStream(originalStreamData);
-      var thumbnailResult = await _thumbnailService.GenerateWebPThumbnailAsync(thumbnailStream);
+      // Generate thumbnail from the original stream data (with graceful fallback)
+      string? thumbnailUrl = null;
+      try
+      {
+        using var thumbnailStream = new MemoryStream(originalStreamData);
+        var thumbnailResult = await _thumbnailService.GenerateWebPThumbnailAsync(thumbnailStream);
 
-      // Upload thumbnail to blob storage
-      _logger.LogInformation("Uploading thumbnail to blob storage: {ThumbnailBlobName}", thumbnailBlobName);
-      // Pass null explicitly for content relationships for thumbnail
-      await _blobStorageService.UploadBlobAsync(containerName, thumbnailBlobName, thumbnailResult.Content, null, null);
+        // Upload thumbnail to blob storage
+        _logger.LogInformation("Uploading thumbnail to blob storage: {ThumbnailBlobName}", thumbnailBlobName);
+        // Pass null explicitly for content relationships for thumbnail
+        var thumbnailRef = await _blobStorageService.UploadBlobAsync(containerName, thumbnailBlobName, thumbnailResult.Content, null, null);
+        thumbnailUrl = thumbnailRef.ThumbnailCdnUrl;
+      }
+      catch (Exception thumbEx)
+      {
+        // Log error but continue without thumbnail
+        _logger.LogWarning("Failed to generate or upload thumbnail, proceeding without it: {Error}", thumbEx.Message);
+      }
 
       // Get image dimensions from conversion result
       var (width, height) = (conversionResult.Width, conversionResult.Height);
@@ -124,7 +176,7 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
         Filename = webpFileName,
         MediaType = "image",
         Url = mediaReference.CdnUrl, // Use CDN URL from MediaReference
-        ThumbnailUrl = mediaReference.ThumbnailCdnUrl, // Use thumbnail CDN URL from MediaReference
+        ThumbnailUrl = thumbnailUrl ?? mediaReference.CdnUrl, // Use thumbnail URL if available, fall back to main URL
         ContentType = "image/webp", // Always WebP after conversion
         Width = width,
         Height = height,

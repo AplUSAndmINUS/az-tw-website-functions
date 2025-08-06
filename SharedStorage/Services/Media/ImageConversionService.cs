@@ -146,22 +146,60 @@ public class ImageConversionService : IImageService
       // Try multiple loading approaches to ensure compatibility
       Image image;
 
-      // First check if we have a valid image format
-      var detectedFormat = Image.DetectFormat(cleanStream);
-      if (detectedFormat == null)
-      {
-        _appLogger.LogWarning("Could not detect image format from stream data");
-        throw new InvalidOperationException("Unsupported image format. Could not detect valid image format signature.");
-      }
-
-      _appLogger.LogInformation("Detected image format: {Format}", detectedFormat.Name);
+      // Reset stream position
       cleanStream.Position = 0;
 
+      // Determine likely image format based on headers for more targeted loading
+      string detectedFormat = "unknown";
+      if (streamData.Length >= 4)
+      {
+        // JPEG: FF D8 FF
+        if (streamData[0] == 0xFF && streamData[1] == 0xD8 && streamData[2] == 0xFF)
+        {
+          detectedFormat = "jpeg";
+        }
+        // PNG: 89 50 4E 47
+        else if (streamData[0] == 0x89 && streamData[1] == 0x50 && streamData[2] == 0x4E && streamData[3] == 0x47)
+        {
+          detectedFormat = "png";
+        }
+        // GIF: 47 49 46 38
+        else if (streamData[0] == 0x47 && streamData[1] == 0x49 && streamData[2] == 0x46 && streamData[3] == 0x38)
+        {
+          detectedFormat = "gif";
+        }
+        // BMP: 42 4D
+        else if (streamData[0] == 0x42 && streamData[1] == 0x4D)
+        {
+          detectedFormat = "bmp";
+        }
+        // TIFF: 49 49 2A 00 or 4D 4D 00 2A
+        else if ((streamData[0] == 0x49 && streamData[1] == 0x49 && streamData[2] == 0x2A && streamData[3] == 0x00) ||
+                (streamData[0] == 0x4D && streamData[1] == 0x4D && streamData[2] == 0x00 && streamData[3] == 0x2A))
+        {
+          detectedFormat = "tiff";
+        }
+        // WebP: RIFF....WEBP (check positions 0-3 and 8-11)
+        else if (streamData.Length >= 12 &&
+                streamData[0] == 0x52 && streamData[1] == 0x49 && streamData[2] == 0x46 && streamData[3] == 0x46 &&
+                streamData[8] == 0x57 && streamData[9] == 0x45 && streamData[10] == 0x42 && streamData[11] == 0x50)
+        {
+          detectedFormat = "webp";
+        }
+      }
+
+      _appLogger.LogInformation("Header-based format detection: {Format}", detectedFormat);
+
+      // Directly try file extension handling for known formats
+      cleanStream.Position = 0;
+
+      // First attempt: Use standard loading with detailed error catching
       try
       {
-        // Try simplified loading approach first - most reliable in v3
         _appLogger.LogInformation("Attempting to load image with standard method...");
         cleanStream.Position = 0;
+
+        // For v3.1.11 compatibility - use the standard Load method
         image = Image.Load(cleanStream);
         _appLogger.LogInformation("Successfully loaded image using standard method");
       }
@@ -169,9 +207,9 @@ public class ImageConversionService : IImageService
       {
         _appLogger.LogWarning("Failed to load with standard method: {Error}", standardEx.Message);
 
+        // Second attempt: Try with decoder options
         try
         {
-          // Try with decoder options
           _appLogger.LogInformation("Attempting to load image with explicit decoder options...");
           cleanStream.Position = 0;
           image = await Image.LoadAsync(decoderOptions, cleanStream);
@@ -181,7 +219,7 @@ public class ImageConversionService : IImageService
         {
           _appLogger.LogWarning("Failed to load from stream with options, trying byte array approach: {Error}", streamEx.Message);
 
-          // Final fallback: try loading directly from byte array
+          // Third attempt: Try loading directly from byte array
           try
           {
             _appLogger.LogInformation("Attempting to load from byte array directly...");
@@ -190,10 +228,80 @@ public class ImageConversionService : IImageService
           }
           catch (Exception byteEx)
           {
-            _appLogger.LogError("All image loading approaches failed. Errors: {Error1}, {Error2}, {Error3}",
-              byteEx, standardEx.Message, streamEx.Message, byteEx.Message);
+            // Fourth attempt: Try with a temporary file
+            try
+            {
+              _appLogger.LogInformation("Last resort: Creating temporary file and loading from disk...");
 
-            throw new InvalidOperationException($"Unable to load image. The file may be corrupted or in an unsupported format. Error: {byteEx.Message}");
+              // Create a temporary file with appropriate extension based on detected format
+              string extension = detectedFormat == "unknown" ? ".tmp" : $".{detectedFormat}";
+              string tempFile = Path.Combine(Path.GetTempPath(), $"image-temp-{Guid.NewGuid()}{extension}");
+
+              // Write image data to the temporary file
+              File.WriteAllBytes(tempFile, streamData);
+
+              // Try to load from the file
+              image = Image.Load(tempFile);
+
+              // Delete temporary file
+              try { File.Delete(tempFile); } catch { }
+
+              _appLogger.LogInformation("Successfully loaded image from temporary file with extension: {Extension}", extension);
+            }
+            catch (Exception tempFileEx)
+            {
+              // Last attempt: If it's a JPEG file with incorrect headers, try fixing common corruption patterns
+              if (detectedFormat == "jpeg" || (detectedFormat == "unknown" && streamData.Length > 4))
+              {
+                try
+                {
+                  _appLogger.LogInformation("Attempting JPEG recovery for possibly corrupted file...");
+
+                  // Create fixed version with proper JPEG header if needed
+                  var fixedData = new byte[streamData.Length + 2]; // Add space for potential missing bytes
+
+                  // Copy existing data
+                  Array.Copy(streamData, 0, fixedData, 0, streamData.Length);
+
+                  // Ensure JPEG header is present and correct
+                  if (!(fixedData[0] == 0xFF && fixedData[1] == 0xD8 && fixedData[2] == 0xFF))
+                  {
+                    fixedData[0] = 0xFF;
+                    fixedData[1] = 0xD8;
+                    fixedData[2] = 0xFF;
+                  }
+
+                  // Try load with fixed data
+                  image = Image.Load(fixedData);
+                  _appLogger.LogInformation("Successfully loaded image after JPEG header repair");
+                }
+                catch (Exception recoveryEx)
+                {
+                  _appLogger.LogError("All image loading approaches failed, including recovery attempts", recoveryEx);
+
+                  // Comprehensive error logging for diagnostics
+                  _appLogger.LogInformation("Initial error: {0}", standardEx.Message);
+                  _appLogger.LogInformation("Options loading error: {0}", streamEx.Message);
+                  _appLogger.LogInformation("Byte array loading error: {0}", byteEx.Message);
+                  _appLogger.LogInformation("Temp file loading error: {0}", tempFileEx.Message);
+                  _appLogger.LogInformation("Recovery error: {0}", recoveryEx.Message);
+
+                  throw new InvalidOperationException($"Unable to load image with any method. The file may be corrupted or in an unsupported format. Error: {recoveryEx.Message}", recoveryEx);
+                }
+              }
+              else
+              {
+                _appLogger.LogError("All image loading approaches failed", tempFileEx);
+
+                // Comprehensive error logging for diagnostics
+                _appLogger.LogInformation("Initial error: {0}", standardEx.Message);
+                _appLogger.LogInformation("Options loading error: {0}", streamEx.Message);
+                _appLogger.LogInformation("Byte array loading error: {0}", byteEx.Message);
+                _appLogger.LogInformation("Temp file loading error: {0}", tempFileEx.Message);
+
+                throw new InvalidOperationException($"Unable to load image with any method. The file may be corrupted or in an unsupported format. Error: {tempFileEx.Message}", tempFileEx);
+              }
+            }
           }
         }
       }
