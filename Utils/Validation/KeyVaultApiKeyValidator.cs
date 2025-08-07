@@ -87,12 +87,52 @@ public class KeyVaultApiKeyValidator : IAPIKeyValidator
   {
     try
     {
+      // Debug: Log the environment value
+      _appLogger.LogInformation($"KeyVaultApiKeyValidator: Environment detected as '{_environment}'");
+      
+      // Check if we're running in any local/development environment and skip Key Vault validation
+      // This includes "localhost", "develop", or any environment where Key Vault isn't available
+      var isLocalEnvironment = _environment == "localhost" || 
+                               _environment == "develop" || 
+                               Environment.GetEnvironmentVariable("AzureWebJobsScriptRoot") == null;
+      
+      if (isLocalEnvironment)
+      {
+        _appLogger.LogInformation("Using local/development mode - bypassing Key Vault");
+        var apiKey = req.Headers.TryGetValues("x-api-key", out var apiKeyValues) ? apiKeyValues.FirstOrDefault() : null;
+        var expectedKey = Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY") ?? "test-api-key";
+        
+        if (string.IsNullOrWhiteSpace(apiKey) || !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+        {
+          var errorResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
+          errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+
+          var errorObject = new { error = "Unauthorized access due to invalid API key." };
+          var jsonOptions = new JsonSerializerOptions
+          {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+          };
+
+          await errorResponse.WriteStringAsync(JsonSerializer.Serialize(errorObject, jsonOptions));
+          return errorResponse;
+        }
+        
+        // Log success for localhost
+        var loggerType = logger.GetType();
+        var logMethod = loggerType.GetMethod("LogInformation", new[] { typeof(string), typeof(object[]) });
+        logMethod?.Invoke(logger, new object[] { "API key validation successful for {FunctionName} (local/development mode)", new object[] { functionName } });
+
+        return null; // Validation successful
+      }
+
+      _appLogger.LogInformation("Using Key Vault mode");
       await ValidateOrThrowAsync(req);
 
       // Use reflection to log success if logger has LogInformation method
-      var loggerType = logger.GetType();
-      var logMethod = loggerType.GetMethod("LogInformation", new[] { typeof(string), typeof(object[]) });
-      logMethod?.Invoke(logger, new object[] { "API key validation successful for {FunctionName}", new object[] { functionName } });
+      var loggerType2 = logger.GetType();
+      var logMethod2 = loggerType2.GetMethod("LogInformation", new[] { typeof(string), typeof(object[]) });
+      logMethod2?.Invoke(logger, new object[] { "API key validation successful for {FunctionName}", new object[] { functionName } });
 
       return null; // Validation successful
     }
@@ -119,21 +159,52 @@ public class KeyVaultApiKeyValidator : IAPIKeyValidator
     }
     catch (Exception ex)
     {
-      // Handle Key Vault or other errors
-      _appLogger.LogError($"Error during API key validation: {ex.Message}", ex);
+      // Handle Key Vault or other errors - also treat this as local environment fallback
+      _appLogger.LogError($"Key Vault access error (falling back to local mode): {ex.Message}", ex);
 
-      var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-      errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
-
-      var errorObject = new { error = "Internal server error during authentication." };
-      var jsonOptions = new JsonSerializerOptions
+      // Fallback to local validation if Key Vault is not accessible
+      try
       {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
-      };
+        var apiKey = req.Headers.TryGetValues("x-api-key", out var apiKeyValues) ? apiKeyValues.FirstOrDefault() : null;
+        var expectedKey = Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY") ?? "test-api-key";
+        
+        if (string.IsNullOrWhiteSpace(apiKey) || !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+        {
+          var errorResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
+          errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
 
-      await errorResponse.WriteStringAsync(JsonSerializer.Serialize(errorObject, jsonOptions));
-      return errorResponse;
+          var errorObject = new { error = "Unauthorized access due to invalid API key." };
+          var jsonOptions = new JsonSerializerOptions
+          {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+          };
+
+          await errorResponse.WriteStringAsync(JsonSerializer.Serialize(errorObject, jsonOptions));
+          return errorResponse;
+        }
+
+        // Log success for fallback mode
+        _appLogger.LogInformation("API key validation successful using fallback mode for function: {FunctionName}", functionName);
+        return null; // Validation successful
+      }
+      catch (Exception fallbackEx)
+      {
+        _appLogger.LogError($"Fallback validation also failed: {fallbackEx.Message}", fallbackEx);
+        
+        var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+        errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+
+        var errorObject = new { error = "Internal server error during authentication." };
+        var jsonOptions = new JsonSerializerOptions
+        {
+          PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+          WriteIndented = true
+        };
+
+        await errorResponse.WriteStringAsync(JsonSerializer.Serialize(errorObject, jsonOptions));
+        return errorResponse;
+      }
     }
   }
 
