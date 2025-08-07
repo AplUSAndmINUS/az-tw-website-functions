@@ -1,0 +1,21 @@
+{
+    "IsEncrypted": true,
+    "Values": {
+        "FUNCTIONS_WORKER_RUNTIME": "<FUNCTIONS_WORKER_RUNTIME>",
+        "PROXY_ALLOWED_ORIGINS": "<PROXY_ALLOWED_ORIGINS>",
+        "PROXY_ALLOWED_IP_RANGES": "<PROXY_ALLOWED_IP_RANGES>",
+        "PROXY_ENABLE_DETAILED_LOGGING": "<PROXY_ENABLE_DETAILED_LOGGING>",
+        "USE_MOCK_STORAGE": "<USE_MOCK_STORAGE>",
+        "AZURE_STORAGE_CONNECTION_STRING": "<AZURE_STORAGE_CONNECTION_STRING>",
+        "AzureWebJobsStorage": "UseDevelopmentStorage=false",
+        "PROXY_BASE_URL": "https://az-tw-website-develop.azurewebsites.net",
+        "FROM_EMAIL": "<FROM_EMAIL>",
+        "FROM_NAME": "<FROM_NAME>",
+        "SMTP_PORT": "<SMTP_PORT>",
+        "SMTP_SERVER": "<SMTP_SERVER>",
+        "SMTP_USERNAME": "<SMTP_USERNAME>",
+        "SMTP_PASSWORD": "<SMTP_PASSWORD>",
+        "TO_EMAIL": "<TO_EMAIL>"
+    },
+    "ConnectionStrings": {}
+}
