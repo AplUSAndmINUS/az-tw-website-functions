@@ -7,8 +7,11 @@ using Functions.GitHub.Services;
 using Functions.ContactMe.Services;
 using Functions.Proxy.Services;
 using Functions.Proxy.Models;
+using Functions.Proxy;
 using SharedStorage.Extensions;
 using Utils.Configuration;
+using Utils;
+using Utils.Services;
 
 namespace Functions.Extensions;
 
@@ -89,6 +92,36 @@ public static class FunctionServiceExtensions
     // Register proxy services
     services.AddScoped<ICorsValidationService, CorsValidationService>();
     services.AddScoped<IRequestForwardingService, RequestForwardingService>();
+
+    // Register ProxyFunction with conditional KeyVaultService dependency
+    var environment = EnvironmentHelper.GetCurrentEnvironment();
+    if (environment == "localhost")
+    {
+      // For localhost, register ProxyFunction without KeyVaultService
+      services.AddScoped<ProxyFunction>(provider =>
+      {
+        var logger = provider.GetRequiredService<IAppInsightsLogger<ProxyFunction>>();
+        var forwardingService = provider.GetRequiredService<IRequestForwardingService>();
+        var corsService = provider.GetRequiredService<ICorsValidationService>();
+        var config = provider.GetRequiredService<ProxyConfiguration>();
+        
+        return new ProxyFunction(logger, forwardingService, corsService, config, null);
+      });
+    }
+    else
+    {
+      // For deployed environments, register ProxyFunction with KeyVaultService
+      services.AddScoped<ProxyFunction>(provider =>
+      {
+        var logger = provider.GetRequiredService<IAppInsightsLogger<ProxyFunction>>();
+        var forwardingService = provider.GetRequiredService<IRequestForwardingService>();
+        var corsService = provider.GetRequiredService<ICorsValidationService>();
+        var config = provider.GetRequiredService<ProxyConfiguration>();
+        var keyVaultService = provider.GetRequiredService<IKeyVaultService>();
+        
+        return new ProxyFunction(logger, forwardingService, corsService, config, keyVaultService);
+      });
+    }
 
     return services;
   }

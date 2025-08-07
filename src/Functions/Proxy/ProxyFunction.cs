@@ -6,6 +6,7 @@ using Functions.Proxy.Services;
 using Functions.Proxy.Models;
 using Utils;
 using Utils.Services;
+using Utils.Configuration;
 
 namespace Functions.Proxy;
 
@@ -16,7 +17,7 @@ namespace Functions.Proxy;
 public class ProxyFunction
 {
     private readonly IAppInsightsLogger<ProxyFunction> _logger;
-    private readonly IKeyVaultService _keyVaultService;
+    private readonly IKeyVaultService? _keyVaultService; // Make nullable
     private readonly IRequestForwardingService _forwardingService;
     private readonly ICorsValidationService _corsValidationService;
     private readonly ProxyConfiguration _config;
@@ -27,13 +28,13 @@ public class ProxyFunction
 
     public ProxyFunction(
         IAppInsightsLogger<ProxyFunction> logger,
-        IKeyVaultService keyVaultService,
         IRequestForwardingService forwardingService,
         ICorsValidationService corsValidationService,
-        ProxyConfiguration config)
+        ProxyConfiguration config,
+        IKeyVaultService? keyVaultService = null) // Make optional
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _keyVaultService = keyVaultService ?? throw new ArgumentNullException(nameof(keyVaultService));
+        _keyVaultService = keyVaultService; // Can be null for localhost
         _forwardingService = forwardingService ?? throw new ArgumentNullException(nameof(forwardingService));
         _corsValidationService = corsValidationService ?? throw new ArgumentNullException(nameof(corsValidationService));
         _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -162,7 +163,18 @@ public class ProxyFunction
     {
         try
         {
-            // Check cache first
+            var environment = EnvironmentHelper.GetCurrentEnvironment();
+            _logger.LogInformation("[{RequestId}] Detected environment: {Environment}", requestId, environment);
+            
+            // For localhost environment, use the environment variable directly
+            if (environment == "localhost")
+            {
+                var localApiKey = Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY") ?? "test-api-key";
+                _logger.LogInformation("[{RequestId}] Using local API key for localhost environment", requestId);
+                return localApiKey;
+            }
+
+            // Check cache first for non-localhost environments
             lock (_cacheLock)
             {
                 if (_apiKeyCache.TryGetValue(_config.ApiKeySecretName, out var cachedEntry))
@@ -179,7 +191,14 @@ public class ProxyFunction
                 }
             }
 
-            // Retrieve from Key Vault
+            // Retrieve from Key Vault for deployed environments
+            if (_keyVaultService == null)
+            {
+                var ex = new InvalidOperationException("KeyVault service not available for non-localhost environment");
+                _logger.LogError("[{RequestId}] KeyVault service not available for non-localhost environment", ex, requestId);
+                return string.Empty;
+            }
+            
             _logger.LogInformation("[{RequestId}] Retrieving API key from Key Vault: {SecretName}", requestId, _config.ApiKeySecretName);
             var apiKey = await _keyVaultService.GetSecretAsync(_config.ApiKeySecretName);
 
