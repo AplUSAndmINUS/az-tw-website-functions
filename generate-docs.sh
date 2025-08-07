@@ -7,9 +7,9 @@ echo "🔧 Azure Functions Documentation Generator"
 echo "=========================================="
 echo
 
-# Navigate to the documentation generator directory
+# Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$SCRIPT_DIR"
 DOC_GEN_DIR="$PROJECT_ROOT/Utils/DocumentationGenerator"
 
 echo "📁 Project root: $PROJECT_ROOT"
@@ -18,6 +18,7 @@ echo "📁 Documentation generator: $DOC_GEN_DIR"
 # Check if the documentation generator exists
 if [ ! -f "$DOC_GEN_DIR/DocumentationGenerator.csproj" ]; then
     echo "❌ Documentation generator project not found"
+    echo "Expected location: $DOC_GEN_DIR/DocumentationGenerator.csproj"
     exit 1
 fi
 
