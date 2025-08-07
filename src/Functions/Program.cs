@@ -58,35 +58,52 @@ public class Program
                 // Add Function-specific services (BlogPost, Author, etc.)
                 services.AddFunctionServices();
 
-                // Register Key Vault Service
-                services.AddSingleton<IKeyVaultService>(sp =>
+                // Register the appropriate API Key Validator based on environment
+                var environment = EnvironmentHelper.GetCurrentEnvironment();
+                Console.WriteLine($"DEBUG: Detected environment: {environment}");
+                
+                if (environment == "localhost")
                 {
-                    var keyVaultUri = EnvironmentHelper.GetKeyVaultUri();
-                    var logger = sp.GetRequiredService<ILogger<KeyVaultService>>();
-                    return new KeyVaultService(keyVaultUri, logger);
-                });
+                    Console.WriteLine("DEBUG: Registering simple API key validator for localhost");
+                    // Use simple API key validator for local development
+                    services.AddSingleton<IAPIKeyValidator>(sp =>
+                    {
+                        var validApiKey = configuration["X_API_ENVIRONMENT_KEY"]
+                            ?? Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY")
+                            ?? "test-api-key"; // Default key for local development
 
-                // Register Key Vault-based APIKeyValidator
-                services.AddSingleton<IAPIKeyValidator>(sp =>
+                        var appLogger = sp.GetRequiredService<IAppInsightsLogger<ApiKeyValidator>>();
+                        Console.WriteLine($"DEBUG: Simple API key validator created with key: {validApiKey}");
+                        return new ApiKeyValidator(validApiKey, appLogger);
+                    });
+                }
+                else
                 {
-                    var keyVaultService = sp.GetRequiredService<IKeyVaultService>();
-                    var environment = EnvironmentHelper.GetCurrentEnvironment();
-                    var appLogger = sp.GetRequiredService<IAppInsightsLogger<KeyVaultApiKeyValidator>>();
+                    Console.WriteLine($"DEBUG: Registering Key Vault API key validator for environment: {environment}");
+                    // Register Key Vault Service for deployed environments
+                    services.AddSingleton<IKeyVaultService>(sp =>
+                    {
+                        var keyVaultUri = EnvironmentHelper.GetKeyVaultUri();
+                        var logger = sp.GetRequiredService<ILogger<KeyVaultService>>();
+                        return new KeyVaultService(keyVaultUri, logger);
+                    });
 
-                    return new KeyVaultApiKeyValidator(keyVaultService, environment, appLogger);
-                });
+                    // Use Key Vault-based validator for deployed environments
+                    services.AddSingleton<IAPIKeyValidator>(sp =>
+                    {
+                        var keyVaultService = sp.GetRequiredService<IKeyVaultService>();
+                        var appLogger = sp.GetRequiredService<IAppInsightsLogger<KeyVaultApiKeyValidator>>();
+
+                        return new KeyVaultApiKeyValidator(keyVaultService, environment, appLogger);
+                    });
+                }
 
                 // Keep the fallback validator for backward compatibility during migration
                 services.AddSingleton<ApiKeyValidator>(sp =>
                 {
                     var validApiKey = configuration["X_API_ENVIRONMENT_KEY"]
-                        ?? Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY");
-
-                    if (string.IsNullOrWhiteSpace(validApiKey))
-                    {
-                        // If no legacy key is found, that's fine - we're using Key Vault now
-                        validApiKey = "fallback-key";
-                    }
+                        ?? Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY")
+                        ?? "test-api-key"; // Default key for local development
 
                     var appLogger = sp.GetRequiredService<IAppInsightsLogger<ApiKeyValidator>>();
                     return new ApiKeyValidator(validApiKey, appLogger);

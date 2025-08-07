@@ -87,12 +87,47 @@ public class KeyVaultApiKeyValidator : IAPIKeyValidator
   {
     try
     {
+      // Debug: Log the environment value
+      _appLogger.LogInformation($"KeyVaultApiKeyValidator: Environment detected as '{_environment}'");
+      
+      // Check if we're running in localhost environment and skip Key Vault validation
+      if (_environment == "localhost")
+      {
+        _appLogger.LogInformation("Using localhost mode - bypassing Key Vault");
+        var apiKey = req.Headers.TryGetValues("x-api-key", out var apiKeyValues) ? apiKeyValues.FirstOrDefault() : null;
+        var expectedKey = Environment.GetEnvironmentVariable("X_API_ENVIRONMENT_KEY") ?? "test-api-key";
+        
+        if (string.IsNullOrWhiteSpace(apiKey) || !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+        {
+          var errorResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
+          errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+
+          var errorObject = new { error = "Unauthorized access due to invalid API key." };
+          var jsonOptions = new JsonSerializerOptions
+          {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+          };
+
+          await errorResponse.WriteStringAsync(JsonSerializer.Serialize(errorObject, jsonOptions));
+          return errorResponse;
+        }
+        
+        // Log success for localhost
+        var loggerType = logger.GetType();
+        var logMethod = loggerType.GetMethod("LogInformation", new[] { typeof(string), typeof(object[]) });
+        logMethod?.Invoke(logger, new object[] { "API key validation successful for {FunctionName} (localhost mode)", new object[] { functionName } });
+
+        return null; // Validation successful
+      }
+
+      _appLogger.LogInformation("Using Key Vault mode");
       await ValidateOrThrowAsync(req);
 
       // Use reflection to log success if logger has LogInformation method
-      var loggerType = logger.GetType();
-      var logMethod = loggerType.GetMethod("LogInformation", new[] { typeof(string), typeof(object[]) });
-      logMethod?.Invoke(logger, new object[] { "API key validation successful for {FunctionName}", new object[] { functionName } });
+      var loggerType2 = logger.GetType();
+      var logMethod2 = loggerType2.GetMethod("LogInformation", new[] { typeof(string), typeof(object[]) });
+      logMethod2?.Invoke(logger, new object[] { "API key validation successful for {FunctionName}", new object[] { functionName } });
 
       return null; // Validation successful
     }
