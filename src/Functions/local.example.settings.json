@@ -8,6 +8,7 @@
         "USE_MOCK_STORAGE": "true",
         "AZURE_STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=false",
         "AzureWebJobsStorage": "UseDevelopmentStorage=false",
+        "StorageAccountName": "<StorageAccountName>",
         "PROXY_BASE_URL": "https://az-tw-website-develop.azurewebsites.net",
         "FROM_EMAIL": "<FROM_EMAIL>",
         "FROM_NAME": "<FROM_NAME>",
