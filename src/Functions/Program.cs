@@ -110,6 +110,9 @@ public class Program
                 });
             })
             .ConfigureFunctionsWorkerDefaults(builder => {
+                // Register IP throttling middleware first (runs before other middleware)
+                builder.UseMiddleware<Functions.Middleware.IPThrottlingMiddleware>();
+                
                 // Register our telemetry middleware
                 builder.UseMiddleware<Utils.Middleware.TelemetryMiddleware>();
             })
