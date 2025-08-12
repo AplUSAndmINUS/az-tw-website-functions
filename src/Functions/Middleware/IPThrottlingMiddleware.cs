@@ -25,26 +25,32 @@ public class IPThrottlingMiddleware : IFunctionsWorkerMiddleware
 
     public async Task Invoke(FunctionContext context, FunctionExecutionDelegate next)
     {
+        var functionName = context.FunctionDefinition.Name;
+        _logger.LogInformation("IPThrottlingMiddleware: Processing function {FunctionName}", functionName);
+
         // Only process HTTP trigger functions
         var httpRequest = await GetHttpRequestDataAsync(context);
         if (httpRequest == null)
         {
+            _logger.LogInformation("IPThrottlingMiddleware: Not an HTTP function, skipping throttling for {FunctionName}", functionName);
             // Not an HTTP function, skip throttling
             await next(context);
             return;
         }
 
-        var functionName = context.FunctionDefinition.Name;
         var endpoint = httpRequest.Url.PathAndQuery;
         var clientIP = _throttlingService.ExtractClientIP(httpRequest);
 
-        _logger.LogDebug("Processing IP throttling for function {FunctionName}, endpoint {Endpoint}, IP {ClientIP}", 
+        _logger.LogInformation("IPThrottlingMiddleware: Processing IP throttling for function {FunctionName}, endpoint {Endpoint}, IP {ClientIP}", 
             functionName, endpoint, clientIP);
 
         try
         {
             // Check if request should be throttled
             var throttleResult = await _throttlingService.ShouldThrottleAsync(httpRequest, endpoint);
+
+            _logger.LogInformation("IPThrottlingMiddleware: Throttle check result - IsThrottled: {IsThrottled}, RequestCount: {RequestCount}", 
+                throttleResult.IsThrottled, throttleResult.RequestCount);
 
             if (throttleResult.IsThrottled)
             {
@@ -83,6 +89,7 @@ public class IPThrottlingMiddleware : IFunctionsWorkerMiddleware
                     }
                 }
 
+                _logger.LogInformation("IPThrottlingMiddleware: Request throttled, returning 429 response");
                 // Don't call next - request is throttled
                 return;
             }
@@ -93,6 +100,7 @@ public class IPThrottlingMiddleware : IFunctionsWorkerMiddleware
                 try
                 {
                     await _throttlingService.LogRequestAsync(httpRequest, endpoint);
+                    _logger.LogInformation("IPThrottlingMiddleware: Request logged for throttling analysis");
                 }
                 catch (Exception ex)
                 {
@@ -100,6 +108,7 @@ public class IPThrottlingMiddleware : IFunctionsWorkerMiddleware
                 }
             });
 
+            _logger.LogInformation("IPThrottlingMiddleware: Request allowed, continuing to next middleware");
             // Request is not throttled, continue with normal processing
             await next(context);
         }

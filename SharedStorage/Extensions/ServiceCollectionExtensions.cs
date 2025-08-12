@@ -96,7 +96,8 @@ public static class ServiceCollectionExtensions
     {
       var tableStorage = provider.GetRequiredService<ITableStorageService>();
       var logger = provider.GetRequiredService<IAppInsightsLogger<IPThrottlingService>>();
-      var telemetryClient = provider.GetRequiredService<TelemetryClient>();
+      // TelemetryClient might not be available in local development, so use GetService (returns null if not found)
+      var telemetryClient = provider.GetService<TelemetryClient>();
       return new IPThrottlingService(tableStorage, logger, telemetryClient);
     });
 

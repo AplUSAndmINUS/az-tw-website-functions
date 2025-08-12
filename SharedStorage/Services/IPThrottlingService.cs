@@ -20,13 +20,13 @@ public class IPThrottlingService : IIPThrottlingService
 
     private readonly ITableStorageService _tableStorage;
     private readonly IAppInsightsLogger<IPThrottlingService> _logger;
-    private readonly TelemetryClient _telemetryClient;
+    private readonly TelemetryClient? _telemetryClient;
 
-    public IPThrottlingService(ITableStorageService tableStorage, IAppInsightsLogger<IPThrottlingService> logger, TelemetryClient telemetryClient)
+    public IPThrottlingService(ITableStorageService tableStorage, IAppInsightsLogger<IPThrottlingService> logger, TelemetryClient? telemetryClient = null)
     {
         _tableStorage = tableStorage ?? throw new ArgumentNullException(nameof(tableStorage));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
+        _telemetryClient = telemetryClient; // Allow null for local development
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public class IPThrottlingService : IIPThrottlingService
                     reason, endpoint, requestCount);
 
                 // Track throttle breach event for dashboard monitoring
-                _telemetryClient.TrackEvent("ip_throttle_breach", new Dictionary<string, string>
+                _telemetryClient?.TrackEvent("ip_throttle_breach", new Dictionary<string, string>
                 {
                     ["ip"] = clientIP,
                     ["endpoint"] = endpoint,
@@ -116,7 +116,7 @@ public class IPThrottlingService : IIPThrottlingService
                 clientIP, endpoint, requestId);
 
             // Track request for telemetry
-            _telemetryClient.TrackEvent("ip_throttle_request_logged", new Dictionary<string, string>
+            _telemetryClient?.TrackEvent("ip_throttle_request_logged", new Dictionary<string, string>
             {
                 ["ip"] = clientIP,
                 ["endpoint"] = endpoint,
