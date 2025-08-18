@@ -186,6 +186,7 @@ public class PortfolioPieceService : ContentService<PortfolioPieceEntity, Portfo
   protected override bool IsPublished(PortfolioPieceEntity entity) => entity.IsPublished;
   protected override string GetAuthorSlug(PortfolioPieceEntity entity) => entity.AuthorSlug;
   protected override string GetCategory(PortfolioPieceEntity entity) => entity.Category;
+  protected override DateTime GetPublishDate(PortfolioPieceEntity entity) => entity.PublishDate;
 
   protected override PortfolioPieceDTO EntityToDto(PortfolioPieceEntity entity) => PortfolioPieceMapper.EntityToDTOStatic(entity);
 
@@ -296,6 +297,7 @@ public class PortfolioPieceService : ContentService<PortfolioPieceEntity, Portfo
       var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, pageSize);
       var entities = result.Entities.Select(e => ConvertTableEntityToTEntity(e))
                           .Where(e => e != null)
+                          .OrderByDescending(e => GetPublishDate(e!))
                           .Select(e => EntityToDto(e!))
                           .ToList();
 
