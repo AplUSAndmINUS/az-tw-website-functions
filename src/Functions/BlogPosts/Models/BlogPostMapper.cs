@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Utils.Validation;
 using Utils.Extensions;
+using Utils.Markdown;
 using Functions.BlogPosts.Models;
 using SharedStorage.Models;
 
@@ -102,7 +103,7 @@ public class BlogPostMapper : BaseContentMapper<BlogPostModel, BlogPostEntity>
       Title = model.Title,
       AuthorSlug = model.AuthorSlug,
       Description = model.Description,
-      Content = model.Content,
+      Content = MarkdownProcessor.ToHtml(model.Content), // Convert markdown to HTML for API responses
       Slug = model.Slug,
       Category = model.Category,
       Status = model.Status,
@@ -135,7 +136,7 @@ public class BlogPostMapper : BaseContentMapper<BlogPostModel, BlogPostEntity>
       Title = entity.Title,
       AuthorSlug = entity.AuthorSlug,
       Description = entity.Description,
-      Content = entity.Content,
+      Content = MarkdownProcessor.ToHtml(entity.Content), // Convert markdown to HTML for API responses
       Slug = entity.Slug,
       Category = entity.Category,
       Status = entity.Status,
