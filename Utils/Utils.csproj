@@ -11,5 +11,7 @@
         <!-- Azure Key Vault packages -->
         <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.*" />
         <PackageReference Include="Azure.Identity" Version="1.*" />
+        <!-- Markdown processing -->
+        <PackageReference Include="Markdig" Version="0.37.0" />
     </ItemGroup>
 </Project>
