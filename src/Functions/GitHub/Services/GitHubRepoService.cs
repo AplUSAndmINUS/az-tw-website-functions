@@ -420,6 +420,11 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
     return entity.Category;
   }
 
+  protected override DateTime GetPublishDate(GitHubRepoEntity entity)
+  {
+    return entity.PublishDate;
+  }
+
   // Helper methods for additional functionality
   protected async Task<GitHubRepoEntity?> GetEntityBySlugAsync(string slug)
   {
@@ -513,6 +518,9 @@ public class GitHubRepoService : ContentService<GitHubRepoEntity, GitHubRepoMode
     {
       query = query.Where(e => GetCategory(e) == category);
     }
+
+    // Order by PublishDate descending (most recent first)
+    query = query.OrderByDescending(e => GetPublishDate(e));
 
     if (limit.HasValue)
     {

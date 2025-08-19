@@ -183,6 +183,7 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
   protected override bool IsPublished(BlogPostEntity entity) => entity.IsPublished;
   protected override string GetAuthorSlug(BlogPostEntity entity) => entity.AuthorSlug;
   protected override string GetCategory(BlogPostEntity entity) => entity.Category;
+  protected override DateTime GetPublishDate(BlogPostEntity entity) => entity.PublishDate;
 
   protected override BlogPostDTO EntityToDto(BlogPostEntity entity) => BlogPostMapper.EntityToDTOStatic(entity);
 
@@ -286,6 +287,7 @@ public class BlogPostService : ContentService<BlogPostEntity, BlogPostModel, Blo
       var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, pageSize);
       var entities = result.Entities.Select(e => ConvertToEntity(e))
                           .Where(e => e != null)
+                          .OrderByDescending(e => GetPublishDate(e!))
                           .Select(e => EntityToDto(e!))
                           .ToList();
 

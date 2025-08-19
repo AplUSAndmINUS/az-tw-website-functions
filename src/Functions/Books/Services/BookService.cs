@@ -199,6 +199,7 @@ public class BookService : ContentService<BookEntity, BookModel, BookDTO>, IBook
   protected override bool IsPublished(BookEntity entity) => entity.IsPublished;
   protected override string GetAuthorSlug(BookEntity entity) => entity.AuthorSlug;
   protected override string GetCategory(BookEntity entity) => entity.Category;
+  protected override DateTime GetPublishDate(BookEntity entity) => entity.PublishDate;
 
   protected override BookDTO EntityToDto(BookEntity entity) => BookMapper.Instance.EntityToDTO(entity);
 
@@ -342,6 +343,7 @@ public class BookService : ContentService<BookEntity, BookModel, BookDTO>, IBook
       var result = await _tableStorageService.GetEntitiesAsync(_tableName, filter, pageSize);
       var entities = result.Entities.Select(e => ConvertToEntity(e))
                           .Where(e => e != null)
+                          .OrderByDescending(e => GetPublishDate(e!))
                           .Select(e => EntityToDto(e!))
                           .ToList();
 

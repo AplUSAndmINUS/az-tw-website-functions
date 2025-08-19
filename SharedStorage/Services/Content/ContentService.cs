@@ -114,6 +114,9 @@ public abstract class ContentService<TEntity, TModel, TDto>(
       if (!string.IsNullOrWhiteSpace(category))
         query = query.Where(e => GetCategory(e) == category);
 
+      // Order by PublishDate descending (most recent first)
+      query = query.OrderByDescending(e => GetPublishDate(e));
+
       if (limit.HasValue)
         query = query.Take(limit.Value);
 
@@ -203,6 +206,7 @@ public abstract class ContentService<TEntity, TModel, TDto>(
   protected abstract bool IsPublished(TEntity entity);
   protected abstract string GetAuthorSlug(TEntity entity);
   protected abstract string GetCategory(TEntity entity);
+  protected abstract DateTime GetPublishDate(TEntity entity);
   protected abstract TDto EntityToDto(TEntity entity);
   protected abstract TEntity ModelToEntity(TModel model);
   protected abstract void UpdateEntityFromModel(TEntity entity, TModel model);
