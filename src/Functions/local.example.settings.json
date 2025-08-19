@@ -16,7 +16,9 @@
         "SMTP_SERVER": "<SMTP_SERVER>",
         "SMTP_USERNAME": "<SMTP_USERNAME>",
         "SMTP_PASSWORD": "<SMTP_PASSWORD>",
-        "TO_EMAIL": "<TO_EMAIL>"
+        "TO_EMAIL": "<TO_EMAIL>",
+        "GITHUB_TOKEN": "<GITHUB_TOKEN_OR_PAT>",
+        "GITHUB_USERNAME": "<GITHUB_USERNAME>"
     },
     "ConnectionStrings": {}
 }
