@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.ApplicationInsights;
 using SharedStorage.Services.BaseServices;
 using SharedStorage.Services.Media;
 using SharedStorage.Services.Media.Handlers;
 using SharedStorage.Services.Email;
+using SharedStorage.Services;
 using SharedStorage.Environment;
 using Utils;
 
@@ -87,6 +89,16 @@ public static class ServiceCollectionExtensions
               ?? throw new InvalidOperationException("Storage account name environment variable is required (StorageAccountName or AZURE_STORAGE_ACCOUNT_NAME)");
       var logger = provider.GetRequiredService<IAppInsightsLogger<TableStorageService>>();
       return new TableStorageService(storageAccountName, logger);
+    });
+
+    // Register IP throttling service
+    services.AddSingleton<IIPThrottlingService>(provider =>
+    {
+      var tableStorage = provider.GetRequiredService<ITableStorageService>();
+      var logger = provider.GetRequiredService<IAppInsightsLogger<IPThrottlingService>>();
+      // TelemetryClient might not be available in local development, so use GetService (returns null if not found)
+      var telemetryClient = provider.GetService<TelemetryClient>();
+      return new IPThrottlingService(tableStorage, logger, telemetryClient);
     });
 
     return services;
