@@ -177,7 +177,7 @@ public class GitHubApiService : IGitHubApiService
       // Convert GraphQL response to our DTO format
       var activityData = new List<GitHubActivityGridDTO>();
       
-      foreach (var week in graphqlResponse.Data.User.ContributionsCollection.ContributionCalendar.Weeks ?? [])
+      foreach (var week in graphqlResponse.Data.User.ContributionsCollection.ContributionCalendar.Weeks ?? Enumerable.Empty<GraphQLWeek>())
       {
         if (week.ContributionDays != null)
         {
