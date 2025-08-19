@@ -40,7 +40,7 @@
     <PackageReference Include="Azure.Identity" Version="1.*" />
     <PackageReference Include="Microsoft.Extensions.Azure" Version="1.*" />
     <!-- JSON handling for GraphQL -->
-    <PackageReference Include="System.Text.Json" Version="8.*" />
+    <PackageReference Include="System.Text.Json" Version="8.0.*" />
   </ItemGroup>
   <ItemGroup>
     <!-- Your shared‑lib projects -->
