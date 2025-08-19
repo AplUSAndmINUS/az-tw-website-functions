@@ -200,7 +200,7 @@ public class GitHubApiService : IGitHubApiService
     }
     catch (Exception ex)
     {
-      _logger.LogError("Error fetching contribution data from GitHub GraphQL API for user {Username}", ex, username);
+      _logger.LogError(ex, "Error fetching contribution data from GitHub GraphQL API for user {Username}", username);
       return [];
     }
   }
