@@ -39,7 +39,7 @@ public class GitHubApiService : IGitHubApiService
       _logger.LogInformation("Fetching repositories for user: {Username}", username);
 
       var response = await _httpClient.GetAsync($"https://api.github.com/users/{username}/repos?type=all&sort=updated&per_page=100");
-      
+
       if (!response.IsSuccessStatusCode)
       {
         _logger.LogWarning("GitHub API request failed with status: {StatusCode}", response.StatusCode);
@@ -86,25 +86,25 @@ public class GitHubApiService : IGitHubApiService
 
       // Fallback: Try to get basic user info to validate the username exists
       var userResponse = await _httpClient.GetAsync($"https://api.github.com/users/{username}");
-      
+
       if (!userResponse.IsSuccessStatusCode)
       {
         _logger.LogWarning("GitHub user {Username} not found or API request failed with status: {StatusCode}", username, userResponse.StatusCode);
-        
+
         // Return a valid empty activity grid instead of empty array to avoid 500 errors
         return GenerateEmptyActivityGrid();
       }
 
       // Fallback: Generate activity grid data based on available public repositories
       var activityData = await GenerateActivityGridFromReposAsync(username);
-      
+
       _logger.LogInformation("Successfully generated fallback activity grid for user: {Username} with {Count} data points", username, activityData.Count());
       return activityData;
     }
     catch (Exception ex)
     {
       _logger.LogError("Error fetching activity grid for user {Username}", ex, username);
-      
+
       // Return a valid empty activity grid instead of empty array to avoid 500 errors
       return GenerateEmptyActivityGrid();
     }
@@ -116,7 +116,7 @@ public class GitHubApiService : IGitHubApiService
     {
       // Check if GitHub token is available
       var githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? Environment.GetEnvironmentVariable("GITHUB_PAT");
-      
+
       if (string.IsNullOrEmpty(githubToken))
       {
         _logger.LogInformation("No GitHub token found - falling back to REST API approach");
@@ -160,7 +160,7 @@ public class GitHubApiService : IGitHubApiService
       if (!response.IsSuccessStatusCode)
       {
         var errorContent = await response.Content.ReadAsStringAsync();
-        _logger.LogWarning("GitHub GraphQL API request failed with status: {StatusCode}, Error: {Error}", 
+        _logger.LogWarning("GitHub GraphQL API request failed with status: {StatusCode}, Error: {Error}",
           response.StatusCode, errorContent);
         return [];
       }
@@ -176,7 +176,7 @@ public class GitHubApiService : IGitHubApiService
 
       // Convert GraphQL response to our DTO format
       var activityData = new List<GitHubActivityGridDTO>();
-      
+
       foreach (var week in graphqlResponse.Data.User.ContributionsCollection.ContributionCalendar.Weeks ?? Enumerable.Empty<GraphQLWeek>())
       {
         if (week.ContributionDays != null)
@@ -193,9 +193,9 @@ public class GitHubApiService : IGitHubApiService
         }
       }
 
-      _logger.LogInformation("Successfully fetched {Count} contribution days from GitHub GraphQL API for user: {Username}", 
+      _logger.LogInformation("Successfully fetched {Count} contribution days from GitHub GraphQL API for user: {Username}",
         activityData.Count, username);
-      
+
       return activityData.OrderBy(d => d.Date);
     }
     catch (Exception ex)
@@ -209,7 +209,7 @@ public class GitHubApiService : IGitHubApiService
   {
     var activityData = new List<GitHubActivityGridDTO>();
     var today = DateTime.UtcNow.Date;
-    
+
     // Generate the last 365 days with no activity
     for (int i = 364; i >= 0; i--)
     {
@@ -221,7 +221,7 @@ public class GitHubApiService : IGitHubApiService
         ContributionLevel = "NONE"
       });
     }
-    
+
     return activityData;
   }
 
@@ -232,29 +232,29 @@ public class GitHubApiService : IGitHubApiService
       // Get repositories to analyze activity
       var repos = await GetRepositoriesAsync(username);
       var activityData = new List<GitHubActivityGridDTO>();
-      
+
       // Generate the last 365 days of activity data
       var today = DateTime.UtcNow.Date;
       for (int i = 364; i >= 0; i--)
       {
         var date = today.AddDays(-i);
         var dateStr = date.ToString("yyyy-MM-dd");
-        
+
         // Simple heuristic: check if any repos were updated on this date
-        var contributionCount = repos.Count(r => 
-          r.GitHubUpdatedAt.Date == date || 
+        var contributionCount = repos.Count(r =>
+          r.GitHubUpdatedAt.Date == date ||
           (r.GitHubPushedAt?.Date == date) ||
           r.GitHubCreatedAt.Date == date);
-        
+
         var level = contributionCount switch
         {
           0 => "NONE",
-          1 => "FIRST_QUARTILE", 
+          1 => "FIRST_QUARTILE",
           2 => "SECOND_QUARTILE",
           3 => "THIRD_QUARTILE",
           _ => "FOURTH_QUARTILE"
         };
-        
+
         activityData.Add(new GitHubActivityGridDTO
         {
           Date = dateStr,
@@ -262,13 +262,13 @@ public class GitHubApiService : IGitHubApiService
           ContributionLevel = level
         });
       }
-      
+
       return activityData;
     }
     catch (Exception ex)
     {
       _logger.LogError("Error generating activity grid data", ex);
-      
+
       // Return a valid activity grid to avoid 500 errors
       return GenerateEmptyActivityGrid();
     }
@@ -370,10 +370,10 @@ internal class GraphQLContributionDay
 {
   [JsonPropertyName("date")]
   public string Date { get; set; } = string.Empty;
-  
+
   [JsonPropertyName("contributionCount")]
   public int ContributionCount { get; set; }
-  
+
   [JsonPropertyName("contributionLevel")]
   public string? ContributionLevel { get; set; }
 }
