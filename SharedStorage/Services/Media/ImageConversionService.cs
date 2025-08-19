@@ -244,7 +244,14 @@ public class ImageConversionService : IImageService
               image = Image.Load(tempFile);
 
               // Delete temporary file
-              try { File.Delete(tempFile); } catch { }
+              try
+              {
+                File.Delete(tempFile);
+              }
+              catch (Exception delEx)
+              {
+                _appLogger.LogWarning("Failed to delete temporary file {TempFile}: {Error}", tempFile, delEx.Message);
+              }
 
               _appLogger.LogInformation("Successfully loaded image from temporary file with extension: {Extension}", extension);
             }
@@ -678,7 +685,14 @@ public class ImageConversionService : IImageService
         var result = Image.Load(tempFile);
 
         // Clean up temp file
-        try { File.Delete(tempFile); } catch { }
+        try
+        {
+          File.Delete(tempFile);
+        }
+        catch (Exception delEx)
+        {
+          _appLogger.LogWarning("Failed to delete temporary file {TempFile}: {Error}", tempFile, delEx.Message);
+        }
 
         _appLogger.LogInformation("Successfully loaded image using temporary file with extension: {Extension}", extension);
         return result;
