@@ -30,9 +30,16 @@ public class ContactMeFunction
 
     [Function("ContactMe")]
     public async Task<HttpResponseData> SubmitContactForm(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "contact")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", "options", Route = "contact")] HttpRequestData req,
         FunctionContext executionContext)
     {
+        // Handle CORS preflight requests
+        if (req.Method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase))
+        {
+            var corsResponse = req.CreateResponse(HttpStatusCode.OK);
+            AddCorsHeaders(corsResponse, req);
+            return corsResponse;
+        }
         try
         {
             _logger.LogInformation("Processing contact form submission");
@@ -41,11 +48,20 @@ public class ContactMeFunction
                 GetClientIpAddress(req),
                 req.Headers.TryGetValues("User-Agent", out var userAgentHeaders) ? userAgentHeaders.FirstOrDefault() ?? "Unknown" : "Unknown");
 
-            // Validate API key
-            var apiKeyValidationResponse = await _apiKeyValidator.ValidateApiKeyAsync(req, _logger, "ContactMe");
-            if (apiKeyValidationResponse != null)
+            // For anonymous endpoints, API key validation is optional
+            // Only validate if an API key is provided (for admin/internal access)
+            if (req.Headers.TryGetValues("x-api-key", out var apiKeyHeaders) && apiKeyHeaders.Any())
             {
-                return apiKeyValidationResponse;
+                var apiKeyValidationResponse = await _apiKeyValidator.ValidateApiKeyAsync(req, _logger, "ContactMe");
+                if (apiKeyValidationResponse != null)
+                {
+                    return apiKeyValidationResponse;
+                }
+                _logger.LogInformation("API key provided and validated successfully for ContactMe");
+            }
+            else
+            {
+                _logger.LogInformation("No API key provided for ContactMe (anonymous access allowed)");
             }
 
             // Read and deserialize request body
@@ -55,6 +71,7 @@ public class ContactMeFunction
                 _logger.LogWarning("Empty request body received");
                 var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
                 await badRequestResponse.WriteStringAsync("Request body is required");
+                AddCorsHeaders(badRequestResponse, req);
                 return badRequestResponse;
             }
 
@@ -71,6 +88,7 @@ public class ContactMeFunction
                 _logger.LogWarning("Invalid JSON in request body");
                 var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
                 await badRequestResponse.WriteStringAsync("Invalid JSON format");
+                AddCorsHeaders(badRequestResponse, req);
                 return badRequestResponse;
             }
 
@@ -79,6 +97,7 @@ public class ContactMeFunction
                 _logger.LogWarning("Null contact data received");
                 var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
                 await badRequestResponse.WriteStringAsync("Contact data is required");
+                AddCorsHeaders(badRequestResponse, req);
                 return badRequestResponse;
             }
 
@@ -115,6 +134,7 @@ public class ContactMeFunction
                 var response = req.CreateResponse(HttpStatusCode.OK);
                 await response.WriteStringAsync(JsonSerializer.Serialize(new { success = true, message = "Contact form submitted successfully" }));
                 response.Headers.Add("Content-Type", "application/json");
+                AddCorsHeaders(response, req);
                 return response;
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("SMTP_USERNAME") || ex.Message.Contains("environment variable"))
@@ -131,6 +151,7 @@ public class ContactMeFunction
                     error = "Email configuration unavailable"
                 }));
                 configErrorResponse.Headers.Add("Content-Type", "application/json");
+                AddCorsHeaders(configErrorResponse, req);
                 return configErrorResponse;
             }
         }
@@ -139,6 +160,7 @@ public class ContactMeFunction
             _logger.LogError("Unexpected error processing contact form submission", ex);
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync("An error occurred while processing your request");
+            AddCorsHeaders(errorResponse, req);
             return errorResponse;
         }
     }
@@ -184,6 +206,7 @@ public class ContactMeFunction
             var errorResponse = JsonSerializer.Serialize(new { errors });
             badRequestResponse.WriteStringAsync(errorResponse);
             badRequestResponse.Headers.Add("Content-Type", "application/json");
+            AddCorsHeaders(badRequestResponse, req);
             return badRequestResponse;
         }
 
@@ -223,5 +246,41 @@ public class ContactMeFunction
         {
             return "Unknown";
         }
+    }
+
+    private void AddCorsHeaders(HttpResponseData response, HttpRequestData request)
+    {
+        // List of allowed origins based on the requirements
+        var allowedOrigins = new[]
+        {
+            "https://mock-dev-api.terencewaters.com",
+            "https://mock-tst-api.terencewaters.com",
+            "https://api.terencewaters.com",
+            "http://localhost:7071",
+            "http://localhost:3000",
+            "http://localhost:3001"
+        };
+
+        // Get the origin from the request
+        var origin = request.Headers.TryGetValues("Origin", out var originValues) 
+            ? originValues.FirstOrDefault() 
+            : null;
+
+        // Check if the origin is allowed
+        if (!string.IsNullOrEmpty(origin) && allowedOrigins.Contains(origin))
+        {
+            response.Headers.Add("Access-Control-Allow-Origin", origin);
+        }
+        else if (string.IsNullOrEmpty(origin))
+        {
+            // For requests without an origin header (like direct API calls), allow all
+            response.Headers.Add("Access-Control-Allow-Origin", "*");
+        }
+
+        // Add other CORS headers
+        response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key, X-Forwarded-For, X-Real-IP");
+        response.Headers.Add("Access-Control-Max-Age", "3600");
+        response.Headers.Add("Access-Control-Allow-Credentials", "true");
     }
 }

@@ -9,7 +9,7 @@ public interface IAPIKeyValidator
     /// </summary>
     /// <param name="apiKey">The API key to validate.</param>
     /// <returns>True if the API key is valid; otherwise, false.</returns>
-    bool IsValid(string apiKey, HttpRequestData req);
+    bool IsValid(string? apiKey, HttpRequestData req);
 
     /// <summary>
     /// Gets the error message if the API key is invalid.

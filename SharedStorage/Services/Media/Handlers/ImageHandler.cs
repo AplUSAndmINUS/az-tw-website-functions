@@ -114,7 +114,7 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
       ImageConversionResult conversionResult;
       try
       {
-        conversionResult = await _imageService.ConvertToWebPAsync(conversionStream, maxWidth: 2048, maxHeight: 2048, quality: 85);
+        conversionResult = await _imageService.ConvertToWebPAsync(conversionStream, maxWidth: 2048, maxHeight: 2048, quality: 85, fileName: fileName);
       }
       catch (Exception ex)
       {
@@ -124,7 +124,7 @@ public class ImageHandler : MediaHandler, IMediaTypeHandler
         conversionStream.Position = 0;
         try
         {
-          conversionResult = await _imageService.ConvertToWebPAsync(conversionStream, maxWidth: 1024, maxHeight: 1024, quality: 70);
+          conversionResult = await _imageService.ConvertToWebPAsync(conversionStream, maxWidth: 1024, maxHeight: 1024, quality: 70, fileName: fileName);
         }
         catch (Exception fallbackEx)
         {

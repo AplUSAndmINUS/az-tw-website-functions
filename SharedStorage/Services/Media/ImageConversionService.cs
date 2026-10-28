@@ -14,7 +14,7 @@ namespace SharedStorage.Services.Media;
 
 public interface IImageService
 {
-  Task<ImageConversionResult> ConvertToWebPAsync(Stream input, int? maxWidth = null, int? maxHeight = null, int quality = 85);
+  Task<ImageConversionResult> ConvertToWebPAsync(Stream input, int? maxWidth = null, int? maxHeight = null, int quality = 85, string? fileName = null);
   Task<ImageConversionResult> ConvertToOptimizedFormatAsync(Stream input, string? preferredFormat = null, int? maxWidth = null, int? maxHeight = null);
   Task<(int width, int height)> GetImageDimensionsAsync(Stream input);
 }
@@ -69,7 +69,7 @@ public class ImageConversionService : IImageService
     }
   }
 
-  public async Task<ImageConversionResult> ConvertToWebPAsync(Stream input, int? maxWidth = null, int? maxHeight = null, int quality = 85)
+  public async Task<ImageConversionResult> ConvertToWebPAsync(Stream input, int? maxWidth = null, int? maxHeight = null, int quality = 85, string? fileName = null)
   {
     // Simple validation without complex stream manipulation
     if (input == null)
@@ -244,7 +244,14 @@ public class ImageConversionService : IImageService
               image = Image.Load(tempFile);
 
               // Delete temporary file
-              try { File.Delete(tempFile); } catch { }
+              try
+              {
+                File.Delete(tempFile);
+              }
+              catch (Exception delEx)
+              {
+                _appLogger.LogWarning("Failed to delete temporary file {TempFile}: {Error}", tempFile, delEx.Message);
+              }
 
               _appLogger.LogInformation("Successfully loaded image from temporary file with extension: {Extension}", extension);
             }
@@ -286,6 +293,21 @@ public class ImageConversionService : IImageService
                   _appLogger.LogInformation("Temp file loading error: {0}", tempFileEx.Message);
                   _appLogger.LogInformation("Recovery error: {0}", recoveryEx.Message);
 
+                  // Final attempt: try format-specific loading based on filename extension
+                  if (!string.IsNullOrEmpty(fileName))
+                  {
+                    try
+                    {
+                      image = await TryLoadByFileExtension(streamData, fileName);
+                      _appLogger.LogInformation("Successfully loaded image using filename-based format detection for: {FileName}", fileName);
+                      goto ImageLoaded; // Jump to successful loading logic
+                    }
+                    catch (Exception filenameEx)
+                    {
+                      _appLogger.LogInformation("Filename-based loading error: {0}", filenameEx.Message);
+                    }
+                  }
+
                   throw new InvalidOperationException($"Unable to load image with any method. The file may be corrupted or in an unsupported format. Error: {recoveryEx.Message}", recoveryEx);
                 }
               }
@@ -299,6 +321,21 @@ public class ImageConversionService : IImageService
                 _appLogger.LogInformation("Byte array loading error: {0}", byteEx.Message);
                 _appLogger.LogInformation("Temp file loading error: {0}", tempFileEx.Message);
 
+                // Final attempt: try format-specific loading based on filename extension  
+                if (!string.IsNullOrEmpty(fileName))
+                {
+                  try
+                  {
+                    image = await TryLoadByFileExtension(streamData, fileName);
+                    _appLogger.LogInformation("Successfully loaded image using filename-based format detection for: {FileName}", fileName);
+                    goto ImageLoaded; // Jump to successful loading logic
+                  }
+                  catch (Exception filenameEx)
+                  {
+                    _appLogger.LogInformation("Filename-based loading error: {0}", filenameEx.Message);
+                  }
+                }
+
                 throw new InvalidOperationException($"Unable to load image with any method. The file may be corrupted or in an unsupported format. Error: {tempFileEx.Message}", tempFileEx);
               }
             }
@@ -306,6 +343,7 @@ public class ImageConversionService : IImageService
         }
       }
 
+    ImageLoaded:
       // Don't use using statement here - we need to keep the image open until we finish saving
       // Auto-orient to handle EXIF rotation
       image.Mutate(x => x.AutoOrient());
@@ -605,5 +643,65 @@ public class ImageConversionService : IImageService
         buffer[8] == 0x57 && buffer[9] == 0x45 && buffer[10] == 0x42 && buffer[11] == 0x50) return true;
 
     return false;
+  }
+
+  private async Task<Image> TryLoadByFileExtension(byte[] imageData, string fileName)
+  {
+    _appLogger.LogInformation("Attempting filename-based format detection for: {FileName}", fileName);
+
+    var extension = Path.GetExtension(fileName).ToLowerInvariant();
+    _appLogger.LogInformation("Detected file extension: {Extension}", extension);
+
+    using var stream = new MemoryStream(imageData);
+
+    try
+    {
+      _appLogger.LogInformation("Attempting forced load with very permissive settings for extension: {Extension}", extension);
+
+      // Try with a very permissive decoder configuration that bypasses strict validation
+      var permissiveOptions = new DecoderOptions
+      {
+        MaxFrames = 1,
+        TargetSize = new Size(8000, 8000), // Very large to avoid size restrictions
+        SkipMetadata = true // Skip metadata parsing which might cause issues
+      };
+
+      stream.Position = 0;
+      return await Image.LoadAsync(permissiveOptions, stream);
+    }
+    catch (Exception ex)
+    {
+      _appLogger.LogWarning("Permissive loading failed for {Extension}: {Error}", extension, ex.Message);
+
+      // Final attempt: create a temporary file with the correct extension
+      // Sometimes ImageSharp works better when it can infer format from file extension
+      try
+      {
+        _appLogger.LogInformation("Final attempt: trying temporary file approach with extension {Extension}", extension);
+
+        string tempFile = Path.Combine(Path.GetTempPath(), $"force-load-{Guid.NewGuid()}{extension}");
+        await File.WriteAllBytesAsync(tempFile, imageData);
+
+        var result = Image.Load(tempFile);
+
+        // Clean up temp file
+        try
+        {
+          File.Delete(tempFile);
+        }
+        catch (Exception delEx)
+        {
+          _appLogger.LogWarning("Failed to delete temporary file {TempFile}: {Error}", tempFile, delEx.Message);
+        }
+
+        _appLogger.LogInformation("Successfully loaded image using temporary file with extension: {Extension}", extension);
+        return result;
+      }
+      catch (Exception tempEx)
+      {
+        _appLogger.LogWarning("Temporary file loading also failed for {Extension}: {Error}", extension, tempEx.Message);
+        throw new InvalidOperationException($"Failed to load image with extension {extension}: {tempEx.Message}", tempEx);
+      }
+    }
   }
 }

@@ -61,7 +61,6 @@ public class Program
                 // Register the appropriate API Key Validator based on environment
                 var environment = EnvironmentHelper.GetCurrentEnvironment();
                 Console.WriteLine($"DEBUG: Detected environment: {environment}");
-                
                 if (environment == "localhost")
                 {
                     Console.WriteLine("DEBUG: Registering simple API key validator for localhost");
@@ -107,6 +106,15 @@ public class Program
 
                     var appLogger = sp.GetRequiredService<IAppInsightsLogger<ApiKeyValidator>>();
                     return new ApiKeyValidator(validApiKey, appLogger);
+                });
+
+                // Register PublicAPIKeyValidator for public endpoints that allow GET without API key
+                // This needs to be registered after the base IAPIKeyValidator
+                services.AddSingleton<PublicAPIKeyValidator>(sp =>
+                {
+                    var baseValidator = sp.GetRequiredService<IAPIKeyValidator>();
+                    var appLogger = sp.GetRequiredService<IAppInsightsLogger<PublicAPIKeyValidator>>();
+                    return new PublicAPIKeyValidator(baseValidator, appLogger);
                 });
             })
             .ConfigureFunctionsWorkerDefaults(builder => {

@@ -16,7 +16,7 @@ public class GetPortfolioPiecesFunction : BaseContentFunctions<IPortfolioPieceSe
   public GetPortfolioPiecesFunction(
     IAppInsightsLogger<BaseContentFunctions<IPortfolioPieceService, PortfolioPieceModel, PortfolioPieceDTO, PortfolioPieceWithMediaDTO>> logger,
     IPortfolioPieceService portfolioService,
-    IAPIKeyValidator apiKeyValidator)
+    PublicAPIKeyValidator apiKeyValidator)
     : base(logger, portfolioService, apiKeyValidator)
   {
     _portfolioService = portfolioService;

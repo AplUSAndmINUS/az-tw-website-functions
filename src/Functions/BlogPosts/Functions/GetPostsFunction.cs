@@ -16,7 +16,7 @@ public class GetPostsFunction : BaseContentFunctions<IBlogPostService, BlogPostM
   public GetPostsFunction(
     IAppInsightsLogger<BaseContentFunctions<IBlogPostService, BlogPostModel, BlogPostDTO, BlogPostWithMediaDTO>> logger,
     IBlogPostService blogPostService,
-    IAPIKeyValidator apiKeyValidator)
+    PublicAPIKeyValidator apiKeyValidator)
     : base(logger, blogPostService, apiKeyValidator)
   {
     _blogPostService = blogPostService;
